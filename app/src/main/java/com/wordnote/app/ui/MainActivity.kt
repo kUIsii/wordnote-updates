@@ -142,7 +142,11 @@ class MainActivity : AppCompatActivity() {
                 progressDialog.dismiss()
             } catch (e: Exception) {
                 progressDialog.dismiss()
-                Toast.makeText(this@MainActivity, "下载失败", Toast.LENGTH_SHORT).show()
+                MaterialAlertDialogBuilder(this@MainActivity, R.style.Theme_WordNoteApp_Dialog)
+                    .setTitle("下载失败")
+                    .setMessage("错误信息：\n${e.message}\n\n请检查网络连接后重试")
+                    .setPositiveButton("确定", null)
+                    .show()
             }
         }
     }

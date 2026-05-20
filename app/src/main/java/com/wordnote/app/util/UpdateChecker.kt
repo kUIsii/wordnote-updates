@@ -83,9 +83,14 @@ object UpdateChecker {
             val connection = url.openConnection() as HttpURLConnection
             connection.apply {
                 setRequestProperty("Authorization", "token $GITHUB_TOKEN")
-                connectTimeout = 30000
-                readTimeout = 30000
+                connectTimeout = 60000
+                readTimeout = 60000
                 instanceFollowRedirects = true
+            }
+
+            val responseCode = connection.responseCode
+            if (responseCode != 200) {
+                throw Exception("服务器返回错误: HTTP $responseCode")
             }
 
             val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
@@ -118,9 +123,7 @@ object UpdateChecker {
             }
         } catch (e: Exception) {
             e.printStackTrace()
-            withContext(Dispatchers.Main) {
-                Toast.makeText(context, "下载失败: ${e.message}", Toast.LENGTH_SHORT).show()
-            }
+            throw Exception("下载失败: ${e.message}")
         }
     }
 
