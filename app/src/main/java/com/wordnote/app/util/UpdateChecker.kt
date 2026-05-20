@@ -16,7 +16,7 @@ object UpdateChecker {
 
     private const val GITHUB_OWNER = "kUIsii"
     private const val GITHUB_REPO = "wordnote-updates"
-    private const val GITHUB_TOKEN = "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"
+    private const val GITHUB_TOKEN = "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"
 
     data class UpdateInfo(
         val versionName: String,
