@@ -1,0 +1,275 @@
+package com.wordnote.app.ui
+
+import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
+import android.os.Bundle
+import android.view.Gravity
+import android.view.View
+import android.widget.EditText
+import android.widget.FrameLayout
+import android.widget.GridLayout
+import android.widget.ImageView
+import android.widget.LinearLayout
+import android.widget.TextView
+import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.ViewModelProvider
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.button.MaterialButton
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.wordnote.app.R
+import com.wordnote.app.data.Category
+import com.wordnote.app.ui.adapter.CategoryAdapter
+import com.wordnote.app.util.compatOverridePendingTransitionClose
+
+class CategoryActivity : AppCompatActivity() {
+
+    private lateinit var viewModel: WordViewModel
+    private lateinit var categoryAdapter: CategoryAdapter
+
+    private var selectedColor: Int = Color.parseColor("#8E24AA")
+
+    // 按色相顺序排列: 红→粉→橙→黄→黄绿→绿→青→蓝→靛→紫→棕→灰
+    private val presetColors = intArrayOf(
+        Color.parseColor("#E53935"),  // 红
+        Color.parseColor("#D81B60"),  // 粉
+        Color.parseColor("#F4511E"),  // 深橙
+        Color.parseColor("#FB8C00"),  // 橙
+        Color.parseColor("#FDD835"),  // 黄
+        Color.parseColor("#7CB342"),  // 黄绿
+        Color.parseColor("#43A047"),  // 绿
+        Color.parseColor("#00ACC1"),  // 青
+        Color.parseColor("#1E88E5"),  // 蓝
+        Color.parseColor("#5C6BC0"),  // 靛
+        Color.parseColor("#8E24AA"),  // 紫
+        Color.parseColor("#6D4C41"),  // 棕
+    )
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_category)
+
+        viewModel = ViewModelProvider(this)[WordViewModel::class.java]
+
+        setupToolbar()
+        setupRecyclerView()
+        setupAddButton()
+        observeData()
+    }
+
+    private fun setupToolbar() {
+        val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)
+        toolbar.setNavigationOnClickListener {
+            finish()
+            compatOverridePendingTransitionClose(R.anim.slide_in_left, R.anim.slide_out_right)
+        }
+    }
+
+    private fun setupRecyclerView() {
+        categoryAdapter = CategoryAdapter(
+            onEditClick = { category -> showEditCategoryDialog(category) },
+            onDeleteClick = { category -> showDeleteConfirmation(category) }
+        )
+        val recyclerView = findViewById<RecyclerView>(R.id.categoryRecyclerView)
+        recyclerView.apply {
+            layoutManager = LinearLayoutManager(this@CategoryActivity)
+            adapter = categoryAdapter
+        }
+    }
+
+    private fun setupAddButton() {
+        findViewById<MaterialButton>(R.id.addCategoryButton).setOnClickListener {
+            selectedColor = Color.parseColor("#8E24AA")
+            showAddCategoryDialog()
+        }
+    }
+
+    private fun observeData() {
+        viewModel.allCategories.observe(this) { categories ->
+            categoryAdapter.submitList(categories)
+        }
+    }
+
+    private fun showAddCategoryDialog() {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_add_category, null)
+        val nameInput = dialogView.findViewById<EditText>(R.id.categoryNameEditText)
+        val colorPreview = dialogView.findViewById<View>(R.id.colorPreview)
+        val changeColorBtn = dialogView.findViewById<TextView>(R.id.changeColorButton)
+
+        (colorPreview.background as? GradientDrawable)?.setColor(selectedColor)
+        changeColorBtn.setOnClickListener {
+            showColorPickerDialog { color ->
+                selectedColor = color
+                (colorPreview.background as? GradientDrawable)?.setColor(color)
+            }
+        }
+
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.add_category)
+            .setView(dialogView)
+            .setPositiveButton(R.string.yes) { _, _ ->
+                val name = nameInput.text.toString().trim()
+                if (name.isEmpty()) {
+                    Toast.makeText(this, R.string.error_category_empty, Toast.LENGTH_SHORT).show()
+                    return@setPositiveButton
+                }
+                val hex = String.format("#%06X", 0xFFFFFF and selectedColor)
+                viewModel.insertCategory(Category(name = name, color = hex))
+                Toast.makeText(this, R.string.category_added, Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton(R.string.no, null)
+            .show()
+    }
+
+    private fun showColorPickerDialog(onColorSelected: (Int) -> Unit) {
+        var currentColor = selectedColor
+
+        val container = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            val pad = (24 * resources.displayMetrics.density).toInt()
+            setPadding(pad, pad, pad, (12 * resources.displayMetrics.density).toInt())
+        }
+
+        // Preview bar
+        val preview = View(this).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                (56 * resources.displayMetrics.density).toInt()
+            ).apply {
+                bottomMargin = (20 * resources.displayMetrics.density).toInt()
+            }
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = 16f * resources.displayMetrics.density
+                setColor(currentColor)
+            }
+        }
+        container.addView(preview)
+
+        // Color label
+        val label = TextView(this).apply {
+            text = "选择分类颜色"
+            setTextColor(getColor(R.color.text_primary))
+            textSize = 15f
+            setPadding(0, 0, 0, (12 * resources.displayMetrics.density).toInt())
+        }
+        container.addView(label)
+
+        // Grid
+        val grid = GridLayout(this).apply {
+            columnCount = 4
+            rowCount = 3
+            useDefaultMargins = true
+        }
+        val cellSize = (64 * resources.displayMetrics.density).toInt()
+        val checkSize = (20 * resources.displayMetrics.density).toInt()
+
+        presetColors.forEach { color ->
+            val cellContainer = FrameLayout(this).apply {
+                layoutParams = GridLayout.LayoutParams().apply {
+                    width = cellSize
+                    height = cellSize
+                    setMargins(6, 6, 6, 6)
+                }
+            }
+
+            val colorBg = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = 14f * resources.displayMetrics.density
+                setColor(color)
+                if (color == currentColor) {
+                    setStroke((3 * resources.displayMetrics.density).toInt(), Color.WHITE)
+                }
+            }
+            cellContainer.background = colorBg
+
+            // Check icon for selected
+            val checkIcon = ImageView(this).apply {
+                setImageResource(android.R.drawable.ic_menu_add)
+                setColorFilter(Color.WHITE)
+                layoutParams = FrameLayout.LayoutParams(checkSize, checkSize).apply {
+                    gravity = Gravity.CENTER
+                }
+                visibility = if (color == currentColor) View.VISIBLE else View.GONE
+                alpha = 0.9f
+            }
+            cellContainer.addView(checkIcon)
+
+            cellContainer.setOnClickListener {
+                currentColor = color
+                preview.background = GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    cornerRadius = 16f * resources.displayMetrics.density
+                    setColor(color)
+                }
+                // Refresh all cells
+                for (i in 0 until grid.childCount) {
+                    val cell = grid.getChildAt(i) as FrameLayout
+                    val bg = cell.background as? GradientDrawable
+                    bg?.setStroke(0, Color.WHITE)
+                    cell.getChildAt(1)?.visibility = View.GONE
+                }
+                colorBg.setStroke((3 * resources.displayMetrics.density).toInt(), Color.WHITE)
+                checkIcon.visibility = View.VISIBLE
+            }
+
+            grid.addView(cellContainer)
+        }
+        container.addView(grid)
+
+        MaterialAlertDialogBuilder(this)
+            .setTitle(null)
+            .setView(container)
+            .setPositiveButton("确定") { _, _ -> onColorSelected(currentColor) }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+
+    private fun showEditCategoryDialog(category: Category) {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_add_category, null)
+        val nameInput = dialogView.findViewById<EditText>(R.id.categoryNameEditText)
+        val colorPreview = dialogView.findViewById<View>(R.id.colorPreview)
+        val changeColorBtn = dialogView.findViewById<TextView>(R.id.changeColorButton)
+
+        nameInput.setText(category.name)
+        var editColor = try { Color.parseColor(category.color) } catch (e: Exception) { Color.parseColor("#8E24AA") }
+        (colorPreview.background as? GradientDrawable)?.setColor(editColor)
+
+        changeColorBtn.setOnClickListener {
+            showColorPickerDialog { color ->
+                editColor = color
+                (colorPreview.background as? GradientDrawable)?.setColor(color)
+            }
+        }
+
+        MaterialAlertDialogBuilder(this)
+            .setTitle("编辑分类")
+            .setView(dialogView)
+            .setPositiveButton("保存") { _, _ ->
+                val name = nameInput.text.toString().trim()
+                if (name.isEmpty()) {
+                    Toast.makeText(this, R.string.error_category_empty, Toast.LENGTH_SHORT).show()
+                    return@setPositiveButton
+                }
+                val hex = String.format("#%06X", 0xFFFFFF and editColor)
+                viewModel.updateCategory(category.copy(name = name, color = hex))
+                Toast.makeText(this, "已更新", Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+
+    private fun showDeleteConfirmation(category: Category) {
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.delete_category)
+            .setMessage(R.string.delete_category_message)
+            .setPositiveButton(R.string.yes) { _, _ ->
+                viewModel.deleteCategory(category)
+                Toast.makeText(this, R.string.category_deleted, Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton(R.string.no, null)
+            .show()
+    }
+}

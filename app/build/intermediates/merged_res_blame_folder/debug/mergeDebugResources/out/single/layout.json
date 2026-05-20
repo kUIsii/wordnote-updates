@@ -1,0 +1,66 @@
+[
+    {
+        "merged": "C:\\Users\\陈仕杰\\.gradle\\daemon\\8.9\\com.wordnote.app-mergeDebugResources-40:\\layout\\item_category.xml",
+        "source": "C:\\Users\\陈仕杰\\.gradle\\daemon\\8.9\\com.wordnote.app-main-43:\\layout\\item_category.xml"
+    },
+    {
+        "merged": "C:\\Users\\陈仕杰\\.gradle\\daemon\\8.9\\com.wordnote.app-mergeDebugResources-40:\\layout\\dialog_color_picker.xml",
+        "source": "C:\\Users\\陈仕杰\\.gradle\\daemon\\8.9\\com.wordnote.app-main-43:\\layout\\dialog_color_picker.xml"
+    },
+    {
+        "merged": "C:\\Users\\陈仕杰\\.gradle\\daemon\\8.9\\com.wordnote.app-mergeDebugResources-40:\\layout\\dialog_note_input.xml",
+        "source": "C:\\Users\\陈仕杰\\.gradle\\daemon\\8.9\\com.wordnote.app-main-43:\\layout\\dialog_note_input.xml"
+    },
+    {
+        "merged": "C:\\Users\\陈仕杰\\.gradle\\daemon\\8.9\\com.wordnote.app-mergeDebugResources-40:\\layout\\item_word_compact.xml",
+        "source": "C:\\Users\\陈仕杰\\.gradle\\daemon\\8.9\\com.wordnote.app-main-43:\\layout\\item_word_compact.xml"
+    },
+    {
+        "merged": "C:\\Users\\陈仕杰\\.gradle\\daemon\\8.9\\com.wordnote.app-mergeDebugResources-40:\\layout\\activity_category.xml",
+        "source": "C:\\Users\\陈仕杰\\.gradle\\daemon\\8.9\\com.wordnote.app-main-43:\\layout\\activity_category.xml"
+    },
+    {
+        "merged": "C:\\Users\\陈仕杰\\.gradle\\daemon\\8.9\\com.wordnote.app-mergeDebugResources-40:\\layout\\dialog_add_category.xml",
+        "source": "C:\\Users\\陈仕杰\\.gradle\\daemon\\8.9\\com.wordnote.app-main-43:\\layout\\dialog_add_category.xml"
+    },
+    {
+        "merged": "C:\\Users\\陈仕杰\\.gradle\\daemon\\8.9\\com.wordnote.app-mergeDebugResources-40:\\layout\\activity_main.xml",
+        "source": "C:\\Users\\陈仕杰\\.gradle\\daemon\\8.9\\com.wordnote.app-main-43:\\layout\\activity_main.xml"
+    },
+    {
+        "merged": "C:\\Users\\陈仕杰\\.gradle\\daemon\\8.9\\com.wordnote.app-mergeDebugResources-40:\\layout\\activity_settings.xml",
+        "source": "C:\\Users\\陈仕杰\\.gradle\\daemon\\8.9\\com.wordnote.app-main-43:\\layout\\activity_settings.xml"
+    },
+    {
+        "merged": "com.wordnote.app-mergeDebugResources-40:/layout/activity_dictionary.xml",
+        "source": "com.wordnote.app-main-43:/layout/activity_dictionary.xml"
+    },
+    {
+        "merged": "com.wordnote.app-mergeDebugResources-40:/layout/activity_main.xml",
+        "source": "com.wordnote.app-main-43:/layout/activity_main.xml"
+    },
+    {
+        "merged": "C:\\Users\\陈仕杰\\.gradle\\daemon\\8.9\\com.wordnote.app-mergeDebugResources-40:\\layout\\activity_calendar_view.xml",
+        "source": "C:\\Users\\陈仕杰\\.gradle\\daemon\\8.9\\com.wordnote.app-main-43:\\layout\\activity_calendar_view.xml"
+    },
+    {
+        "merged": "C:\\Users\\陈仕杰\\.gradle\\daemon\\8.9\\com.wordnote.app-mergeDebugResources-40:\\layout\\item_date_header.xml",
+        "source": "C:\\Users\\陈仕杰\\.gradle\\daemon\\8.9\\com.wordnote.app-main-43:\\layout\\item_date_header.xml"
+    },
+    {
+        "merged": "C:\\Users\\陈仕杰\\.gradle\\daemon\\8.9\\com.wordnote.app-mergeDebugResources-40:\\layout\\item_word.xml",
+        "source": "C:\\Users\\陈仕杰\\.gradle\\daemon\\8.9\\com.wordnote.app-main-43:\\layout\\item_word.xml"
+    },
+    {
+        "merged": "C:\\Users\\陈仕杰\\.gradle\\daemon\\8.9\\com.wordnote.app-mergeDebugResources-40:\\layout\\sheet_edit_word.xml",
+        "source": "C:\\Users\\陈仕杰\\.gradle\\daemon\\8.9\\com.wordnote.app-main-43:\\layout\\sheet_edit_word.xml"
+    },
+    {
+        "merged": "C:\\Users\\陈仕杰\\.gradle\\daemon\\8.9\\com.wordnote.app-mergeDebugResources-40:\\layout\\activity_word_detail.xml",
+        "source": "C:\\Users\\陈仕杰\\.gradle\\daemon\\8.9\\com.wordnote.app-main-43:\\layout\\activity_word_detail.xml"
+    },
+    {
+        "merged": "C:\\Users\\陈仕杰\\.gradle\\daemon\\8.9\\com.wordnote.app-mergeDebugResources-40:\\layout\\activity_add_word.xml",
+        "source": "C:\\Users\\陈仕杰\\.gradle\\daemon\\8.9\\com.wordnote.app-main-43:\\layout\\activity_add_word.xml"
+    }
+]

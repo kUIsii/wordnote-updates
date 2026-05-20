@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">单词笔记</string>
+    <string name="hint_input">输入 单词 中文释义</string>
+    <string name="tab_all">全部</string>
+    <string name="tab_hard">记不住</string>
+    <string name="tab_differs">释义有出入</string>
+    <string name="tab_similar">意思相近</string>
+    <string name="tab_partial">部分记不住</string>
+    <string name="empty_hint">在下方输入框添加单词</string>
+    <string name="stats_format">共 %1$d 个 · 待复习 %2$d 个</string>
+    <string name="error_word_empty">请输入单词</string>
+    <string name="error_meaning_empty">请输入释义</string>
+    <string name="word_saved">已添加</string>
+    <string name="error_format">请输入单词和释义，用空格分隔</string>
+    <string name="yes">确定</string>
+    <string name="no">取消</string>
+    <string name="delete">删除</string>
+    <string name="confirm_delete">确认删除</string>
+    <string name="confirm_delete_message">确定要删除吗？</string>
+    <string name="forgotten">忘记了</string>
+    <string name="remembered">记住了</string>
+    <string name="forget_count">忘%1$d次</string>
+    <string name="review_due">待复习</string>
+    <string name="next_review">下次：%1$s</string>
+    <string name="add_new_word">添加新单词</string>
+    <string name="word_hint">单词</string>
+    <string name="meaning_hint">释义</string>
+    <string name="category_label">分类</string>
+    <string name="save">保存</string>
+    <string name="manage_categories">管理分类</string>
+    <string name="add_category">添加分类</string>
+    <string name="category_name_hint">输入分类名称</string>
+    <string name="error_category_empty">请输入分类名称</string>
+    <string name="category_added">分类已添加</string>
+    <string name="delete_category">删除分类</string>
+    <string name="delete_category_message">确定要删除这个分类吗？</string>
+    <string name="category_deleted">分类已删除</string>
+</resources>

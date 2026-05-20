@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Background Gradient - softer blue-grey -->
+    <color name="background">#F0F4F8</color>
+    <color name="gradient_start">#F0F4F8</color>
+    <color name="gradient_end">#FAFCFE</color>
+
+    <!-- Primary Blue - softer -->
+    <color name="primary">#5B7FD6</color>
+    <color name="primary_dark">#4A6BC4</color>
+    <color name="primary_light">#D6E4F7</color>
+
+    <!-- Category Colors - softer, less harsh -->
+    <color name="cat_hard">#E8636A</color>
+    <color name="cat_differs">#F0A050</color>
+    <color name="cat_similar">#5CB87A</color>
+    <color name="cat_partial">#5B9BD5</color>
+    <color name="cat_custom">#9B72CF</color>
+
+    <!-- Highlight color for unknown meanings -->
+    <color name="highlight">#5B7FD6</color>
+
+    <!-- Text - warmer tones -->
+    <color name="text_primary">#2D3436</color>
+    <color name="text_secondary">#8395A7</color>
+    <color name="text_hint">#B2BEC3</color>
+    <color name="text_on_primary">#ffffff</color>
+
+    <!-- Surface -->
+    <color name="surface">#ffffff</color>
+    <color name="surface_input">#F1F5F9</color>
+    <color name="surface_light">#EDF2F7</color>
+    <color name="card_background">#FFFFFF</color>
+    <color name="divider">#E2E8F0</color>
+
+    <!-- Batch group -->
+    <color name="batch_group_bg">#F5F8FC</color>
+
+    <!-- Date header -->
+    <color name="date_header_bg">#5B7FD6</color>
+    <color name="date_header_text">#ffffff</color>
+</resources>

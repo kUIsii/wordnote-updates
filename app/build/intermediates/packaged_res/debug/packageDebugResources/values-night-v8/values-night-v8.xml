@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="background">#1A1D23</color>
+    <color name="batch_group_bg">#283040</color>
+    <color name="card_background">#22262E</color>
+    <color name="cat_custom">#B088D0</color>
+    <color name="cat_differs">#F0B060</color>
+    <color name="cat_hard">#F08080</color>
+    <color name="cat_partial">#6BAAE8</color>
+    <color name="cat_similar">#7CC88E</color>
+    <color name="date_header_bg">#2A3550</color>
+    <color name="date_header_text">#E0E0E0</color>
+    <color name="divider">#3A3F4B</color>
+    <color name="gradient_end">#22262E</color>
+    <color name="gradient_start">#1A1D23</color>
+    <color name="highlight">#7DA8E0</color>
+    <color name="primary">#7DA8E0</color>
+    <color name="primary_dark">#6B96D0</color>
+    <color name="primary_light">#2A3550</color>
+    <color name="surface">#22262E</color>
+    <color name="surface_input">#2A2F38</color>
+    <color name="surface_light">#2A2F38</color>
+    <color name="text_hint">#616161</color>
+    <color name="text_on_primary">#000000</color>
+    <color name="text_primary">#E0E0E0</color>
+    <color name="text_secondary">#9E9E9E</color>
+    <style name="ShapeAppearance.WordNoteApp.BottomSheet" parent="">
+        <item name="cornerSizeTopLeft">24dp</item>
+        <item name="cornerSizeTopRight">24dp</item>
+        <item name="cornerSizeBottomLeft">0dp</item>
+        <item name="cornerSizeBottomRight">0dp</item>
+    </style>
+    <style name="Theme.WordNoteApp" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/primary</item>
+        <item name="colorPrimaryDark">@color/primary_dark</item>
+        <item name="colorAccent">@color/primary</item>
+        <item name="android:windowBackground">@color/background</item>
+        <item name="android:statusBarColor">@color/background</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+        <item name="colorOnPrimary">@color/text_on_primary</item>
+        <item name="colorSurface">@color/surface</item>
+        <item name="colorOnSurface">@color/text_primary</item>
+        <item name="colorSurfaceVariant">@color/surface_light</item>
+        <item name="colorOnSurfaceVariant">@color/text_secondary</item>
+        <item name="colorOutline">@color/divider</item>
+    </style>
+    <style name="Theme.WordNoteApp.BottomSheet" parent="ThemeOverlay.Material3.BottomSheetDialog">
+        <item name="bottomSheetStyle">@style/Widget.WordNoteApp.BottomSheet</item>
+    </style>
+    <style name="Widget.WordNoteApp.BottomSheet" parent="Widget.Material3.BottomSheet">
+        <item name="backgroundTint">@color/card_background</item>
+        <item name="shapeAppearanceOverlay">@style/ShapeAppearance.WordNoteApp.BottomSheet</item>
+    </style>
+</resources>
