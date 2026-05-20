@@ -1,0 +1,18 @@
+# Build files
+*.apk
+*.ap_
+*.aab
+*.dex
+/build/
+/app/build/
+/.gradle/
+/local.properties
+/.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Debug files
+*.log
+/.kotlin/
