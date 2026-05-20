@@ -6,10 +6,12 @@ import android.net.Uri
 import android.os.Environment
 import android.provider.Settings
 import androidx.core.content.FileProvider
+import android.widget.Toast
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.File
+import java.net.HttpURLConnection
 import java.net.URL
 
 object UpdateChecker {
@@ -78,8 +80,12 @@ object UpdateChecker {
     suspend fun downloadAndInstall(context: Context, updateInfo: UpdateInfo, onProgress: (Int) -> Unit) = withContext(Dispatchers.IO) {
         try {
             val url = URL(updateInfo.downloadUrl)
-            val connection = url.openConnection().apply {
+            val connection = url.openConnection() as HttpURLConnection
+            connection.apply {
                 setRequestProperty("Authorization", "token $GITHUB_TOKEN")
+                connectTimeout = 30000
+                readTimeout = 30000
+                instanceFollowRedirects = true
             }
 
             val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
@@ -112,6 +118,9 @@ object UpdateChecker {
             }
         } catch (e: Exception) {
             e.printStackTrace()
+            withContext(Dispatchers.Main) {
+                Toast.makeText(context, "下载失败: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 

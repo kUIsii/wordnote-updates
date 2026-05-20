@@ -56,6 +56,7 @@ class MainActivity : AppCompatActivity() {
     private var selectedTab: TextView? = null
     private var categoriesList: List<Category> = emptyList()
     private var groupsList: List<WordGroup> = emptyList()
+    private var updateDialogShown = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -85,27 +86,40 @@ class MainActivity : AppCompatActivity() {
                 val packageInfo = packageManager.getPackageInfo(packageName, 0)
                 val currentVersionName = packageInfo.versionName ?: "1.0"
 
+                Toast.makeText(this@MainActivity, "正在检查更新...", Toast.LENGTH_SHORT).show()
+
                 val updateInfo = withContext(Dispatchers.IO) {
                     UpdateChecker.checkForUpdate(currentVersionName)
                 }
 
                 if (updateInfo != null) {
                     showUpdateDialog(updateInfo)
+                } else {
+                    Toast.makeText(this@MainActivity, "当前已是最新版本", Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
+                Toast.makeText(this@MainActivity, "检查更新失败: ${e.message}", Toast.LENGTH_SHORT).show()
             }
         }
     }
 
     private fun showUpdateDialog(updateInfo: UpdateChecker.UpdateInfo) {
-        MaterialAlertDialogBuilder(this)
+        if (updateDialogShown) return
+        updateDialogShown = true
+
+        MaterialAlertDialogBuilder(this, R.style.Theme_WordNoteApp_Dialog)
             .setTitle("发现新版本 ${updateInfo.versionName}")
             .setMessage(updateInfo.body.ifBlank { "有新版本可用，是否更新？" })
             .setPositiveButton("更新") { _, _ ->
                 startUpdate(updateInfo)
             }
-            .setNegativeButton("稍后", null)
+            .setNegativeButton("稍后") { _, _ ->
+                updateDialogShown = false
+            }
+            .setOnCancelListener {
+                updateDialogShown = false
+            }
             .show()
     }
 
