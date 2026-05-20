@@ -29,7 +29,12 @@ import com.wordnote.app.data.Category
 import com.wordnote.app.data.Word
 import com.wordnote.app.data.WordGroup
 import com.wordnote.app.ui.adapter.WordAdapter
+import com.wordnote.app.util.UpdateChecker
 import com.wordnote.app.util.compatOverridePendingTransition
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class MainActivity : AppCompatActivity() {
 
@@ -71,6 +76,61 @@ class MainActivity : AppCompatActivity() {
         setupInput()
         setupSearch()
         observeData()
+        checkForUpdate()
+    }
+
+    private fun checkForUpdate() {
+        CoroutineScope(Dispatchers.Main).launch {
+            try {
+                val packageInfo = packageManager.getPackageInfo(packageName, 0)
+                val currentVersionCode = packageInfo.longVersionCode.toInt()
+
+                val updateInfo = withContext(Dispatchers.IO) {
+                    UpdateChecker.checkForUpdate(currentVersionCode)
+                }
+
+                if (updateInfo != null) {
+                    showUpdateDialog(updateInfo)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    private fun showUpdateDialog(updateInfo: UpdateChecker.UpdateInfo) {
+        MaterialAlertDialogBuilder(this)
+            .setTitle("发现新版本 ${updateInfo.versionName}")
+            .setMessage(updateInfo.body.ifBlank { "有新版本可用，是否更新？" })
+            .setPositiveButton("更新") { _, _ ->
+                startUpdate(updateInfo)
+            }
+            .setNegativeButton("稍后", null)
+            .show()
+    }
+
+    private fun startUpdate(updateInfo: UpdateChecker.UpdateInfo) {
+        val progressDialog = android.app.ProgressDialog(this).apply {
+            setTitle("下载中")
+            setMessage("正在下载新版本...")
+            setProgressStyle(android.app.ProgressDialog.STYLE_HORIZONTAL)
+            isIndeterminate = false
+            max = 100
+            setCancelable(false)
+            show()
+        }
+
+        CoroutineScope(Dispatchers.Main).launch {
+            try {
+                UpdateChecker.downloadAndInstall(this@MainActivity, updateInfo) { progress ->
+                    progressDialog.progress = progress
+                }
+                progressDialog.dismiss()
+            } catch (e: Exception) {
+                progressDialog.dismiss()
+                Toast.makeText(this@MainActivity, "下载失败", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
     private fun initViews() {
