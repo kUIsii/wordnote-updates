@@ -25,7 +25,7 @@ object UpdateChecker {
         val body: String
     )
 
-    suspend fun checkForUpdate(currentVersionCode: Int): UpdateInfo? = withContext(Dispatchers.IO) {
+    suspend fun checkForUpdate(currentVersionName: String): UpdateInfo? = withContext(Dispatchers.IO) {
         try {
             val url = URL("https://api.github.com/repos/$GITHUB_OWNER/$GITHUB_REPO/releases/latest")
             val connection = url.openConnection().apply {
@@ -37,8 +37,13 @@ object UpdateChecker {
             val json = JSONObject(response)
 
             val tagName = json.getString("tag_name")
-            val versionName = tagName.removePrefix("v")
+            val remoteVersionName = tagName.removePrefix("v")
             val body = json.optString("body", "")
+
+            // Compare versions
+            if (compareVersions(remoteVersionName, currentVersionName) <= 0) {
+                return@withContext null
+            }
 
             val assets = json.getJSONArray("assets")
             if (assets.length() == 0) return@withContext null
@@ -46,14 +51,28 @@ object UpdateChecker {
             val apkUrl = assets.getJSONObject(0).getString("browser_download_url")
 
             UpdateInfo(
-                versionName = versionName,
-                versionCode = currentVersionCode + 1,
+                versionName = remoteVersionName,
+                versionCode = 0,
                 downloadUrl = apkUrl,
                 body = body
             )
         } catch (e: Exception) {
             null
         }
+    }
+
+    private fun compareVersions(v1: String, v2: String): Int {
+        val parts1 = v1.split(".").map { it.toIntOrNull() ?: 0 }
+        val parts2 = v2.split(".").map { it.toIntOrNull() ?: 0 }
+        val maxParts = maxOf(parts1.size, parts2.size)
+
+        for (i in 0 until maxParts) {
+            val p1 = parts1.getOrElse(i) { 0 }
+            val p2 = parts2.getOrElse(i) { 0 }
+            if (p1 > p2) return 1
+            if (p1 < p2) return -1
+        }
+        return 0
     }
 
     suspend fun downloadAndInstall(context: Context, updateInfo: UpdateInfo, onProgress: (Int) -> Unit) = withContext(Dispatchers.IO) {

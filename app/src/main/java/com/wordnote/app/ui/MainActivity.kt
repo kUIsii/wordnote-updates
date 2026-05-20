@@ -83,10 +83,10 @@ class MainActivity : AppCompatActivity() {
         CoroutineScope(Dispatchers.Main).launch {
             try {
                 val packageInfo = packageManager.getPackageInfo(packageName, 0)
-                val currentVersionCode = packageInfo.longVersionCode.toInt()
+                val currentVersionName = packageInfo.versionName ?: "1.0"
 
                 val updateInfo = withContext(Dispatchers.IO) {
-                    UpdateChecker.checkForUpdate(currentVersionCode)
+                    UpdateChecker.checkForUpdate(currentVersionName)
                 }
 
                 if (updateInfo != null) {
