@@ -29,6 +29,8 @@ object UpdateChecker {
 
     suspend fun checkForUpdate(currentVersionName: String): UpdateInfo? = withContext(Dispatchers.IO) {
         try {
+            android.util.Log.d("UpdateChecker", "Checking update: current=$currentVersionName")
+
             val url = URL("https://api.github.com/repos/$GITHUB_OWNER/$GITHUB_REPO/releases/latest")
             val connection = url.openConnection().apply {
                 setRequestProperty("Authorization", "token $GITHUB_TOKEN")
@@ -42,6 +44,8 @@ object UpdateChecker {
             val remoteVersionName = tagName.removePrefix("v")
             val body = json.optString("body", "")
 
+            android.util.Log.d("UpdateChecker", "Remote version: $remoteVersionName, comparison: ${compareVersions(remoteVersionName, currentVersionName)}")
+
             // Compare versions
             if (compareVersions(remoteVersionName, currentVersionName) <= 0) {
                 return@withContext null
@@ -51,6 +55,7 @@ object UpdateChecker {
             if (assets.length() == 0) return@withContext null
 
             val apkUrl = assets.getJSONObject(0).getString("browser_download_url")
+            android.util.Log.d("UpdateChecker", "Update available: $remoteVersionName")
 
             UpdateInfo(
                 versionName = remoteVersionName,
@@ -59,6 +64,7 @@ object UpdateChecker {
                 body = body
             )
         } catch (e: Exception) {
+            android.util.Log.e("UpdateChecker", "Check failed: ${e.message}")
             null
         }
     }

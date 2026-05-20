@@ -78,6 +78,34 @@ class DictionaryDatabase(private val context: Context) {
         }
     }
 
+    fun searchByChinese(chinese: String): List<DictEntry> {
+        if (!isOpen || database == null) return emptyList()
+        return try {
+            val results = mutableListOf<DictEntry>()
+            database?.rawQuery(
+                "SELECT word, phonetic, translation, pos, collins, oxford, tag, bnc, frq FROM dict WHERE translation LIKE ? COLLATE NOCASE LIMIT 50",
+                arrayOf("%$chinese%")
+            )?.use { cursor ->
+                while (cursor.moveToNext()) {
+                    results.add(DictEntry(
+                        word = cursor.getString(0),
+                        phonetic = cursor.getString(1),
+                        translation = cursor.getString(2),
+                        pos = cursor.getString(3),
+                        collins = cursor.getInt(4),
+                        oxford = cursor.getInt(5),
+                        tag = cursor.getString(6),
+                        bnc = cursor.getInt(7),
+                        frq = cursor.getInt(8)
+                    ))
+                }
+            }
+            results
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
     fun isReady(): Boolean = isOpen
 
     fun close() {

@@ -32,6 +32,9 @@ class DictionaryActivity : AppCompatActivity() {
     private lateinit var resultTranslation: TextView
     private lateinit var tagsContainer: LinearLayout
     private lateinit var selectDbButton: com.google.android.material.button.MaterialButton
+    private lateinit var searchModeButton: TextView
+
+    private var isChineseMode = false
 
     private val selectFileLauncher = registerForActivityResult(
         ActivityResultContracts.OpenDocument()
@@ -68,6 +71,14 @@ class DictionaryActivity : AppCompatActivity() {
         resultTranslation = findViewById(R.id.resultTranslation)
         tagsContainer = findViewById(R.id.tagsContainer)
         selectDbButton = findViewById(R.id.selectDbButton)
+        searchModeButton = findViewById(R.id.searchModeButton)
+
+        updateSearchModeUI()
+
+        searchModeButton.setOnClickListener {
+            isChineseMode = !isChineseMode
+            updateSearchModeUI()
+        }
 
         findViewById<ImageView>(R.id.backButton).setOnClickListener {
             finish()
@@ -88,6 +99,16 @@ class DictionaryActivity : AppCompatActivity() {
         }
     }
 
+    private fun updateSearchModeUI() {
+        if (isChineseMode) {
+            searchModeButton.text = "中→英"
+            searchEditText.hint = "输入中文查询英文单词..."
+        } else {
+            searchModeButton.text = "英→中"
+            searchEditText.hint = "输入英文单词..."
+        }
+    }
+
     private fun doSearch() {
         val query = searchEditText.text.toString().trim()
         if (query.isEmpty()) return
@@ -100,18 +121,60 @@ class DictionaryActivity : AppCompatActivity() {
         }
 
         showLoading(true)
-        val result = dictDb.search(query)
-        showLoading(false)
 
-        if (result != null) {
-            showResult(result)
+        if (isChineseMode) {
+            // Chinese to English search
+            val results = dictDb.searchByChinese(query)
+            showLoading(false)
+
+            if (results.isNotEmpty()) {
+                showChineseResults(query, results)
+            } else {
+                hintView.visibility = android.view.View.GONE
+                noDatabaseView.visibility = android.view.View.GONE
+                resultScrollView.visibility = android.view.View.GONE
+                noResultView.visibility = android.view.View.VISIBLE
+                noResultText.text = "未找到包含 \"$query\" 的单词"
+            }
         } else {
-            hintView.visibility = android.view.View.GONE
-            noDatabaseView.visibility = android.view.View.GONE
-            resultScrollView.visibility = android.view.View.GONE
-            noResultView.visibility = android.view.View.VISIBLE
-            noResultText.text = "未找到 \"$query\""
+            // English to Chinese search
+            val result = dictDb.search(query)
+            showLoading(false)
+
+            if (result != null) {
+                showResult(result)
+            } else {
+                hintView.visibility = android.view.View.GONE
+                noDatabaseView.visibility = android.view.View.GONE
+                resultScrollView.visibility = android.view.View.GONE
+                noResultView.visibility = android.view.View.VISIBLE
+                noResultText.text = "未找到 \"$query\""
+            }
         }
+    }
+
+    private fun showChineseResults(query: String, results: List<com.wordnote.app.data.DictEntry>) {
+        hintView.visibility = android.view.View.GONE
+        noDatabaseView.visibility = android.view.View.GONE
+        noResultView.visibility = android.view.View.GONE
+        resultScrollView.visibility = android.view.View.VISIBLE
+
+        // Build results text
+        val sb = StringBuilder()
+        sb.appendLine("包含 \"$query\" 的英文单词：")
+        sb.appendLine()
+
+        results.forEachIndexed { index, entry ->
+            sb.appendLine("${entry.word}  ${entry.translation ?: ""}")
+            if (index < results.size - 1) {
+                sb.appendLine()
+            }
+        }
+
+        resultWord.text = "查询结果"
+        resultPhonetic.text = "共找到 ${results.size} 个单词"
+        resultTranslation.text = sb.toString()
+        tagsContainer.visibility = android.view.View.GONE
     }
 
     private fun showResult(entry: com.wordnote.app.data.DictEntry) {
