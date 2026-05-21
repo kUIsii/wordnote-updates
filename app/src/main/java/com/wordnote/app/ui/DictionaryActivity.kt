@@ -223,7 +223,7 @@ class DictionaryActivity : AppCompatActivity() {
         val tags = mutableListOf<String>()
 
         if (entry.collins > 0) {
-            tags.add("柯林斯 ${entry.collins}★")
+            tags.add("柯林斯 Lv.${entry.collins}")
         }
         if (entry.oxford > 0) {
             tags.add("牛津核心")

@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Background Gradient - softer blue-grey -->
-    <color name="background">#F0F4F8</color>
-    <color name="gradient_start">#F0F4F8</color>
-    <color name="gradient_end">#FAFCFE</color>
+    <color name="background">#F4F7FB</color>
+    <color name="gradient_start">#EDF2F9</color>
+    <color name="gradient_end">#FFFFFF</color>
 
     <!-- Primary Blue - softer -->
-    <color name="primary">#5B7FD6</color>
-    <color name="primary_dark">#4A6BC4</color>
-    <color name="primary_light">#D6E4F7</color>
+    <color name="primary">#6B8FD4</color>
+    <color name="primary_dark">#5A7DC0</color>
+    <color name="primary_light">#DCE6F5</color>
 
     <!-- Category Colors - softer, less harsh -->
     <color name="cat_hard">#E8636A</color>

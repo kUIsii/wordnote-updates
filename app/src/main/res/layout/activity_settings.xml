@@ -92,7 +92,7 @@
                         <ImageView
                             android:layout_width="24dp"
                             android:layout_height="24dp"
-                            android:src="@android:drawable/ic_menu_my_calendar"
+                            android:src="@drawable/ic_calendar"
                             android:contentDescription="日历" />
 
                         <LinearLayout
@@ -123,8 +123,7 @@
                         <ImageView
                             android:layout_width="20dp"
                             android:layout_height="20dp"
-                            android:src="@android:drawable/ic_media_play"
-                            android:alpha="0.3"
+                            android:src="@drawable/ic_chevron_right"
                             android:contentDescription="执行" />
 
                     </LinearLayout>
@@ -179,8 +178,7 @@
                         <ImageView
                             android:layout_width="20dp"
                             android:layout_height="20dp"
-                            android:src="@android:drawable/ic_media_play"
-                            android:alpha="0.3"
+                            android:src="@drawable/ic_chevron_right"
                             android:contentDescription="执行" />
 
                     </LinearLayout>
@@ -235,8 +233,7 @@
                         <ImageView
                             android:layout_width="20dp"
                             android:layout_height="20dp"
-                            android:src="@android:drawable/ic_media_play"
-                            android:alpha="0.3"
+                            android:src="@drawable/ic_chevron_right"
                             android:contentDescription="执行" />
 
                     </LinearLayout>
@@ -275,8 +272,7 @@
                     <ImageView
                         android:layout_width="24dp"
                         android:layout_height="24dp"
-                        android:src="@android:drawable/ic_menu_view"
-                        android:alpha="0.6"
+                        android:src="@drawable/ic_dark_mode"
                         android:contentDescription="主题" />
 
                     <TextView

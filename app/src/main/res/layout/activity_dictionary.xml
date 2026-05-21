@@ -118,11 +118,11 @@
             android:gravity="center"
             android:orientation="vertical">
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="📖"
-                android:textSize="48sp" />
+            <ImageView
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:src="@drawable/ic_hint_book"
+                android:contentDescription="提示" />
 
             <TextView
                 android:layout_width="wrap_content"
@@ -143,11 +143,11 @@
             android:orientation="vertical"
             android:visibility="gone">
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="📂"
-                android:textSize="48sp" />
+            <ImageView
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:src="@drawable/ic_no_database"
+                android:contentDescription="无数据库" />
 
             <TextView
                 android:layout_width="wrap_content"
@@ -187,11 +187,11 @@
             android:orientation="vertical"
             android:visibility="gone">
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="😅"
-                android:textSize="48sp" />
+            <ImageView
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:src="@drawable/ic_no_result"
+                android:contentDescription="无结果" />
 
             <TextView
                 android:id="@+id/noResultText"
