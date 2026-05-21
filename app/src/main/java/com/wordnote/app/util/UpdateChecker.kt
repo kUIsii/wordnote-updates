@@ -54,8 +54,9 @@ object UpdateChecker {
             val assets = json.getJSONArray("assets")
             if (assets.length() == 0) return@withContext null
 
-            val apkUrl = assets.getJSONObject(0).getString("browser_download_url")
-            android.util.Log.d("UpdateChecker", "Update available: $remoteVersionName")
+            val assetId = assets.getJSONObject(0).getString("id")
+            val apkUrl = "https://api.github.com/repos/$GITHUB_OWNER/$GITHUB_REPO/releases/assets/$assetId"
+            android.util.Log.d("UpdateChecker", "Update available: $remoteVersionName, URL: $apkUrl")
 
             UpdateInfo(
                 versionName = remoteVersionName,
@@ -89,6 +90,7 @@ object UpdateChecker {
             val connection = url.openConnection() as HttpURLConnection
             connection.apply {
                 setRequestProperty("Authorization", "token $GITHUB_TOKEN")
+                setRequestProperty("Accept", "application/octet-stream")
                 connectTimeout = 60000
                 readTimeout = 60000
                 instanceFollowRedirects = true
