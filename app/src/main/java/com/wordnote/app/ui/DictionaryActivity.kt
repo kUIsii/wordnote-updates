@@ -30,7 +30,7 @@ class DictionaryActivity : AppCompatActivity() {
     private lateinit var resultWord: TextView
     private lateinit var resultPhonetic: TextView
     private lateinit var resultTranslation: TextView
-    private lateinit var tagsContainer: LinearLayout
+    private lateinit var tagsContainer: com.google.android.flexbox.FlexboxLayout
     private lateinit var selectDbButton: com.google.android.material.button.MaterialButton
     private lateinit var searchModeButton: TextView
 
