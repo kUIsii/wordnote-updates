@@ -40,6 +40,7 @@ Android 英语单词记忆工具，支持分类管理、一词多义标注、分
 | 离线词典搜索 | 独立词典页面，支持加载 ECDict 离线数据库查询英文单词释义、音标、词频、考试标签；通过 SAF 选择数据库文件，首次选择后自动记住 |
 | 中文检索英文 | 词典页面支持中→英反向查询，输入中文可查找包含该释义的所有英文单词 |
 | 应用内自动更新 | 启动时检查 GitHub 私有仓库 Releases，有新版本弹窗提示下载安装，无需数据线 |
+| 日记/备忘录 | 每日记录想法、待办事项，支持心情追踪、关联单词、学习摘要统计 |
 
 ### 开发中 / 待做
 
@@ -65,12 +66,16 @@ app/src/main/java/com/wordnote/app/
 │   ├── WordTag.kt                  # 多对多关联
 │   ├── WordMeaning.kt              # 释义实体 (一词多义)
 │   ├── WordGroup.kt                # 词语分组
+│   ├── DiaryEntry.kt               # 日记条目实体
+│   ├── DiaryTodo.kt                # 日记待办实体
+│   ├── DiaryWordRef.kt             # 日记-单词关联实体
 │   ├── WordDao.kt                  # 单词 DAO
 │   ├── CategoryDao.kt              # 分类 DAO
 │   ├── TagDao.kt                   # 标签 DAO
 │   ├── WordMeaningDao.kt           # 释义 DAO
 │   ├── WordGroupDao.kt             # 分组 DAO
-│   ├── WordDatabase.kt             # Room 数据库 (v6)
+│   ├── DiaryDao.kt                 # 日记 DAO
+│   ├── WordDatabase.kt             # Room 数据库 (v7)
 │   ├── WordRepository.kt           # 数据仓库层
 │   └── DictionaryDatabase.kt       # 离线词典数据库 (ECDict)
 ├── ui/
@@ -81,9 +86,14 @@ app/src/main/java/com/wordnote/app/
 │   ├── SettingsActivity.kt         # 设置：备份/恢复/深色模式/日历查看
 │   ├── CalendarViewActivity.kt     # 日历查看：按日期查看单词
 │   ├── DictionaryActivity.kt       # 离线词典搜索页面
+│   ├── DiaryActivity.kt            # 日记列表页面
+│   ├── DiaryDetailActivity.kt      # 日记详情/编辑页面
+│   ├── DiaryViewModel.kt           # 日记 ViewModel
 │   └── adapter/
 │       ├── WordAdapter.kt          # 单词列表适配器 (紧凑单行布局，支持批量选择)
-│       └── CategoryAdapter.kt      # 分类列表适配器
+│       ├── CategoryAdapter.kt      # 分类列表适配器
+│       ├── DiaryAdapter.kt         # 日记列表适配器
+│       └── DiaryTodoAdapter.kt     # 日记待办适配器
 └── util/
     ├── DateUtils.kt                # 日期工具
     └── ActivityTransitionExt.kt    # 页面过渡动画兼容性工具 (API 34+ 兼容)
@@ -97,9 +107,13 @@ app/src/main/res/
 │   ├── activity_settings.xml       # 设置页
 │   ├── activity_calendar_view.xml  # 日历查看页
 │   ├── activity_dictionary.xml     # 离线词典搜索页
+│   ├── activity_diary.xml          # 日记列表页
+│   ├── activity_diary_detail.xml   # 日记详情/编辑页
 │   ├── item_word_compact.xml       # 单词条目 (单行紧凑)
 │   ├── item_date_header.xml        # 日期分组标题
 │   ├── item_category.xml           # 分类条目
+│   ├── item_diary_entry.xml        # 日记列表条目
+│   ├── item_diary_todo.xml         # 日记待办条目
 │   ├── sheet_edit_word.xml         # 底部编辑弹窗
 │   ├── dialog_add_category.xml     # 添加分类弹窗
 │   ├── dialog_note_input.xml       # 备注输入弹窗
@@ -122,7 +136,7 @@ app/src/main/res/
 └── values-night/themes.xml         # 暗色主题
 ```
 
-### 数据库 Schema (v6)
+### 数据库 Schema (v7)
 
 ```
 words
@@ -157,6 +171,27 @@ word_groups
 ├── name: String
 └── createdAt: Long
 
+diary_entries (NEW)
+├── id (PK)
+├── entryDate: Long (唯一，每天一条)
+├── content: String (日记正文)
+├── mood: Int (0=无, 1=开心, 2=平静, 3=难过, 4=疲惫, 5=兴奋)
+├── createdAt: Long
+└── updatedAt: Long
+
+diary_todos (NEW)
+├── id (PK)
+├── diaryEntryId: Long (FK → diary_entries, CASCADE)
+├── text: String
+├── isCompleted: Boolean
+├── sortOrder: Int
+└── createdAt: Long
+
+diary_word_refs (NEW)
+├── diaryEntryId: Long (FK → diary_entries, CASCADE)
+├── wordId: Long (FK → words, CASCADE)
+└── addedAt: Long
+
 tags / word_tag (标签系统，目前未在 UI 使用)
 ```
 
@@ -167,6 +202,7 @@ tags / word_tag (标签系统，目前未在 UI 使用)
 - MIGRATION_3_4: 添加 word.groupId, 创建 word_groups 表
 - MIGRATION_4_5: 添加 word.batchId (批量输入分组)
 - MIGRATION_5_6: 添加 word_meanings.isHighlighted (释义颜色标记)
+- MIGRATION_6_7: 创建 diary_entries, diary_todos, diary_word_refs 表 (日记/备忘录功能)
 
 ---
 
@@ -186,6 +222,18 @@ tags / word_tag (标签系统，目前未在 UI 使用)
 ---
 
 ## 开发日志
+
+### 2026-05-21 (v2.2.0)
+
+- 新增日记/备忘录功能
+  - 日记列表页面：按日期倒序显示所有日记条目，支持搜索
+  - 日记详情页面：支持文字编辑、心情选择、待办事项、关联单词
+  - 心情追踪：6种心情选项（无/开心/平静/难过/疲惫/兴奋）
+  - 待办清单：每个日记可添加多个待办事项，支持勾选完成
+  - 单词关联：可将单词库中的单词关联到日记，形成"今日所学"
+  - 学习摘要：自动统计今日新增单词数和复习单词数
+- 数据库升级至 v7，新增 diary_entries, diary_todos, diary_word_refs 三张表
+- 主页添加日记入口按钮
 
 ### 2026-05-20 (v4)
 

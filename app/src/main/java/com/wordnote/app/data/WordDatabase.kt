@@ -11,8 +11,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @Database(
-    entities = [Word::class, Category::class, Tag::class, WordTag::class, WordMeaning::class, WordGroup::class],
-    version = 6,
+    entities = [Word::class, Category::class, Tag::class, WordTag::class, WordMeaning::class, WordGroup::class, DiaryEntry::class, DiaryTodo::class, DiaryWordRef::class],
+    version = 7,
     exportSchema = false
 )
 abstract class WordDatabase : RoomDatabase() {
@@ -21,6 +21,7 @@ abstract class WordDatabase : RoomDatabase() {
     abstract fun tagDao(): TagDao
     abstract fun wordMeaningDao(): WordMeaningDao
     abstract fun wordGroupDao(): WordGroupDao
+    abstract fun diaryDao(): DiaryDao
 
     companion object {
         @Volatile
@@ -85,6 +86,46 @@ abstract class WordDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS diary_entries (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        entryDate INTEGER NOT NULL,
+                        content TEXT NOT NULL DEFAULT '',
+                        mood INTEGER NOT NULL DEFAULT 0,
+                        createdAt INTEGER NOT NULL DEFAULT 0,
+                        updatedAt INTEGER NOT NULL DEFAULT 0
+                    )
+                """)
+                database.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_diary_entries_entryDate ON diary_entries(entryDate)")
+
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS diary_todos (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        diaryEntryId INTEGER NOT NULL,
+                        text TEXT NOT NULL,
+                        isCompleted INTEGER NOT NULL DEFAULT 0,
+                        sortOrder INTEGER NOT NULL DEFAULT 0,
+                        createdAt INTEGER NOT NULL DEFAULT 0,
+                        FOREIGN KEY (diaryEntryId) REFERENCES diary_entries(id) ON DELETE CASCADE
+                    )
+                """)
+                database.execSQL("CREATE INDEX IF NOT EXISTS index_diary_todos_diaryEntryId ON diary_todos(diaryEntryId)")
+
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS diary_word_refs (
+                        diaryEntryId INTEGER NOT NULL,
+                        wordId INTEGER NOT NULL,
+                        addedAt INTEGER NOT NULL DEFAULT 0,
+                        PRIMARY KEY(diaryEntryId, wordId),
+                        FOREIGN KEY(diaryEntryId) REFERENCES diary_entries(id) ON DELETE CASCADE,
+                        FOREIGN KEY(wordId) REFERENCES words(id) ON DELETE CASCADE
+                    )
+                """)
+            }
+        }
+
         fun getDatabase(context: Context): WordDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -92,7 +133,7 @@ abstract class WordDatabase : RoomDatabase() {
                     WordDatabase::class.java,
                     "word_database"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
                     .fallbackToDestructiveMigration()
                     .addCallback(DatabaseCallback())
                     .build()

@@ -47,6 +47,14 @@
             android:name=".ui.DictionaryActivity"
             android:parentActivityName=".ui.MainActivity" />
 
+        <activity
+            android:name=".ui.DiaryActivity"
+            android:parentActivityName=".ui.MainActivity" />
+
+        <activity
+            android:name=".ui.DiaryDetailActivity"
+            android:parentActivityName=".ui.DiaryActivity" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

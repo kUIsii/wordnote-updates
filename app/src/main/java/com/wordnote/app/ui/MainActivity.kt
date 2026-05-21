@@ -166,6 +166,11 @@ class MainActivity : AppCompatActivity() {
             compatOverridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left)
         }
 
+        findViewById<ImageView>(R.id.diaryButton).setOnClickListener {
+            startActivity(Intent(this, DiaryActivity::class.java))
+            compatOverridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left)
+        }
+
         manageCategoriesButton.setOnClickListener {
             startActivity(Intent(this, CategoryActivity::class.java))
             compatOverridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left)
