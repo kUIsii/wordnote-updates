@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="@color/background"
+    android:background="#F5F1EB"
     tools:context=".ui.DiaryActivity">
 
     <!-- Header -->
@@ -13,9 +13,9 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:paddingHorizontal="16dp"
-        android:paddingTop="44dp"
-        android:paddingBottom="12dp"
+        android:paddingHorizontal="20dp"
+        android:paddingTop="48dp"
+        android:paddingBottom="8dp"
         android:gravity="center_vertical">
 
         <ImageView
@@ -26,37 +26,68 @@
             android:background="?attr/selectableItemBackgroundBorderless"
             android:padding="6dp"
             android:contentDescription="返回"
-            android:alpha="0.7" />
+            android:alpha="0.5" />
 
         <TextView
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:layout_marginStart="12dp"
-            android:text="日记"
-            android:textColor="@color/text_primary"
+            android:text="日记本"
+            android:textColor="#3D3D3D"
             android:textSize="22sp"
             android:textStyle="bold"
             android:fontFamily="sans-serif-medium" />
 
+        <ImageView
+            android:id="@+id/searchButton"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:src="@drawable/ic_search"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:padding="6dp"
+            android:contentDescription="搜索"
+            android:alpha="0.5" />
+
     </LinearLayout>
 
-    <!-- Search Bar -->
-    <EditText
-        android:id="@+id/searchEditText"
+    <!-- Month Selector -->
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="40dp"
-        android:layout_marginHorizontal="16dp"
-        android:layout_marginBottom="8dp"
-        android:hint="搜索日记内容..."
-        android:inputType="text"
-        android:maxLines="1"
-        android:paddingStart="12dp"
-        android:paddingEnd="12dp"
-        android:textSize="14sp"
-        android:background="@drawable/search_box_background"
-        android:textColor="@color/text_primary"
-        android:textColorHint="@color/text_hint" />
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:paddingVertical="12dp">
+
+        <ImageView
+            android:id="@+id/prevMonthButton"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:src="@drawable/ic_chevron_right"
+            android:rotation="180"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:padding="4dp"
+            android:contentDescription="上个月" />
+
+        <TextView
+            android:id="@+id/monthTextView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="24dp"
+            android:textColor="#3D3D3D"
+            android:textSize="17sp"
+            android:textStyle="bold" />
+
+        <ImageView
+            android:id="@+id/nextMonthButton"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:src="@drawable/ic_chevron_right"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:padding="4dp"
+            android:contentDescription="下个月" />
+
+    </LinearLayout>
 
     <!-- Content -->
     <FrameLayout
@@ -73,26 +104,26 @@
             android:orientation="vertical">
 
             <ImageView
-                android:layout_width="64dp"
-                android:layout_height="64dp"
+                android:layout_width="80dp"
+                android:layout_height="80dp"
                 android:src="@drawable/ic_diary"
                 android:contentDescription="日记"
-                android:alpha="0.4" />
+                android:alpha="0.3" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
-                android:text="还没有日记"
-                android:textColor="@color/text_secondary"
+                android:text="这个月还没有日记"
+                android:textColor="#8A8A8A"
                 android:textSize="15sp" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
+                android:layout_marginTop="6dp"
                 android:text="点击右下角按钮开始记录"
-                android:textColor="@color/text_hint"
+                android:textColor="#B0B0B0"
                 android:textSize="13sp" />
 
         </LinearLayout>
@@ -114,11 +145,12 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|end"
-        android:layout_margin="16dp"
+        android:layout_margin="20dp"
         android:src="@drawable/ic_add_diary"
         android:contentDescription="新建日记"
-        app:backgroundTint="@color/primary"
+        app:backgroundTint="#7D9B76"
         app:tint="@android:color/white"
-        app:fabSize="normal" />
+        app:fabSize="normal"
+        app:elevation="6dp" />
 
 </LinearLayout>

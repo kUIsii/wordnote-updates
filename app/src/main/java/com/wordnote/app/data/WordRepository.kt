@@ -98,20 +98,6 @@ class WordRepository(
     fun getAllDiaryEntries() = diaryDao.getAllEntries()
     suspend fun getAllDiaryEntriesSync() = diaryDao.getAllEntriesSync()
     fun searchDiaryEntries(query: String) = diaryDao.searchEntries(query)
-
-    // Diary Todo operations
-    suspend fun insertDiaryTodo(todo: DiaryTodo) = diaryDao.insertTodo(todo)
-    suspend fun updateDiaryTodo(todo: DiaryTodo) = diaryDao.updateTodo(todo)
-    suspend fun deleteDiaryTodo(todo: DiaryTodo) = diaryDao.deleteTodo(todo)
-    fun getTodosForDiaryEntry(entryId: Long) = diaryDao.getTodosForEntry(entryId)
-    suspend fun getTodosForDiaryEntrySync(entryId: Long) = diaryDao.getTodosForEntrySync(entryId)
-
-    // Diary Word Ref operations
-    suspend fun linkWordToDiary(entryId: Long, wordId: Long) = diaryDao.insertWordRef(DiaryWordRef(entryId, wordId))
-    suspend fun unlinkWordFromDiary(entryId: Long, wordId: Long) = diaryDao.deleteWordRef(DiaryWordRef(entryId, wordId))
-    fun getWordsForDiaryEntry(entryId: Long) = diaryDao.getWordsForEntry(entryId)
-    suspend fun getWordsForDiaryEntrySync(entryId: Long) = diaryDao.getWordsForEntrySync(entryId)
-    suspend fun getWordsAddedInRange(start: Long, end: Long) = diaryDao.getWordsAddedInRange(start, end)
-    suspend fun getWordsReviewedInRange(start: Long, end: Long) = diaryDao.getWordsReviewedInRange(start, end)
-    fun getTotalDiaryCount() = diaryDao.getTotalDiaryCount()
+    fun getDiaryEntriesBetween(start: Long, end: Long) = diaryDao.getEntriesBetween(start, end)
+    suspend fun getDiaryEntriesBetweenSync(start: Long, end: Long) = diaryDao.getEntriesBetweenSync(start, end)
 }

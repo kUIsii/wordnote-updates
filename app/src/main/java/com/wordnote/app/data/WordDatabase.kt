@@ -11,7 +11,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @Database(
-    entities = [Word::class, Category::class, Tag::class, WordTag::class, WordMeaning::class, WordGroup::class, DiaryEntry::class, DiaryTodo::class, DiaryWordRef::class],
+    entities = [Word::class, Category::class, Tag::class, WordTag::class, WordMeaning::class, WordGroup::class, DiaryEntry::class],
     version = 7,
     exportSchema = false
 )

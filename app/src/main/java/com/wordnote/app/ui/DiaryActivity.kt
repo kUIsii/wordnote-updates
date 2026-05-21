@@ -2,8 +2,6 @@ package com.wordnote.app.ui
 
 import android.content.Intent
 import android.os.Bundle
-import android.text.Editable
-import android.text.TextWatcher
 import android.view.View
 import android.widget.EditText
 import android.widget.ImageView
@@ -25,7 +23,10 @@ class DiaryActivity : AppCompatActivity() {
     private lateinit var diaryAdapter: DiaryAdapter
     private lateinit var emptyView: LinearLayout
     private lateinit var diaryRecyclerView: RecyclerView
-    private lateinit var searchEditText: EditText
+    private lateinit var monthTextView: TextView
+
+    private var currentYear = Calendar.getInstance().get(Calendar.YEAR)
+    private var currentMonth = Calendar.getInstance().get(Calendar.MONTH)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -35,7 +36,7 @@ class DiaryActivity : AppCompatActivity() {
 
         initViews()
         setupRecyclerView()
-        setupSearch()
+        setupMonthSelector()
         observeDiaryEntries()
     }
 
@@ -47,7 +48,11 @@ class DiaryActivity : AppCompatActivity() {
 
         emptyView = findViewById(R.id.emptyView)
         diaryRecyclerView = findViewById(R.id.diaryRecyclerView)
-        searchEditText = findViewById(R.id.searchEditText)
+        monthTextView = findViewById(R.id.monthTextView)
+
+        findViewById<ImageView>(R.id.searchButton).setOnClickListener {
+            showSearchDialog()
+        }
 
         findViewById<FloatingActionButton>(R.id.fabAdd).setOnClickListener {
             openDiaryDetail(System.currentTimeMillis())
@@ -55,46 +60,61 @@ class DiaryActivity : AppCompatActivity() {
     }
 
     private fun setupRecyclerView() {
-        diaryAdapter = DiaryAdapter { entry ->
-            openDiaryDetail(entry.entryDate)
-        }
+        diaryAdapter = DiaryAdapter(
+            onClick = { entry ->
+                openDiaryDetail(entry.entryDate)
+            },
+            onLongClick = { entry ->
+                showDeleteDialog(entry)
+            }
+        )
         diaryRecyclerView.apply {
             layoutManager = LinearLayoutManager(this@DiaryActivity)
             adapter = diaryAdapter
         }
     }
 
-    private fun setupSearch() {
-        searchEditText.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-            override fun afterTextChanged(s: Editable?) {
-                val query = s?.toString()?.trim() ?: ""
-                if (query.isEmpty()) {
-                    observeDiaryEntries()
-                } else {
-                    viewModel.searchDiaryEntries(query).observe(this@DiaryActivity) { entries ->
-                        updateUI(entries)
-                    }
-                }
-            }
-        })
-    }
+    private fun setupMonthSelector() {
+        updateMonthDisplay()
 
-    private fun observeDiaryEntries() {
-        viewModel.allDiaryEntries.observe(this) { entries ->
-            updateUI(entries)
+        findViewById<ImageView>(R.id.prevMonthButton).setOnClickListener {
+            currentMonth--
+            if (currentMonth < 0) {
+                currentMonth = 11
+                currentYear--
+            }
+            updateMonthDisplay()
+            observeDiaryEntries()
+        }
+
+        findViewById<ImageView>(R.id.nextMonthButton).setOnClickListener {
+            currentMonth++
+            if (currentMonth > 11) {
+                currentMonth = 0
+                currentYear++
+            }
+            updateMonthDisplay()
+            observeDiaryEntries()
         }
     }
 
-    private fun updateUI(entries: List<com.wordnote.app.data.DiaryEntry>?) {
-        if (entries.isNullOrEmpty()) {
-            emptyView.visibility = View.VISIBLE
-            diaryRecyclerView.visibility = View.GONE
-        } else {
-            emptyView.visibility = View.GONE
-            diaryRecyclerView.visibility = View.VISIBLE
-            diaryAdapter.submitList(entries)
+    private fun updateMonthDisplay() {
+        monthTextView.text = "${currentYear}年${currentMonth + 1}月"
+    }
+
+    private fun observeDiaryEntries() {
+        val start = viewModel.getStartOfMonth(currentYear, currentMonth)
+        val end = viewModel.getEndOfMonth(currentYear, currentMonth)
+
+        viewModel.getDiaryEntriesBetween(start, end).observe(this) { entries ->
+            if (entries.isNullOrEmpty()) {
+                emptyView.visibility = View.VISIBLE
+                diaryRecyclerView.visibility = View.GONE
+            } else {
+                emptyView.visibility = View.GONE
+                diaryRecyclerView.visibility = View.VISIBLE
+                diaryAdapter.submitList(entries)
+            }
         }
     }
 
@@ -106,9 +126,52 @@ class DiaryActivity : AppCompatActivity() {
         overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left)
     }
 
+    private fun showDeleteDialog(entry: com.wordnote.app.data.DiaryEntry) {
+        val dateStr = java.text.SimpleDateFormat("M月d日", java.util.Locale.CHINA).format(java.util.Date(entry.entryDate))
+        MaterialAlertDialogBuilder(this)
+            .setTitle("删除日记")
+            .setMessage("确定要删除 ${dateStr} 的日记吗？")
+            .setPositiveButton("删除") { _, _ ->
+                viewModel.deleteDiaryEntry(entry)
+            }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+
+    private fun showSearchDialog() {
+        val input = EditText(this).apply {
+            hint = "搜索日记内容..."
+            setPadding(48, 32, 48, 32)
+        }
+
+        MaterialAlertDialogBuilder(this)
+            .setTitle("搜索日记")
+            .setView(input)
+            .setPositiveButton("搜索") { _, _ ->
+                val query = input.text.toString().trim()
+                if (query.isNotEmpty()) {
+                    searchDiary(query)
+                }
+            }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+
+    private fun searchDiary(query: String) {
+        viewModel.searchDiaryEntries(query).observe(this) { entries ->
+            if (entries.isNullOrEmpty()) {
+                emptyView.visibility = View.VISIBLE
+                diaryRecyclerView.visibility = View.GONE
+            } else {
+                emptyView.visibility = View.GONE
+                diaryRecyclerView.visibility = View.VISIBLE
+                diaryAdapter.submitList(entries)
+            }
+        }
+    }
+
     override fun onResume() {
         super.onResume()
-        searchEditText.text.clear()
         observeDiaryEntries()
     }
 }

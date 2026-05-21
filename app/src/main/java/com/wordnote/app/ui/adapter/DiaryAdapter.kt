@@ -15,18 +15,13 @@ import java.util.Date
 import java.util.Locale
 
 class DiaryAdapter(
-    private val onClick: (DiaryEntry) -> Unit
+    private val onClick: (DiaryEntry) -> Unit,
+    private val onLongClick: (DiaryEntry) -> Unit
 ) : ListAdapter<DiaryEntry, DiaryAdapter.DiaryViewHolder>(DiaryDiffCallback()) {
 
-    private val dateFormat = SimpleDateFormat("yyyy年M月d日", Locale.CHINA)
-    private val moodMap = mapOf(
-        0 to "",
-        1 to "😊",
-        2 to "😐",
-        3 to "😔",
-        4 to "😴",
-        5 to "🎉"
-    )
+    private val dayFormat = SimpleDateFormat("d", Locale.CHINA)
+    private val weekdayFormat = SimpleDateFormat("EEEE", Locale.CHINA)
+    private val monthYearFormat = SimpleDateFormat("yyyy年M月", Locale.CHINA)
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): DiaryViewHolder {
         val view = LayoutInflater.from(parent.context).inflate(R.layout.item_diary_entry, parent, false)
@@ -38,21 +33,30 @@ class DiaryAdapter(
     }
 
     inner class DiaryViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        private val dateTextView: TextView = itemView.findViewById(R.id.dateTextView)
-        private val moodTextView: TextView = itemView.findViewById(R.id.moodTextView)
+        private val dayTextView: TextView = itemView.findViewById(R.id.dayTextView)
+        private val weekdayTextView: TextView = itemView.findViewById(R.id.weekdayTextView)
+        private val monthYearTextView: TextView = itemView.findViewById(R.id.monthYearTextView)
         private val contentTextView: TextView = itemView.findViewById(R.id.contentTextView)
         private val wordCountTextView: TextView = itemView.findViewById(R.id.wordCountTextView)
-        private val todoCountTextView: TextView = itemView.findViewById(R.id.todoCountTextView)
 
         fun bind(entry: DiaryEntry) {
-            dateTextView.text = dateFormat.format(Date(entry.entryDate))
-            moodTextView.text = moodMap[entry.mood] ?: ""
+            val date = Date(entry.entryDate)
+            dayTextView.text = dayFormat.format(date)
+            weekdayTextView.text = weekdayFormat.format(date)
+            monthYearTextView.text = monthYearFormat.format(date)
 
-            val preview = entry.content.take(100)
+            val preview = entry.content.take(150)
             contentTextView.text = preview.ifBlank { "暂无内容" }
             contentTextView.alpha = if (preview.isBlank()) 0.5f else 1.0f
 
+            val wordCount = entry.content.length
+            wordCountTextView.text = "$wordCount 字"
+
             itemView.setOnClickListener { onClick(entry) }
+            itemView.setOnLongClickListener {
+                onLongClick(entry)
+                true
+            }
         }
     }
 
