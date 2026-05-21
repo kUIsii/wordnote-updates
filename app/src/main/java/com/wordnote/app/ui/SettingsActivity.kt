@@ -26,8 +26,19 @@ class SettingsActivity : AppCompatActivity() {
         setContentView(R.layout.activity_settings)
 
         setupToolbar()
+        setupVersion()
         setupDarkMode()
         setupBackupRestore()
+    }
+
+    private fun setupVersion() {
+        try {
+            val packageInfo = packageManager.getPackageInfo(packageName, 0)
+            val versionText = findViewById<android.widget.TextView>(R.id.versionText)
+            versionText.text = packageInfo.versionName ?: "1.0"
+        } catch (e: Exception) {
+            // ignore
+        }
     }
 
     private fun setupToolbar() {

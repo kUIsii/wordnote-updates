@@ -341,9 +341,9 @@
                             android:textSize="15sp" />
 
                         <TextView
+                            android:id="@+id/versionText"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="1.0.0"
                             android:textColor="@color/text_hint"
                             android:textSize="14sp" />
 
