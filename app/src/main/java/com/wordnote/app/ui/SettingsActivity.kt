@@ -14,6 +14,8 @@ import com.wordnote.app.data.WordDatabase
 import com.wordnote.app.util.compatOverridePendingTransition
 import com.wordnote.app.util.compatOverridePendingTransitionClose
 import kotlinx.coroutines.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.File
 import org.json.JSONObject
 
@@ -31,13 +33,78 @@ class SettingsActivity : AppCompatActivity() {
         setupBackupRestore()
     }
 
+    private var updateDialogShown = false
+
     private fun setupVersion() {
         try {
             val packageInfo = packageManager.getPackageInfo(packageName, 0)
             val versionText = findViewById<android.widget.TextView>(R.id.versionText)
             versionText.text = packageInfo.versionName ?: "1.0"
+
+            versionText.setOnClickListener {
+                updateDialogShown = false
+                checkForUpdate()
+            }
         } catch (e: Exception) {
             // ignore
+        }
+    }
+
+    private fun checkForUpdate() {
+        CoroutineScope(Dispatchers.Main).launch {
+            try {
+                val packageInfo = packageManager.getPackageInfo(packageName, 0)
+                val currentVersionName = packageInfo.versionName ?: "1.0"
+
+                Toast.makeText(this@SettingsActivity, "正在检查更新...", Toast.LENGTH_SHORT).show()
+
+                val updateInfo = withContext(Dispatchers.IO) {
+                    com.wordnote.app.util.UpdateChecker.checkForUpdate(currentVersionName)
+                }
+
+                if (updateInfo != null) {
+                    showUpdateDialog(updateInfo)
+                } else {
+                    Toast.makeText(this@SettingsActivity, "当前已是最新版本", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                Toast.makeText(this@SettingsActivity, "检查失败: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun showUpdateDialog(updateInfo: com.wordnote.app.util.UpdateChecker.UpdateInfo) {
+        if (updateDialogShown) return
+        updateDialogShown = true
+
+        MaterialAlertDialogBuilder(this)
+            .setTitle("发现新版本 ${updateInfo.versionName}")
+            .setMessage(updateInfo.body.ifBlank { "有新版本可用，是否更新？" })
+            .setPositiveButton("更新") { _, _ ->
+                startUpdate(updateInfo)
+            }
+            .setNegativeButton("稍后") { _, _ ->
+                updateDialogShown = false
+            }
+            .setOnCancelListener {
+                updateDialogShown = false
+            }
+            .show()
+    }
+
+    private fun startUpdate(updateInfo: com.wordnote.app.util.UpdateChecker.UpdateInfo) {
+        CoroutineScope(Dispatchers.Main).launch {
+            try {
+                com.wordnote.app.util.UpdateChecker.downloadAndInstall(this@SettingsActivity, updateInfo) { }
+                Toast.makeText(this@SettingsActivity, "下载完成，请安装", Toast.LENGTH_LONG).show()
+            } catch (e: Exception) {
+                MaterialAlertDialogBuilder(this@SettingsActivity)
+                    .setTitle("下载失败")
+                    .setMessage("错误信息：\n${e.message}\n\n请检查网络连接后重试")
+                    .setPositiveButton("确定", null)
+                    .show()
+            }
         }
     }
 

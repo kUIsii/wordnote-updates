@@ -77,7 +77,6 @@ class MainActivity : AppCompatActivity() {
         setupInput()
         setupSearch()
         observeData()
-        checkForUpdate()
     }
 
     private fun checkForUpdate() {
