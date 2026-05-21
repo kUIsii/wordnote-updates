@@ -82,8 +82,9 @@ class DictionaryDatabase(private val context: Context) {
         if (!isOpen || database == null) return emptyList()
         return try {
             val results = mutableListOf<DictEntry>()
+            // Search for words containing the Chinese term
             database?.rawQuery(
-                "SELECT word, phonetic, translation, pos, collins, oxford, tag, bnc, frq FROM dict WHERE translation LIKE ? COLLATE NOCASE LIMIT 50",
+                "SELECT word, phonetic, translation, pos, collins, oxford, tag, bnc, frq FROM dict WHERE translation LIKE ? COLLATE NOCASE",
                 arrayOf("%$chinese%")
             )?.use { cursor ->
                 while (cursor.moveToNext()) {
@@ -100,7 +101,26 @@ class DictionaryDatabase(private val context: Context) {
                     ))
                 }
             }
-            results
+
+            // Rank by relevance: exact match > starts with > contains
+            // Then sort by frequency (lower frq = more common)
+            results.sortedWith(compareBy<DictEntry> { entry ->
+                val trans = entry.translation ?: ""
+                when {
+                    // Exact match: translation is exactly the Chinese word (or with minor punctuation)
+                    trans == chinese || trans == "$chinese;" || trans == "；$chinese" -> 0
+                    // Starts with the Chinese word
+                    trans.startsWith(chinese) || trans.startsWith("$chinese;") || trans.startsWith("；$chinese") -> 1
+                    // Contains as a standalone term (preceded by ; or space)
+                    trans.contains("；$chinese") || trans.contains("; $chinese") || trans.contains(" $chinese") -> 2
+                    // Default: contains anywhere
+                    else -> 3
+                }
+            }.thenBy { entry ->
+                // Sort by frequency within each group (lower = more common)
+                val frq = entry.frq
+                if (frq == 0) 99999 else frq
+            }).take(30)
         } catch (e: Exception) {
             emptyList()
         }

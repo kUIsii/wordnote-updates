@@ -159,21 +159,48 @@ class DictionaryActivity : AppCompatActivity() {
         noResultView.visibility = android.view.View.GONE
         resultScrollView.visibility = android.view.View.VISIBLE
 
-        // Build results text
-        val sb = StringBuilder()
-        sb.appendLine("包含 \"$query\" 的英文单词：")
-        sb.appendLine()
+        // Group results by relevance tier
+        val exactMatches = results.filter { entry ->
+            val trans = entry.translation ?: ""
+            trans == query || trans == "$query;" || trans == "；$query"
+        }
+        val startsWith = results.filter { entry ->
+            val trans = entry.translation ?: ""
+            (trans.startsWith(query) || trans.startsWith("$query;") || trans.startsWith("；$query")) && !exactMatches.contains(entry)
+        }
+        val contains = results.filter { entry -> !exactMatches.contains(entry) && !startsWith.contains(entry) }
 
-        results.forEachIndexed { index, entry ->
-            sb.appendLine("${entry.word}  ${entry.translation ?: ""}")
-            if (index < results.size - 1) {
-                sb.appendLine()
+        val sb = StringBuilder()
+
+        if (exactMatches.isNotEmpty()) {
+            sb.appendLine("直接匹配：")
+            exactMatches.forEach { entry ->
+                sb.appendLine("${entry.word}  ${entry.translation ?: ""}")
+            }
+            sb.appendLine()
+        }
+
+        if (startsWith.isNotEmpty()) {
+            sb.appendLine("以此开头：")
+            startsWith.forEach { entry ->
+                sb.appendLine("${entry.word}  ${entry.translation ?: ""}")
+            }
+            sb.appendLine()
+        }
+
+        if (contains.isNotEmpty()) {
+            sb.appendLine("包含 \"$query\"：")
+            contains.take(15).forEach { entry ->
+                sb.appendLine("${entry.word}  ${entry.translation ?: ""}")
+            }
+            if (contains.size > 15) {
+                sb.appendLine("... 还有 ${contains.size - 15} 个")
             }
         }
 
         resultWord.text = "查询结果"
         resultPhonetic.text = "共找到 ${results.size} 个单词"
-        resultTranslation.text = sb.toString()
+        resultTranslation.text = sb.toString().trimEnd()
         tagsContainer.visibility = android.view.View.GONE
     }
 
@@ -228,12 +255,11 @@ class DictionaryActivity : AppCompatActivity() {
                         cornerRadius = 12f * resources.displayMetrics.density
                     }
                     background = bg
-                    val params = LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.WRAP_CONTENT,
-                        LinearLayout.LayoutParams.WRAP_CONTENT
+                    val params = com.google.android.flexbox.FlexboxLayout.LayoutParams(
+                        com.google.android.flexbox.FlexboxLayout.LayoutParams.WRAP_CONTENT,
+                        com.google.android.flexbox.FlexboxLayout.LayoutParams.WRAP_CONTENT
                     ).apply {
-                        marginEnd = dpToPx(6)
-                        bottomMargin = dpToPx(4)
+                        setMargins(dpToPx(6), 0, dpToPx(6), dpToPx(4))
                     }
                     layoutParams = params
                 }

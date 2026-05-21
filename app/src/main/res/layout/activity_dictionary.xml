@@ -262,12 +262,11 @@
                         android:lineSpacingExtra="4dp" />
 
                     <!-- Tags row (below translation) -->
-                    <LinearLayout
+                    <com.google.android.flexbox.FlexboxLayout
                         android:id="@+id/tagsContainer"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="12dp"
-                        android:orientation="horizontal"
                         android:visibility="gone" />
 
                 </LinearLayout>
