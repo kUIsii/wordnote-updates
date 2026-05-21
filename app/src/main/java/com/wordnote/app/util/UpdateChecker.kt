@@ -101,8 +101,7 @@ object UpdateChecker {
                 throw Exception("服务器返回错误: HTTP $responseCode")
             }
 
-            val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-            val apkFile = File(downloadsDir, "wordnote_update.apk")
+            val apkFile = File(context.filesDir, "wordnote_update.apk")
 
             val inputStream = connection.inputStream
             val outputStream = apkFile.outputStream()
