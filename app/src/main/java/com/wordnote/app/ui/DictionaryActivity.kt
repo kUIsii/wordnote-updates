@@ -159,6 +159,12 @@ class DictionaryActivity : AppCompatActivity() {
         noResultView.visibility = android.view.View.GONE
         resultScrollView.visibility = android.view.View.VISIBLE
 
+        // Hide single-word result area
+        resultWord.visibility = android.view.View.GONE
+        resultPhonetic.visibility = android.view.View.GONE
+        resultTranslation.visibility = android.view.View.GONE
+        tagsContainer.visibility = android.view.View.GONE
+
         // Group results by relevance tier
         val exactMatches = results.filter { entry ->
             val trans = entry.translation ?: ""
@@ -170,38 +176,113 @@ class DictionaryActivity : AppCompatActivity() {
         }
         val contains = results.filter { entry -> !exactMatches.contains(entry) && !startsWith.contains(entry) }
 
-        val sb = StringBuilder()
+        val container = findViewById<LinearLayout>(R.id.chineseResultContainer)
+        container.removeAllViews()
+        container.visibility = android.view.View.VISIBLE
 
+        // Header
+        addSectionHeader(container, "共找到 ${results.size} 个结果")
+
+        // Exact matches
         if (exactMatches.isNotEmpty()) {
-            sb.appendLine("直接匹配：")
+            addSectionLabel(container, "直接匹配")
             exactMatches.forEach { entry ->
-                sb.appendLine("${entry.word}  ${entry.translation ?: ""}")
+                addWordCard(container, entry, query)
             }
-            sb.appendLine()
         }
 
+        // Starts with
         if (startsWith.isNotEmpty()) {
-            sb.appendLine("以此开头：")
+            addSectionLabel(container, "以此开头")
             startsWith.forEach { entry ->
-                sb.appendLine("${entry.word}  ${entry.translation ?: ""}")
+                addWordCard(container, entry, query)
             }
-            sb.appendLine()
         }
 
+        // Contains
         if (contains.isNotEmpty()) {
-            sb.appendLine("包含 \"$query\"：")
+            addSectionLabel(container, "包含 \"$query\"")
             contains.take(15).forEach { entry ->
-                sb.appendLine("${entry.word}  ${entry.translation ?: ""}")
+                addWordCard(container, entry, query)
             }
             if (contains.size > 15) {
-                sb.appendLine("... 还有 ${contains.size - 15} 个")
+                addSectionFooter(container, "... 还有 ${contains.size - 15} 个结果")
             }
         }
+    }
 
-        resultWord.text = "查询结果"
-        resultPhonetic.text = "共找到 ${results.size} 个单词"
-        resultTranslation.text = sb.toString().trimEnd()
-        tagsContainer.visibility = android.view.View.GONE
+    private fun addSectionHeader(container: LinearLayout, text: String) {
+        val tv = TextView(this).apply {
+            this.text = text
+            setTextColor(resources.getColor(R.color.text_secondary, null))
+            textSize = 13f
+            setPadding(dpToPx(4), dpToPx(12), dpToPx(4), dpToPx(8))
+        }
+        container.addView(tv)
+    }
+
+    private fun addSectionLabel(container: LinearLayout, text: String) {
+        val tv = TextView(this).apply {
+            this.text = text
+            setTextColor(resources.getColor(R.color.primary, null))
+            textSize = 12f
+            setPadding(dpToPx(4), dpToPx(10), dpToPx(4), dpToPx(4))
+        }
+        container.addView(tv)
+    }
+
+    private fun addSectionFooter(container: LinearLayout, text: String) {
+        val tv = TextView(this).apply {
+            this.text = text
+            setTextColor(resources.getColor(R.color.text_hint, null))
+            textSize = 12f
+            setPadding(dpToPx(4), dpToPx(6), dpToPx(4), dpToPx(4))
+        }
+        container.addView(tv)
+    }
+
+    private fun addWordCard(container: LinearLayout, entry: com.wordnote.app.data.DictEntry, query: String) {
+        val card = com.google.android.material.card.MaterialCardView(this).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                setMargins(0, dpToPx(3), 0, dpToPx(3))
+            }
+            setCardBackgroundColor(resources.getColor(R.color.card_background, null))
+            cardElevation = 0f
+            strokeWidth = 0
+            radius = 12f * resources.displayMetrics.density
+            useCompatPadding = false
+        }
+
+        val inner = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dpToPx(14), dpToPx(10), dpToPx(14), dpToPx(10))
+        }
+
+        // Word
+        val wordTv = TextView(this).apply {
+            this.text = entry.word
+            setTextColor(resources.getColor(R.color.text_primary, null))
+            textSize = 16f
+            paint.isFakeBoldText = true
+        }
+        inner.addView(wordTv)
+
+        // Translation - highlight the query
+        val trans = entry.translation ?: ""
+        val transTv = TextView(this).apply {
+            this.text = trans
+            setTextColor(resources.getColor(R.color.text_secondary, null))
+            textSize = 13f
+            setPadding(0, dpToPx(2), 0, 0)
+            maxLines = 2
+        }
+        inner.addView(transTv)
+
+        card.addView(inner)
+        container.addView(card)
     }
 
     private fun showResult(entry: com.wordnote.app.data.DictEntry) {
@@ -209,6 +290,16 @@ class DictionaryActivity : AppCompatActivity() {
         noDatabaseView.visibility = android.view.View.GONE
         noResultView.visibility = android.view.View.GONE
         resultScrollView.visibility = android.view.View.VISIBLE
+
+        // Hide Chinese results container
+        val chineseContainer = findViewById<LinearLayout>(R.id.chineseResultContainer)
+        chineseContainer.visibility = android.view.View.GONE
+        chineseContainer.removeAllViews()
+
+        // Show single-word result area
+        resultWord.visibility = android.view.View.VISIBLE
+        resultPhonetic.visibility = android.view.View.VISIBLE
+        resultTranslation.visibility = android.view.View.VISIBLE
 
         resultWord.text = entry.word
         resultPhonetic.text = entry.phonetic?.let { "/$it/" } ?: ""
