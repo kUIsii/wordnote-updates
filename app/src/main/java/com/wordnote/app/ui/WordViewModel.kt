@@ -192,6 +192,18 @@ class WordViewModel(application: Application) : AndroidViewModel(application) {
 
     val problematicWordIds: LiveData<List<Long>> = repository.getProblematicWordIds()
 
+    // Copy words to category
+    fun copyWordsToCategory(wordIds: List<Long>, targetCategoryId: Long) = viewModelScope.launch {
+        repository.copyWordsToCategory(wordIds, targetCategoryId)
+    }
+
+    // Meaning reorder
+    fun reorderMeanings(meanings: List<WordMeaning>) = viewModelScope.launch {
+        meanings.forEachIndexed { index, meaning ->
+            repository.updateMeaningSortOrder(meaning.id, index)
+        }
+    }
+
     // WordGroup operations
     val allGroups: LiveData<List<WordGroup>> = repository.allGroups
 

@@ -67,14 +67,21 @@ class WordRepository(
     // WordMeaning operations
     suspend fun insertMeanings(meanings: List<WordMeaning>) = wordMeaningDao.insertAll(meanings)
     suspend fun deleteMeaningsForWord(wordId: Long) = wordMeaningDao.deleteAllForWord(wordId)
-    fun getMeaningsForWord(wordId: Long): LiveData<List<WordMeaning>> = wordMeaningDao.getMeaningsForWord(wordId)
-    suspend fun getMeaningsForWordSync(wordId: Long): List<WordMeaning> = wordMeaningDao.getMeaningsForWordSync(wordId)
+    fun getMeaningsForWord(wordId: Long): LiveData<List<WordMeaning>> = wordMeaningDao.getMeaningsForWordOrdered(wordId)
+    suspend fun getMeaningsForWordSync(wordId: Long): List<WordMeaning> = wordMeaningDao.getMeaningsForWordOrderedSync(wordId)
     suspend fun updateMeaning(meaning: WordMeaning) = wordMeaningDao.update(meaning)
     suspend fun setMeaningProblematic(meaningId: Long, isProblematic: Boolean) = wordMeaningDao.setProblematic(meaningId, isProblematic)
     suspend fun setMeaningHighlighted(meaningId: Long, isHighlighted: Boolean) = wordMeaningDao.setHighlighted(meaningId, isHighlighted)
     suspend fun updateMeaningNote(meaningId: Long, note: String?) = wordMeaningDao.updateNote(meaningId, note)
+    suspend fun updateMeaningSortOrder(meaningId: Long, sortOrder: Int) = wordMeaningDao.updateSortOrder(meaningId, sortOrder)
     fun getProblematicWordIds(): LiveData<List<Long>> = wordMeaningDao.getProblematicWordIds()
     fun getHighlightedMeanings(): LiveData<List<HighlightedMeaning>> = wordMeaningDao.getHighlightedMeanings()
+
+    // Copy words to category
+    suspend fun copyWordsToCategory(wordIds: List<Long>, targetCategoryId: Long) {
+        val now = System.currentTimeMillis()
+        wordDao.copyWordsToCategory(wordIds, targetCategoryId, now)
+    }
 
     // WordGroup operations
     val allGroups: LiveData<List<WordGroup>> = wordGroupDao.getAllGroups()

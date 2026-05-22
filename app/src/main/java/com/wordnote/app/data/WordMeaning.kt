@@ -24,5 +24,6 @@ data class WordMeaning(
     val meaningText: String,
     val note: String? = null,
     val isProblematic: Boolean = false,
-    val isHighlighted: Boolean = false
+    val isHighlighted: Boolean = false,
+    val sortOrder: Int = 0
 )

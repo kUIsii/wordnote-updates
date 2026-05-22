@@ -255,6 +255,7 @@ class MainActivity : AppCompatActivity() {
         val selectionBar = findViewById<LinearLayout>(R.id.selectionBar)
         val selectionCountText = findViewById<TextView>(R.id.selectionCountText)
         val deleteSelectedButton = findViewById<MaterialButton>(R.id.deleteSelectedButton)
+        val copySelectedButton = findViewById<MaterialButton>(R.id.copySelectedButton)
         val cancelButton = findViewById<MaterialButton>(R.id.cancelSelectionButton)
 
         if (selectedIds.isEmpty()) {
@@ -267,6 +268,12 @@ class MainActivity : AppCompatActivity() {
         deleteSelectedButton.setOnClickListener {
             if (selectedIds.isNotEmpty()) {
                 showBatchDeleteDialog(selectedIds)
+            }
+        }
+
+        copySelectedButton.setOnClickListener {
+            if (selectedIds.isNotEmpty()) {
+                showCopyCategoryDialog(selectedIds)
             }
         }
 
@@ -283,6 +290,20 @@ class MainActivity : AppCompatActivity() {
                 viewModel.deleteWordsByIds(wordIds.toList())
                 wordAdapter.deleteSelectedWords()
                 Toast.makeText(this, "已删除 ${wordIds.size} 个单词", Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+
+    private fun showCopyCategoryDialog(wordIds: Set<Long>) {
+        val categoryNames = categoriesList.map { it.name }.toTypedArray()
+        MaterialAlertDialogBuilder(this)
+            .setTitle("复制到分类")
+            .setItems(categoryNames) { _, which ->
+                val targetCategory = categoriesList[which]
+                viewModel.copyWordsToCategory(wordIds.toList(), targetCategory.id)
+                wordAdapter.exitSelectionMode()
+                Toast.makeText(this, "已复制 ${wordIds.size} 个单词到「${targetCategory.name}」", Toast.LENGTH_SHORT).show()
             }
             .setNegativeButton("取消", null)
             .show()

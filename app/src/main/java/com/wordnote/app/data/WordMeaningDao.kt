@@ -42,4 +42,16 @@ interface WordMeaningDao {
 
     @Query("SELECT wordId, meaningText FROM word_meanings WHERE isHighlighted = 1")
     fun getHighlightedMeanings(): LiveData<List<HighlightedMeaning>>
+
+    @Query("UPDATE word_meanings SET sortOrder = :sortOrder WHERE id = :meaningId")
+    suspend fun updateSortOrder(meaningId: Long, sortOrder: Int)
+
+    @Query("UPDATE word_meanings SET sortOrder = :sortOrder WHERE id IN (:meaningIds)")
+    suspend fun updateSortOrders(meaningIds: List<Long>, sortOrder: Int)
+
+    @Query("SELECT * FROM word_meanings WHERE wordId = :wordId ORDER BY sortOrder ASC, id ASC")
+    fun getMeaningsForWordOrdered(wordId: Long): LiveData<List<WordMeaning>>
+
+    @Query("SELECT * FROM word_meanings WHERE wordId = :wordId ORDER BY sortOrder ASC, id ASC")
+    suspend fun getMeaningsForWordOrderedSync(wordId: Long): List<WordMeaning>
 }

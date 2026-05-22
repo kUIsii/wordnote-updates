@@ -58,8 +58,6 @@
             android:layout_weight="1"
             android:textColor="@color/text_secondary"
             android:textSize="14sp"
-            android:maxLines="1"
-            android:ellipsize="end"
             tools:text="努力奋斗，尝试" />
 
         <!-- Group badge (inline) -->

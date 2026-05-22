@@ -167,53 +167,50 @@ class WordDetailActivity : AppCompatActivity() {
     private fun displayMeanings(meanings: List<WordMeaning>) {
         meaningsContainer.removeAllViews()
         if (meanings.isEmpty()) {
-            // Show split button for partial category
+            // Show split button for any category with comma-separated meanings
             val word = currentWord
-            if (word != null && word.categoryId != null) {
-                val cat = viewModel.getCategoryById(word.categoryId!!)
-                if (cat?.name == "部分意思记不住" && word.meaning.contains("，") || word.meaning.contains(",")) {
-                    meaningsCard.visibility = View.VISIBLE
-                    meaningTextView.visibility = View.GONE
+            if (word != null && (word.meaning.contains("，") || word.meaning.contains(","))) {
+                meaningsCard.visibility = View.VISIBLE
+                meaningTextView.visibility = View.GONE
 
-                    val label = TextView(this).apply {
-                        text = "各释义标注"
-                        textSize = 15f
-                        setTextColor(getColor(R.color.text_primary))
-                        setPadding(0, 0, 0, dpToPx(8))
-                    }
-                    meaningsContainer.addView(label)
-
-                    val hint = TextView(this).apply {
-                        text = "点击下方按钮拆分释义，即可对每个释义单独标记"
-                        textSize = 13f
-                        setTextColor(getColor(R.color.text_secondary))
-                        setPadding(0, 0, 0, dpToPx(12))
-                    }
-                    meaningsContainer.addView(hint)
-
-                    val splitButton = TextView(this).apply {
-                        text = "拆分释义"
-                        textSize = 14f
-                        setPadding(dpToPx(16), dpToPx(10), dpToPx(16), dpToPx(10))
-                        val bg = GradientDrawable().apply {
-                            setColor(getColor(R.color.primary))
-                            cornerRadius = 20f * resources.displayMetrics.density
-                        }
-                        background = bg
-                        setTextColor(getColor(R.color.text_on_primary))
-                        setOnClickListener {
-                            val parts = word.meaning.split("，", ",").map { it.trim() }.filter { it.isNotBlank() }
-                            if (parts.size > 1) {
-                                viewModel.saveMeanings(wordId, parts)
-                                Toast.makeText(this@WordDetailActivity, "已拆分 ${parts.size} 个释义", Toast.LENGTH_SHORT).show()
-                            } else {
-                                Toast.makeText(this@WordDetailActivity, "释义无法拆分（没有逗号分隔符）", Toast.LENGTH_SHORT).show()
-                            }
-                        }
-                    }
-                    meaningsContainer.addView(splitButton)
-                    return
+                val label = TextView(this).apply {
+                    text = "各释义标注"
+                    textSize = 15f
+                    setTextColor(getColor(R.color.text_primary))
+                    setPadding(0, 0, 0, dpToPx(8))
                 }
+                meaningsContainer.addView(label)
+
+                val hint = TextView(this).apply {
+                    text = "点击下方按钮拆分释义，即可对每个释义单独标记和排序"
+                    textSize = 13f
+                    setTextColor(getColor(R.color.text_secondary))
+                    setPadding(0, 0, 0, dpToPx(12))
+                }
+                meaningsContainer.addView(hint)
+
+                val splitButton = TextView(this).apply {
+                    text = "拆分释义"
+                    textSize = 14f
+                    setPadding(dpToPx(16), dpToPx(10), dpToPx(16), dpToPx(10))
+                    val bg = GradientDrawable().apply {
+                        setColor(getColor(R.color.primary))
+                        cornerRadius = 20f * resources.displayMetrics.density
+                    }
+                    background = bg
+                    setTextColor(getColor(R.color.text_on_primary))
+                    setOnClickListener {
+                        val parts = word.meaning.split("，", ",").map { it.trim() }.filter { it.isNotBlank() }
+                        if (parts.size > 1) {
+                            viewModel.saveMeanings(wordId, parts)
+                            Toast.makeText(this@WordDetailActivity, "已拆分 ${parts.size} 个释义", Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(this@WordDetailActivity, "释义无法拆分（没有逗号分隔符）", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+                meaningsContainer.addView(splitButton)
+                return
             }
             meaningsCard.visibility = View.GONE
             meaningTextView.visibility = View.VISIBLE
@@ -230,14 +227,10 @@ class WordDetailActivity : AppCompatActivity() {
         }
         meaningsContainer.addView(label)
 
-        // Get category info for highlighting
-        val categoryObj = currentWord?.categoryId?.let { catId ->
-            viewModel.getCategoryById(catId)
-        }
-        val categoryColor = categoryObj?.color
-        val isPartialCategory = categoryObj?.name == "部分意思记不住"
+        // Highlight color is always blue for all categories
+        val highlightColor = Color.parseColor("#5B9BD5")
 
-        meanings.forEach { meaning ->
+        meanings.forEachIndexed { index, meaning ->
             val row = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 setPadding(dpToPx(4), dpToPx(10), dpToPx(4), dpToPx(10))
@@ -250,6 +243,51 @@ class WordDetailActivity : AppCompatActivity() {
                 }
                 layoutParams = params
             }
+
+            // Sequence number
+            val seqText = TextView(this).apply {
+                text = "${index + 1}."
+                textSize = 13f
+                setTextColor(getColor(R.color.text_secondary))
+                setPadding(dpToPx(2), 0, dpToPx(6), 0)
+                minWidth = dpToPx(24)
+            }
+            row.addView(seqText)
+
+            // Up/Down buttons for reorder
+            val upButton = TextView(this).apply {
+                text = "▲"
+                textSize = 10f
+                setPadding(dpToPx(4), dpToPx(2), dpToPx(4), dpToPx(2))
+                setTextColor(if (index > 0) getColor(R.color.text_secondary) else getColor(R.color.text_hint))
+                alpha = if (index > 0) 1f else 0.3f
+                if (index > 0) {
+                    setOnClickListener {
+                        val mutableMeanings = meanings.toMutableList()
+                        val item = mutableMeanings.removeAt(index)
+                        mutableMeanings.add(index - 1, item)
+                        viewModel.reorderMeanings(mutableMeanings)
+                    }
+                }
+            }
+            row.addView(upButton)
+
+            val downButton = TextView(this).apply {
+                text = "▼"
+                textSize = 10f
+                setPadding(dpToPx(4), dpToPx(2), dpToPx(4), dpToPx(2))
+                setTextColor(if (index < meanings.size - 1) getColor(R.color.text_secondary) else getColor(R.color.text_hint))
+                alpha = if (index < meanings.size - 1) 1f else 0.3f
+                if (index < meanings.size - 1) {
+                    setOnClickListener {
+                        val mutableMeanings = meanings.toMutableList()
+                        val item = mutableMeanings.removeAt(index)
+                        mutableMeanings.add(index + 1, item)
+                        viewModel.reorderMeanings(mutableMeanings)
+                    }
+                }
+            }
+            row.addView(downButton)
 
             // Meaning text styling
             val meaningText = TextView(this).apply {
@@ -265,20 +303,15 @@ class WordDetailActivity : AppCompatActivity() {
                     background = bg
                     setPadding(dpToPx(8), dpToPx(2), dpToPx(8), dpToPx(2))
                     paint.isFakeBoldText = true
-                } else if (meaning.isHighlighted && categoryColor != null) {
-                    try {
-                        val c = android.graphics.Color.parseColor(categoryColor)
-                        setTextColor(c)
-                        val bg = GradientDrawable().apply {
-                            setColor(android.graphics.Color.argb(35, android.graphics.Color.red(c), android.graphics.Color.green(c), android.graphics.Color.blue(c)))
-                            cornerRadius = 6f * density
-                        }
-                        background = bg
-                        setPadding(dpToPx(8), dpToPx(4), dpToPx(8), dpToPx(4))
-                        paint.isFakeBoldText = true
-                    } catch (e: Exception) {
-                        setTextColor(getColor(R.color.text_primary))
+                } else if (meaning.isHighlighted) {
+                    setTextColor(highlightColor)
+                    val bg = GradientDrawable().apply {
+                        setColor(Color.argb(35, Color.red(highlightColor), Color.green(highlightColor), Color.blue(highlightColor)))
+                        cornerRadius = 6f * density
                     }
+                    background = bg
+                    setPadding(dpToPx(8), dpToPx(4), dpToPx(8), dpToPx(4))
+                    paint.isFakeBoldText = true
                 } else {
                     setTextColor(getColor(R.color.text_primary))
                 }
@@ -291,33 +324,27 @@ class WordDetailActivity : AppCompatActivity() {
             }
             row.addView(meaningText)
 
-            // "标记" button - only for "部分意思记不住" category
-            if (isPartialCategory) {
-                val highlightButton = TextView(this).apply {
-                    text = if (meaning.isHighlighted) "已标记" else "标记"
-                    textSize = 11f
-                    setPadding(dpToPx(10), dpToPx(4), dpToPx(10), dpToPx(4))
-                    if (meaning.isHighlighted) {
-                        try {
-                            setTextColor(android.graphics.Color.parseColor(categoryColor ?: "#5B7FD6"))
-                        } catch (e: Exception) {
-                            setTextColor(getColor(R.color.primary))
-                        }
-                    } else {
-                        val bg = GradientDrawable().apply {
-                            setStroke(dpToPx(1), getColor(R.color.divider))
-                            cornerRadius = 16f * resources.displayMetrics.density
-                            setColor(Color.TRANSPARENT)
-                        }
-                        background = bg
-                        setTextColor(getColor(R.color.text_secondary))
+            // "标记" button - for ALL categories
+            val highlightButton = TextView(this).apply {
+                text = if (meaning.isHighlighted) "已标记" else "标记"
+                textSize = 11f
+                setPadding(dpToPx(10), dpToPx(4), dpToPx(10), dpToPx(4))
+                if (meaning.isHighlighted) {
+                    setTextColor(highlightColor)
+                } else {
+                    val bg = GradientDrawable().apply {
+                        setStroke(dpToPx(1), getColor(R.color.divider))
+                        cornerRadius = 16f * resources.displayMetrics.density
+                        setColor(Color.TRANSPARENT)
                     }
-                    setOnClickListener {
-                        viewModel.toggleMeaningHighlighted(meaning)
-                    }
+                    background = bg
+                    setTextColor(getColor(R.color.text_secondary))
                 }
-                row.addView(highlightButton)
+                setOnClickListener {
+                    viewModel.toggleMeaningHighlighted(meaning)
+                }
             }
+            row.addView(highlightButton)
 
             // Note button
             val noteButton = TextView(this).apply {
