@@ -201,7 +201,13 @@ class WordAdapter(
         private val deleteButton: ImageView = itemView.findViewById(R.id.deleteWordButton)
 
         fun bind(word: Word, index: Int, isFirstInBatch: Boolean = false, isLastInBatch: Boolean = false) {
-            indexTextView.text = "$index."
+            // Only show index on first word of batch, or on non-batch words
+            if (word.batchId != null && !isFirstInBatch) {
+                indexTextView.visibility = View.GONE
+            } else {
+                indexTextView.visibility = View.VISIBLE
+                indexTextView.text = "$index."
+            }
             wordTextView.text = word.word
 
             // Apply color to highlighted meanings

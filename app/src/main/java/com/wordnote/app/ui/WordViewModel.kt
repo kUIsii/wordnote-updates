@@ -4,7 +4,9 @@ import android.app.Application
 import androidx.lifecycle.*
 import com.wordnote.app.WordNoteApplication
 import com.wordnote.app.data.*
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
 
 class WordViewModel(application: Application) : AndroidViewModel(application) {
@@ -193,8 +195,11 @@ class WordViewModel(application: Application) : AndroidViewModel(application) {
     val problematicWordIds: LiveData<List<Long>> = repository.getProblematicWordIds()
 
     // Copy words to category
-    fun copyWordsToCategory(wordIds: List<Long>, targetCategoryId: Long) = viewModelScope.launch {
-        repository.copyWordsToCategory(wordIds, targetCategoryId)
+    fun copyWordsToCategory(wordIds: List<Long>, targetCategoryId: Long, onResult: (Int) -> Unit = {}) = viewModelScope.launch {
+        val count = repository.copyWordsToCategory(wordIds, targetCategoryId)
+        withContext(Dispatchers.Main) {
+            onResult(count)
+        }
     }
 
     // Meaning reorder

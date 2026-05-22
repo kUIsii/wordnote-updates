@@ -7,8 +7,7 @@ class WordRepository(
     private val categoryDao: CategoryDao,
     private val tagDao: TagDao,
     private val wordMeaningDao: WordMeaningDao,
-    private val wordGroupDao: WordGroupDao,
-    private val diaryDao: DiaryDao
+    private val wordGroupDao: WordGroupDao
 ) {
 
     // Word operations
@@ -78,8 +77,9 @@ class WordRepository(
     fun getHighlightedMeanings(): LiveData<List<HighlightedMeaning>> = wordMeaningDao.getHighlightedMeanings()
 
     // Copy words to category
-    suspend fun copyWordsToCategory(wordIds: List<Long>, targetCategoryId: Long) {
+    suspend fun copyWordsToCategory(wordIds: List<Long>, targetCategoryId: Long): Int {
         val now = System.currentTimeMillis()
+        var count = 0
         wordIds.forEach { wordId ->
             val word = wordDao.getWordById(wordId) ?: return@forEach
             val copy = Word(
@@ -90,7 +90,9 @@ class WordRepository(
                 createdAt = now
             )
             wordDao.insertWord(copy)
+            count++
         }
+        return count
     }
 
     // WordGroup operations
@@ -106,15 +108,4 @@ class WordRepository(
     suspend fun getWordsByGroup(groupId: Long): List<Word> = wordDao.getWordsByGroupSync(groupId)
     suspend fun setWordGroup(wordId: Long, groupId: Long?) = wordDao.setWordGroup(wordId, groupId)
 
-    // Diary operations
-    suspend fun getDiaryEntryByDate(startOfDay: Long) = diaryDao.getEntryByDate(startOfDay)
-    fun getDiaryEntryByDateLive(startOfDay: Long) = diaryDao.getEntryByDateLive(startOfDay)
-    suspend fun insertDiaryEntry(entry: DiaryEntry) = diaryDao.insertEntry(entry)
-    suspend fun updateDiaryEntry(entry: DiaryEntry) = diaryDao.updateEntry(entry)
-    suspend fun deleteDiaryEntry(entry: DiaryEntry) = diaryDao.deleteEntry(entry)
-    fun getAllDiaryEntries() = diaryDao.getAllEntries()
-    suspend fun getAllDiaryEntriesSync() = diaryDao.getAllEntriesSync()
-    fun searchDiaryEntries(query: String) = diaryDao.searchEntries(query)
-    fun getDiaryEntriesBetween(start: Long, end: Long) = diaryDao.getEntriesBetween(start, end)
-    suspend fun getDiaryEntriesBetweenSync(start: Long, end: Long) = diaryDao.getEntriesBetweenSync(start, end)
 }

@@ -11,7 +11,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @Database(
-    entities = [Word::class, Category::class, Tag::class, WordTag::class, WordMeaning::class, WordGroup::class, DiaryEntry::class],
+    entities = [Word::class, Category::class, Tag::class, WordTag::class, WordMeaning::class, WordGroup::class],
     version = 9,
     exportSchema = false
 )
@@ -21,7 +21,6 @@ abstract class WordDatabase : RoomDatabase() {
     abstract fun tagDao(): TagDao
     abstract fun wordMeaningDao(): WordMeaningDao
     abstract fun wordGroupDao(): WordGroupDao
-    abstract fun diaryDao(): DiaryDao
 
     companion object {
         @Volatile

@@ -9,7 +9,7 @@ import kotlinx.coroutines.launch
 
 class WordNoteApplication : Application() {
     val database by lazy { WordDatabase.getDatabase(this) }
-    val repository by lazy { WordRepository(database.wordDao(), database.categoryDao(), database.tagDao(), database.wordMeaningDao(), database.wordGroupDao(), database.diaryDao()) }
+    val repository by lazy { WordRepository(database.wordDao(), database.categoryDao(), database.tagDao(), database.wordMeaningDao(), database.wordGroupDao()) }
 
     override fun onCreate() {
         super.onCreate()

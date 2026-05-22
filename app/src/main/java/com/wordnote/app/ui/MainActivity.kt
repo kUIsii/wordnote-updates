@@ -77,6 +77,7 @@ class MainActivity : AppCompatActivity() {
         setupInput()
         setupSearch()
         observeData()
+        checkForUpdateOnStartup()
     }
 
     private fun checkForUpdate() {
@@ -99,6 +100,25 @@ class MainActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 e.printStackTrace()
                 Toast.makeText(this@MainActivity, "检查更新失败: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun checkForUpdateOnStartup() {
+        CoroutineScope(Dispatchers.Main).launch {
+            try {
+                val packageInfo = packageManager.getPackageInfo(packageName, 0)
+                val currentVersionName = packageInfo.versionName ?: "1.0"
+
+                val updateInfo = withContext(Dispatchers.IO) {
+                    UpdateChecker.checkForUpdate(currentVersionName)
+                }
+
+                if (updateInfo != null && !updateDialogShown) {
+                    showUpdateDialog(updateInfo)
+                }
+            } catch (_: Exception) {
+                // Silent fail on startup check
             }
         }
     }
@@ -163,11 +183,6 @@ class MainActivity : AppCompatActivity() {
 
         findViewById<ImageView>(R.id.dictionaryButton).setOnClickListener {
             startActivity(Intent(this, DictionaryActivity::class.java))
-            compatOverridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left)
-        }
-
-        findViewById<ImageView>(R.id.diaryButton).setOnClickListener {
-            startActivity(Intent(this, DiaryActivity::class.java))
             compatOverridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left)
         }
 
@@ -305,9 +320,10 @@ class MainActivity : AppCompatActivity() {
             .setTitle("复制到分类")
             .setItems(categoryNames) { _, which ->
                 val targetCategory = categoriesList[which]
-                viewModel.copyWordsToCategory(wordIds.toList(), targetCategory.id)
-                wordAdapter.exitSelectionMode()
-                Toast.makeText(this, "已复制 ${wordIds.size} 个单词到「${targetCategory.name}」", Toast.LENGTH_SHORT).show()
+                viewModel.copyWordsToCategory(wordIds.toList(), targetCategory.id) { count ->
+                    wordAdapter.exitSelectionMode()
+                    Toast.makeText(this, "已复制 $count 个单词到「${targetCategory.name}」", Toast.LENGTH_SHORT).show()
+                }
             }
             .setNegativeButton("取消", null)
             .show()

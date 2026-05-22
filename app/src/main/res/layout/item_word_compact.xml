@@ -33,7 +33,7 @@
             android:id="@+id/indexTextView"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textColor="@color/text_hint"
+            android:textColor="@color/text_primary"
             android:textSize="12sp"
             android:layout_marginEnd="8dp"
             tools:text="1." />
