@@ -86,6 +86,8 @@ object UpdateChecker {
 
     suspend fun downloadAndInstall(context: Context, updateInfo: UpdateInfo, onProgress: (Int) -> Unit) = withContext(Dispatchers.IO) {
         try {
+            // Auto-backup database before update to prevent data loss
+            autoBackupBeforeUpdate(context)
             val url = URL(updateInfo.downloadUrl)
             val connection = url.openConnection() as HttpURLConnection
             connection.apply {
@@ -151,5 +153,28 @@ object UpdateChecker {
         }
 
         context.startActivity(intent)
+    }
+
+    private fun autoBackupBeforeUpdate(context: Context) {
+        try {
+            val dbFile = context.getDatabasePath("word_database")
+            if (!dbFile.exists()) return
+
+            val backupDir = File(context.filesDir, "auto_backup")
+            if (!backupDir.exists()) backupDir.mkdirs()
+
+            val backupFile = File(backupDir, "word_database_pre_update")
+            dbFile.copyTo(backupFile, overwrite = true)
+
+            // Also copy WAL and SHM
+            val walFile = File(dbFile.path + "-wal")
+            if (walFile.exists()) walFile.copyTo(File(backupFile.path + "-wal"), overwrite = true)
+            val shmFile = File(dbFile.path + "-shm")
+            if (shmFile.exists()) shmFile.copyTo(File(backupFile.path + "-shm"), overwrite = true)
+
+            android.util.Log.d("UpdateChecker", "Auto-backup created before update")
+        } catch (e: Exception) {
+            android.util.Log.e("UpdateChecker", "Auto-backup failed: ${e.message}")
+        }
     }
 }

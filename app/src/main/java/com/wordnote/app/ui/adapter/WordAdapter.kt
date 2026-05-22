@@ -270,14 +270,9 @@ class WordAdapter(
             if (word.batchId != null) {
                 cardView.setCardBackgroundColor(itemView.context.getColor(R.color.batch_group_bg))
                 val lp = cardView.layoutParams as ViewGroup.MarginLayoutParams
-                lp.topMargin = if (isFirstInBatch) (12 * density).toInt() else 0
-                lp.bottomMargin = if (isLastInBatch) (12 * density).toInt() else (1 * density).toInt()
+                lp.topMargin = if (isFirstInBatch) (10 * density).toInt() else 0
+                lp.bottomMargin = if (isLastInBatch) (10 * density).toInt() else (1 * density).toInt()
                 cardView.layoutParams = lp
-                // Subtle border for batch groups to improve separation
-                if (isFirstInBatch) {
-                    cardView.strokeWidth = (1 * density).toInt()
-                    cardView.strokeColor = itemView.context.getColor(R.color.divider)
-                }
             } else {
                 val lp = cardView.layoutParams as ViewGroup.MarginLayoutParams
                 lp.topMargin = (2 * density).toInt()
