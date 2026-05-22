@@ -122,7 +122,6 @@ class WordAdapter(
         var currentDate = ""
         var index = 1
         var currentBatchId: Long? = null
-        var batchIndex = 0
 
         words.forEach { word ->
             val date = DateUtils.formatDate(word.createdAt)
@@ -130,34 +129,29 @@ class WordAdapter(
                 currentDate = date
                 val label = formatDateLabel(word.createdAt)
                 items.add(ListItem.DateHeader(date, label))
-                index = 1
                 currentBatchId = null
-                batchIndex = 0
             }
 
-            // Check if this word is part of a batch
             if (word.batchId != null) {
                 if (word.batchId != currentBatchId) {
-                    // New batch started
+                    // New batch started - assign one number for the whole batch
                     currentBatchId = word.batchId
-                    batchIndex = 0
                     items.add(ListItem.WordItem(word, index, isFirstInBatch = true, isLastInBatch = false))
                 } else {
-                    // Same batch continued
+                    // Same batch continued - share the same index number
                     val nextWordIndex = words.indexOf(word) + 1
                     val isLast = nextWordIndex >= words.size ||
                             words[nextWordIndex].batchId != currentBatchId ||
                             DateUtils.formatDate(words[nextWordIndex].createdAt) != currentDate
                     items.add(ListItem.WordItem(word, index, isFirstInBatch = false, isLastInBatch = isLast))
+                    if (isLast) index++ // Increment after batch ends
                 }
-                batchIndex++
             } else {
-                // Not in a batch
+                // Not in a batch - each gets its own number
                 currentBatchId = null
-                batchIndex = 0
                 items.add(ListItem.WordItem(word, index))
+                index++
             }
-            index++
         }
 
         submitList(items)
@@ -270,9 +264,14 @@ class WordAdapter(
             if (word.batchId != null) {
                 cardView.setCardBackgroundColor(itemView.context.getColor(R.color.batch_group_bg))
                 val lp = cardView.layoutParams as ViewGroup.MarginLayoutParams
-                lp.topMargin = if (isFirstInBatch) (10 * density).toInt() else 0
-                lp.bottomMargin = if (isLastInBatch) (10 * density).toInt() else (1 * density).toInt()
+                lp.topMargin = if (isFirstInBatch) (12 * density).toInt() else 0
+                lp.bottomMargin = if (isLastInBatch) (12 * density).toInt() else (1 * density).toInt()
                 cardView.layoutParams = lp
+                // Subtle border for batch groups to improve separation
+                if (isFirstInBatch) {
+                    cardView.strokeWidth = (1 * density).toInt()
+                    cardView.strokeColor = itemView.context.getColor(R.color.divider)
+                }
             } else {
                 val lp = cardView.layoutParams as ViewGroup.MarginLayoutParams
                 lp.topMargin = (2 * density).toInt()

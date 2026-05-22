@@ -167,50 +167,52 @@ class WordDetailActivity : AppCompatActivity() {
     private fun displayMeanings(meanings: List<WordMeaning>) {
         meaningsContainer.removeAllViews()
         if (meanings.isEmpty()) {
-            // Show split button for any category with comma-separated meanings
             val word = currentWord
-            if (word != null && (word.meaning.contains("，") || word.meaning.contains(","))) {
-                meaningsCard.visibility = View.VISIBLE
-                meaningTextView.visibility = View.GONE
+            if (word != null) {
+                val parts = word.meaning.split("，", ",").map { it.trim() }.filter { it.isNotBlank() }
+                if (parts.size > 1) {
+                    // Multiple meanings - show split button
+                    meaningsCard.visibility = View.VISIBLE
+                    meaningTextView.visibility = View.GONE
 
-                val label = TextView(this).apply {
-                    text = "各释义标注"
-                    textSize = 15f
-                    setTextColor(getColor(R.color.text_primary))
-                    setPadding(0, 0, 0, dpToPx(8))
-                }
-                meaningsContainer.addView(label)
-
-                val hint = TextView(this).apply {
-                    text = "点击下方按钮拆分释义，即可对每个释义单独标记和排序"
-                    textSize = 13f
-                    setTextColor(getColor(R.color.text_secondary))
-                    setPadding(0, 0, 0, dpToPx(12))
-                }
-                meaningsContainer.addView(hint)
-
-                val splitButton = TextView(this).apply {
-                    text = "拆分释义"
-                    textSize = 14f
-                    setPadding(dpToPx(16), dpToPx(10), dpToPx(16), dpToPx(10))
-                    val bg = GradientDrawable().apply {
-                        setColor(getColor(R.color.primary))
-                        cornerRadius = 20f * resources.displayMetrics.density
+                    val label = TextView(this).apply {
+                        text = "各释义标注"
+                        textSize = 15f
+                        setTextColor(getColor(R.color.text_primary))
+                        setPadding(0, 0, 0, dpToPx(8))
                     }
-                    background = bg
-                    setTextColor(getColor(R.color.text_on_primary))
-                    setOnClickListener {
-                        val parts = word.meaning.split("，", ",").map { it.trim() }.filter { it.isNotBlank() }
-                        if (parts.size > 1) {
+                    meaningsContainer.addView(label)
+
+                    val hint = TextView(this).apply {
+                        text = "点击下方按钮拆分释义，即可对每个释义单独标记和排序"
+                        textSize = 13f
+                        setTextColor(getColor(R.color.text_secondary))
+                        setPadding(0, 0, 0, dpToPx(12))
+                    }
+                    meaningsContainer.addView(hint)
+
+                    val splitButton = TextView(this).apply {
+                        text = "拆分释义"
+                        textSize = 14f
+                        setPadding(dpToPx(16), dpToPx(10), dpToPx(16), dpToPx(10))
+                        val bg = GradientDrawable().apply {
+                            setColor(getColor(R.color.primary))
+                            cornerRadius = 20f * resources.displayMetrics.density
+                        }
+                        background = bg
+                        setTextColor(getColor(R.color.text_on_primary))
+                        setOnClickListener {
                             viewModel.saveMeanings(wordId, parts)
                             Toast.makeText(this@WordDetailActivity, "已拆分 ${parts.size} 个释义", Toast.LENGTH_SHORT).show()
-                        } else {
-                            Toast.makeText(this@WordDetailActivity, "释义无法拆分（没有逗号分隔符）", Toast.LENGTH_SHORT).show()
                         }
                     }
+                    meaningsContainer.addView(splitButton)
+                    return
+                } else if (parts.size == 1) {
+                    // Single meaning - auto-create and show marking UI
+                    viewModel.createMeaningsIfEmpty(wordId, parts)
+                    return  // Will re-trigger via LiveData observer
                 }
-                meaningsContainer.addView(splitButton)
-                return
             }
             meaningsCard.visibility = View.GONE
             meaningTextView.visibility = View.VISIBLE

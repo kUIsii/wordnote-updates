@@ -296,6 +296,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showCopyCategoryDialog(wordIds: Set<Long>) {
+        if (categoriesList.isEmpty()) {
+            Toast.makeText(this, "没有可用的分类", Toast.LENGTH_SHORT).show()
+            return
+        }
         val categoryNames = categoriesList.map { it.name }.toTypedArray()
         MaterialAlertDialogBuilder(this)
             .setTitle("复制到分类")

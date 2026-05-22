@@ -80,7 +80,17 @@ class WordRepository(
     // Copy words to category
     suspend fun copyWordsToCategory(wordIds: List<Long>, targetCategoryId: Long) {
         val now = System.currentTimeMillis()
-        wordDao.copyWordsToCategory(wordIds, targetCategoryId, now)
+        wordIds.forEach { wordId ->
+            val word = wordDao.getWordById(wordId) ?: return@forEach
+            val copy = Word(
+                word = word.word,
+                meaning = word.meaning,
+                categoryId = targetCategoryId,
+                note = word.note,
+                createdAt = now
+            )
+            wordDao.insertWord(copy)
+        }
     }
 
     // WordGroup operations

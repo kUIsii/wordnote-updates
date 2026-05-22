@@ -70,7 +70,4 @@ interface WordDao {
 
     @Query("SELECT * FROM words WHERE word = :word LIMIT 1")
     suspend fun getWordByWord(word: String): Word?
-
-    @Query("INSERT INTO words (word, meaning, categoryId, createdAt) SELECT word, meaning, :targetCategoryId, :now FROM words WHERE id IN (:wordIds)")
-    suspend fun copyWordsToCategory(wordIds: List<Long>, targetCategoryId: Long, now: Long)
 }
