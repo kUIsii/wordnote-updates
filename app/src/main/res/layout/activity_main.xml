@@ -81,6 +81,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:paddingHorizontal="16dp"
+        android:paddingTop="8dp"
         android:paddingBottom="4dp">
 
         <EditText
@@ -106,7 +107,8 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:scrollbars="none"
-        android:paddingBottom="4dp"
+        android:paddingTop="4dp"
+        android:paddingBottom="8dp"
         android:paddingStart="16dp"
         android:paddingEnd="16dp">
 
@@ -133,9 +135,10 @@
             android:paddingBottom="8dp"
             android:overScrollMode="never"
             android:scrollbarThumbVertical="@drawable/scrollbar_thumb"
+            android:scrollbarTrackVertical="@drawable/scrollbar_track"
             android:scrollbars="vertical"
-            android:fadeScrollbars="true"
-            android:scrollbarFadeDuration="1500" />
+            android:fadeScrollbars="false"
+            android:scrollbarDefaultDelayBeforeFade="0" />
 
         <LinearLayout
             android:id="@+id/emptyView"

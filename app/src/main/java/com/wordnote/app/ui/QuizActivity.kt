@@ -176,6 +176,9 @@ class QuizActivity : AppCompatActivity() {
         forgetButton.visibility = View.VISIBLE
         rememberButton.visibility = View.GONE
         nextButton.visibility = View.GONE
+
+        // Increment index after showing the word
+        currentIndex++
     }
 
     private fun onWordForgotten() {

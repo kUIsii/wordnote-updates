@@ -176,14 +176,13 @@ class StatisticsActivity : AppCompatActivity() {
             setTextColor(resources.getColor(R.color.text_primary, null))
             textSize = 13f
             val params = LinearLayout.LayoutParams(
-                (60 * density).toInt(),
+                LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             ).apply {
                 marginStart = (8 * density).toInt()
             }
             layoutParams = params
             maxLines = 1
-            ellipsize = android.text.TextUtils.TruncateAt.END
         }
         row.addView(nameText)
 

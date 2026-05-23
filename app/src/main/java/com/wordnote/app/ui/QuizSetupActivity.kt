@@ -126,11 +126,10 @@ class QuizSetupActivity : AppCompatActivity() {
         // Checkbox
         val checkbox = ImageView(this).apply {
             layoutParams = LinearLayout.LayoutParams(dpToPx(24), dpToPx(24))
+            setImageResource(R.drawable.ic_checkbox_unchecked)
             if (categoryId == null) {
-                setImageResource(android.R.drawable.ic_menu_add)
                 setColorFilter(getColor(R.color.primary))
             } else {
-                setImageResource(android.R.drawable.ic_menu_add)
                 setColorFilter(color)
             }
             tag = "checkbox"
@@ -181,14 +180,14 @@ class QuizSetupActivity : AppCompatActivity() {
                 selectedCategories.clear()
                 allCategoryViews.forEach { view ->
                     val cb = view.findViewWithTag<ImageView>("checkbox")
-                    cb?.setImageResource(android.R.drawable.ic_menu_add)
+                    cb?.setImageResource(R.drawable.ic_checkbox_unchecked)
                 }
             } else {
                 selectedCategories.clear()
                 selectedCategories.add(-1)
                 allCategoryViews.forEach { view ->
                     val cb = view.findViewWithTag<ImageView>("checkbox")
-                    cb?.setImageResource(android.R.drawable.btn_minus)
+                    cb?.setImageResource(R.drawable.ic_checkbox_checked)
                     cb?.setColorFilter(getColor(R.color.primary))
                 }
             }
@@ -196,14 +195,14 @@ class QuizSetupActivity : AppCompatActivity() {
             // Remove "all" if specific category selected
             selectedCategories.remove(-1)
             val allRow = allCategoryViews.firstOrNull { it.tag == null }
-            allRow?.findViewWithTag<ImageView>("checkbox")?.setImageResource(android.R.drawable.ic_menu_add)
+            allRow?.findViewWithTag<ImageView>("checkbox")?.setImageResource(R.drawable.ic_checkbox_unchecked)
 
             if (selectedCategories.contains(categoryId)) {
                 selectedCategories.remove(categoryId)
-                checkbox?.setImageResource(android.R.drawable.ic_menu_add)
+                checkbox?.setImageResource(R.drawable.ic_checkbox_unchecked)
             } else {
                 selectedCategories.add(categoryId)
-                checkbox?.setImageResource(android.R.drawable.btn_minus)
+                checkbox?.setImageResource(R.drawable.ic_checkbox_checked)
                 val color = try {
                     Color.parseColor(allCategories.find { it.id == categoryId }?.color ?: "#757575")
                 } catch (e: Exception) {
@@ -215,7 +214,7 @@ class QuizSetupActivity : AppCompatActivity() {
             // If no categories selected, select all
             if (selectedCategories.isEmpty()) {
                 selectedCategories.add(-1)
-                allRow?.findViewWithTag<ImageView>("checkbox")?.setImageResource(android.R.drawable.btn_minus)
+                allRow?.findViewWithTag<ImageView>("checkbox")?.setImageResource(R.drawable.ic_checkbox_checked)
                 allRow?.findViewWithTag<ImageView>("checkbox")?.setColorFilter(getColor(R.color.primary))
             }
         }

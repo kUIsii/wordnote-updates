@@ -58,6 +58,7 @@ class MainActivity : AppCompatActivity() {
     private var groupsList: List<WordGroup> = emptyList()
     private var updateDialogShown = false
     private val scrollPositions = mutableMapOf<Long, Int>()
+    private var pendingScrollPosition: Int? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -420,16 +421,8 @@ class MainActivity : AppCompatActivity() {
         // Update input mode based on category
         updateInputMode()
 
-        // Restore scroll position after a short delay
-        val targetCategoryId = categoryId
-        if (targetCategoryId != null) {
-            wordRecyclerView.post {
-                val savedPos = scrollPositions[targetCategoryId] ?: 0
-                if (savedPos > 0) {
-                    (wordRecyclerView.layoutManager as? LinearLayoutManager)?.scrollToPosition(savedPos)
-                }
-            }
-        }
+        // Set pending scroll position to be restored after data loads
+        pendingScrollPosition = scrollPositions[categoryId]
     }
 
     private fun updateInputMode() {
@@ -727,6 +720,16 @@ class MainActivity : AppCompatActivity() {
             wordAdapter.submitWordList(words)
             emptyView.visibility = if (words.isEmpty()) View.VISIBLE else View.GONE
             wordRecyclerView.visibility = if (words.isEmpty()) View.GONE else View.VISIBLE
+
+            // Restore scroll position after data loads
+            pendingScrollPosition?.let { pos ->
+                if (pos > 0) {
+                    wordRecyclerView.post {
+                        (wordRecyclerView.layoutManager as? LinearLayoutManager)?.scrollToPosition(pos)
+                    }
+                }
+                pendingScrollPosition = null
+            }
         }
 
         viewModel.allWords.observe(this) { words ->
