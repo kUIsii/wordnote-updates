@@ -143,6 +143,8 @@ class WordViewModel(application: Application) : AndroidViewModel(application) {
         emit(repository.getWordById(wordId))
     }
 
+    suspend fun getWordByIdSync(wordId: Long): Word? = repository.getWordById(wordId)
+
     fun getTagsForWord(wordId: Long): LiveData<List<Tag>> = repository.getTagsForWord(wordId)
 
     // Review operations

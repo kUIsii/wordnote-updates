@@ -156,6 +156,11 @@ class SettingsActivity : AppCompatActivity() {
             compatOverridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left)
         }
 
+        findViewById<LinearLayout>(R.id.quizButton).setOnClickListener {
+            startActivity(Intent(this, QuizSetupActivity::class.java))
+            compatOverridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left)
+        }
+
         findViewById<LinearLayout>(R.id.changelogButton).setOnClickListener {
             startActivity(Intent(this, ChangelogActivity::class.java))
             compatOverridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left)

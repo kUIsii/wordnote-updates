@@ -5,6 +5,7 @@ import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.view.Gravity
 import android.view.View
+import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -147,10 +148,27 @@ class StatisticsActivity : AppCompatActivity() {
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             ).apply {
-                bottomMargin = (10 * density).toInt()
+                bottomMargin = (12 * density).toInt()
             }
             layoutParams = params
         }
+
+        // Category color dot
+        val colorDot = View(this).apply {
+            val dotSize = (10 * density).toInt()
+            val params = LinearLayout.LayoutParams(dotSize, dotSize)
+            layoutParams = params
+            val categoryColor = try {
+                Color.parseColor(category.color)
+            } catch (e: Exception) {
+                Color.parseColor("#757575")
+            }
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(categoryColor)
+            }
+        }
+        row.addView(colorDot)
 
         // Category name
         val nameText = TextView(this).apply {
@@ -158,43 +176,46 @@ class StatisticsActivity : AppCompatActivity() {
             setTextColor(resources.getColor(R.color.text_primary, null))
             textSize = 13f
             val params = LinearLayout.LayoutParams(
-                (80 * density).toInt(),
+                (60 * density).toInt(),
                 LinearLayout.LayoutParams.WRAP_CONTENT
-            )
+            ).apply {
+                marginStart = (8 * density).toInt()
+            }
             layoutParams = params
+            maxLines = 1
+            ellipsize = android.text.TextUtils.TruncateAt.END
         }
         row.addView(nameText)
 
         // Progress bar background
-        val barContainer = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
+        val barBg = GradientDrawable().apply {
+            setColor(resources.getColor(R.color.divider, null))
+            cornerRadius = 4f * density
+        }
+
+        val barContainer = FrameLayout(this).apply {
             val params = LinearLayout.LayoutParams(
                 0,
-                (16 * density).toInt(),
+                (12 * density).toInt(),
                 1f
             ).apply {
                 marginStart = (8 * density).toInt()
                 marginEnd = (8 * density).toInt()
             }
             layoutParams = params
+            background = barBg
         }
-
-        val barBg = GradientDrawable().apply {
-            setColor(resources.getColor(R.color.divider, null))
-            cornerRadius = 4f * density
-        }
-        barContainer.background = barBg
 
         // Progress bar fill
         val barFill = View(this).apply {
             val fillWidth = if (maxCount > 0) {
                 (count.toFloat() / maxCount * 100).toInt()
             } else 0
-            val params = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.MATCH_PARENT
+            val params = FrameLayout.LayoutParams(
+                0,
+                FrameLayout.LayoutParams.MATCH_PARENT
             ).apply {
-                weight = fillWidth.toFloat()
+                width = (fillWidth * density).toInt()
             }
             layoutParams = params
 
@@ -219,12 +240,13 @@ class StatisticsActivity : AppCompatActivity() {
             setTextColor(resources.getColor(R.color.text_secondary, null))
             textSize = 13f
             val params = LinearLayout.LayoutParams(
-                (36 * density).toInt(),
+                (32 * density).toInt(),
                 LinearLayout.LayoutParams.WRAP_CONTENT
             ).apply {
-                gravity = Gravity.END
+                marginStart = (4 * density).toInt()
             }
             layoutParams = params
+            gravity = Gravity.END
         }
         row.addView(countText)
 

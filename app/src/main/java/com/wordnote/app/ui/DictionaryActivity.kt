@@ -102,6 +102,21 @@ class DictionaryActivity : AppCompatActivity() {
             }
         }
 
+        searchEditText.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: android.text.Editable?) {
+                if (s.isNullOrEmpty()) {
+                    showHistory()
+                    // Reset to hint state
+                    hintView.visibility = View.VISIBLE
+                    noDatabaseView.visibility = View.GONE
+                    resultScrollView.visibility = View.GONE
+                    noResultView.visibility = View.GONE
+                }
+            }
+        })
+
         findViewById<ImageView>(R.id.backButton).setOnClickListener {
             finish()
             compatOverridePendingTransition(R.anim.slide_in_left, R.anim.slide_out_right)
@@ -405,6 +420,8 @@ class DictionaryActivity : AppCompatActivity() {
         } else {
             showNoDatabase()
         }
+        // Show history if available
+        showHistory()
     }
 
     private fun openDatabase(uri: android.net.Uri) {

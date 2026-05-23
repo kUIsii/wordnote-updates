@@ -59,6 +59,18 @@
             android:name=".ui.StatisticsActivity"
             android:parentActivityName=".ui.SettingsActivity" />
 
+        <activity
+            android:name=".ui.QuizSetupActivity"
+            android:parentActivityName=".ui.SettingsActivity" />
+
+        <activity
+            android:name=".ui.QuizActivity"
+            android:parentActivityName=".ui.QuizSetupActivity" />
+
+        <activity
+            android:name=".ui.QuizResultActivity"
+            android:parentActivityName=".ui.QuizActivity" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

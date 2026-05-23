@@ -69,7 +69,7 @@
                     android:layout_marginEnd="6dp"
                     app:cardCornerRadius="12dp"
                     app:cardElevation="0dp"
-                    app:cardBackgroundColor="@color/card_background">
+                    app:cardBackgroundColor="@color/primary">
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -81,7 +81,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="总词汇量"
-                            android:textColor="@color/text_hint"
+                            android:textColor="#B0FFFFFF"
                             android:textSize="12sp" />
 
                         <TextView
@@ -89,7 +89,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="0"
-                            android:textColor="@color/text_primary"
+                            android:textColor="@android:color/white"
                             android:textSize="28sp"
                             android:textStyle="bold"
                             android:layout_marginTop="4dp" />
@@ -176,17 +176,6 @@
             </LinearLayout>
 
             <!-- Heatmap Section -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="学习热力图"
-                android:textColor="@color/text_hint"
-                android:textSize="12sp"
-                android:textStyle="bold"
-                android:letterSpacing="0.08"
-                android:layout_marginStart="4dp"
-                android:layout_marginBottom="8dp" />
-
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -200,22 +189,38 @@
                     android:orientation="vertical"
                     android:padding="16dp">
 
-                    <!-- Year label -->
-                    <TextView
-                        android:id="@+id/heatmapYearText"
-                        android:layout_width="wrap_content"
+                    <!-- Header -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:textColor="@color/text_primary"
-                        android:textSize="14sp"
-                        android:textStyle="bold"
-                        android:layout_marginBottom="12dp" />
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="12dp">
 
-                    <!-- Heatmap grid will be added programmatically -->
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="学习热力图"
+                            android:textColor="@color/text_primary"
+                            android:textSize="15sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/heatmapYearText"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textColor="@color/text_hint"
+                            android:textSize="13sp" />
+
+                    </LinearLayout>
+
+                    <!-- Heatmap grid -->
                     <com.wordnote.app.ui.HeatmapView
                         android:id="@+id/heatmapView"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginBottom="8dp" />
+                        android:layout_marginBottom="12dp" />
 
                     <!-- Legend -->
                     <LinearLayout
@@ -280,31 +285,36 @@
             </com.google.android.material.card.MaterialCardView>
 
             <!-- Category Distribution -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="分类分布"
-                android:textColor="@color/text_hint"
-                android:textSize="12sp"
-                android:textStyle="bold"
-                android:letterSpacing="0.08"
-                android:layout_marginStart="4dp"
-                android:layout_marginTop="20dp"
-                android:layout_marginBottom="8dp" />
-
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
                 app:cardCornerRadius="12dp"
                 app:cardElevation="0dp"
                 app:cardBackgroundColor="@color/card_background">
 
                 <LinearLayout
-                    android:id="@+id/categoryDistributionContainer"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="16dp" />
+                    android:padding="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="分类分布"
+                        android:textColor="@color/text_primary"
+                        android:textSize="15sp"
+                        android:textStyle="bold"
+                        android:layout_marginBottom="16dp" />
+
+                    <LinearLayout
+                        android:id="@+id/categoryDistributionContainer"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical" />
+
+                </LinearLayout>
 
             </com.google.android.material.card.MaterialCardView>
 

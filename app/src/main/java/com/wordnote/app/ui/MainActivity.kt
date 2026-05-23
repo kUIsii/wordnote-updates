@@ -57,6 +57,7 @@ class MainActivity : AppCompatActivity() {
     private var categoriesList: List<Category> = emptyList()
     private var groupsList: List<WordGroup> = emptyList()
     private var updateDialogShown = false
+    private val scrollPositions = mutableMapOf<Long, Int>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -392,6 +393,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun selectTab(tab: TextView, categoryId: Long?) {
+        // Save current scroll position before switching
+        selectedCategoryId?.let { currentId ->
+            val pos = (wordRecyclerView.layoutManager as? LinearLayoutManager)?.findFirstCompletelyVisibleItemPosition() ?: 0
+            scrollPositions[currentId] = pos
+        }
+
         selectedTab?.let { prevTab ->
             prevTab.setBackgroundResource(R.drawable.tab_bg_inactive)
             prevTab.setTextColor(resources.getColor(R.color.text_secondary, null))
@@ -412,6 +419,17 @@ class MainActivity : AppCompatActivity() {
 
         // Update input mode based on category
         updateInputMode()
+
+        // Restore scroll position after a short delay
+        val targetCategoryId = categoryId
+        if (targetCategoryId != null) {
+            wordRecyclerView.post {
+                val savedPos = scrollPositions[targetCategoryId] ?: 0
+                if (savedPos > 0) {
+                    (wordRecyclerView.layoutManager as? LinearLayoutManager)?.scrollToPosition(savedPos)
+                }
+            }
+        }
     }
 
     private fun updateInputMode() {
