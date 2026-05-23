@@ -188,6 +188,8 @@ class WordViewModel(application: Application) : AndroidViewModel(application) {
     // WordMeaning operations
     fun getMeaningsForWord(wordId: Long): LiveData<List<WordMeaning>> = repository.getMeaningsForWord(wordId)
 
+    suspend fun getMeaningsForWordSync(wordId: Long): List<WordMeaning> = repository.getMeaningsForWordSync(wordId)
+
     fun saveMeanings(wordId: Long, meaningTexts: List<String>) = viewModelScope.launch {
         repository.deleteMeaningsForWord(wordId)
         val meanings = meaningTexts.filter { it.isNotBlank() }.map { text ->
@@ -232,6 +234,15 @@ class WordViewModel(application: Application) : AndroidViewModel(application) {
     fun reorderMeanings(meanings: List<WordMeaning>) = viewModelScope.launch {
         meanings.forEachIndexed { index, meaning ->
             repository.updateMeaningSortOrder(meaning.id, index)
+        }
+        // Also update word.meaning to sync with main page display
+        if (meanings.isNotEmpty()) {
+            val wordId = meanings[0].wordId
+            val word = repository.getWordById(wordId)
+            if (word != null) {
+                val newMeaning = meanings.joinToString("，") { it.meaningText }
+                repository.updateWord(word.copy(meaning = newMeaning))
+            }
         }
     }
 

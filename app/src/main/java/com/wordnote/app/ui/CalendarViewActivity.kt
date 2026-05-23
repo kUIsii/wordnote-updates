@@ -2,6 +2,10 @@ package com.wordnote.app.ui
 
 import android.graphics.Color
 import android.os.Bundle
+import android.text.SpannableString
+import android.text.Spanned
+import android.text.style.ForegroundColorSpan
+import android.text.style.StyleSpan
 import android.view.View
 import android.widget.EditText
 import android.widget.ImageView
@@ -13,7 +17,12 @@ import com.google.android.material.datepicker.MaterialDatePicker
 import com.wordnote.app.R
 import com.wordnote.app.data.Category
 import com.wordnote.app.data.Word
+import com.wordnote.app.data.WordMeaning
 import com.wordnote.app.util.compatOverridePendingTransitionClose
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -31,6 +40,8 @@ class CalendarViewActivity : AppCompatActivity() {
     private var allWords: List<Word> = emptyList()
     private var categoriesList: List<Category> = emptyList()
     private val collapsedCategories = mutableSetOf<Long>()
+    private val highlightedMeaningsMap = mutableMapOf<Long, List<String>>()
+    private val wordMeaningsMap = mutableMapOf<Long, List<WordMeaning>>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -117,11 +128,30 @@ class CalendarViewActivity : AppCompatActivity() {
         viewModel.allWords.observe(this) { words ->
             allWords = words
             filterWordsByDate()
+            fetchHighlightedMeanings(words)
         }
 
         viewModel.allCategories.observe(this) { categories ->
             categoriesList = categories
             filterWordsByDate()
+        }
+    }
+
+    private fun fetchHighlightedMeanings(words: List<Word>) {
+        CoroutineScope(Dispatchers.IO).launch {
+            words.forEach { word ->
+                val meanings = viewModel.getMeaningsForWordSync(word.id)
+                if (meanings.isNotEmpty()) {
+                    wordMeaningsMap[word.id] = meanings
+                    val highlighted = meanings.filter { it.isHighlighted }.map { it.meaningText }
+                    if (highlighted.isNotEmpty()) {
+                        highlightedMeaningsMap[word.id] = highlighted
+                    }
+                }
+            }
+            withContext(Dispatchers.Main) {
+                filterWordsByDate()
+            }
         }
     }
 
@@ -381,9 +411,31 @@ class CalendarViewActivity : AppCompatActivity() {
 
         // Meaning
         val meaningText = TextView(this).apply {
-            text = word.meaning
             textSize = 14f
-            setTextColor(resources.getColor(R.color.text_secondary, null))
+            val highlighted = highlightedMeaningsMap[word.id]
+            if (!highlighted.isNullOrEmpty()) {
+                val spannable = SpannableString(word.meaning)
+                val highlightColor = Color.parseColor("#5B9BD5")
+                highlighted.forEach { hm ->
+                    val idx = word.meaning.indexOf(hm)
+                    if (idx >= 0) {
+                        spannable.setSpan(
+                            ForegroundColorSpan(highlightColor),
+                            idx, idx + hm.length,
+                            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                        )
+                        spannable.setSpan(
+                            StyleSpan(android.graphics.Typeface.BOLD),
+                            idx, idx + hm.length,
+                            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                        )
+                    }
+                }
+                text = spannable
+            } else {
+                text = word.meaning
+                setTextColor(resources.getColor(R.color.text_secondary, null))
+            }
         }
         row.addView(meaningText)
 

@@ -142,6 +142,10 @@ class SettingsActivity : AppCompatActivity() {
             confirmRestore()
         }
 
+        findViewById<LinearLayout>(R.id.manageBackupsButton).setOnClickListener {
+            showManageBackups()
+        }
+
         findViewById<LinearLayout>(R.id.recycleBinButton).setOnClickListener {
             startActivity(Intent(this, RecycleBinActivity::class.java))
             compatOverridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left)
@@ -301,5 +305,72 @@ class SettingsActivity : AppCompatActivity() {
                 }
             }
         }
+    }
+
+    private fun showManageBackups() {
+        val backupDir = File(android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS), "WordNoteBackup")
+        if (!backupDir.exists()) {
+            Toast.makeText(this, "备份目录不存在", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val files = backupDir.listFiles()
+        if (files == null || files.isEmpty()) {
+            Toast.makeText(this, "没有备份文件", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val dbFiles = files.filter { it.name.endsWith(".db") }.sortedByDescending { it.lastModified() }
+        if (dbFiles.isEmpty()) {
+            Toast.makeText(this, "没有备份文件", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val fileNames = dbFiles.map { file ->
+            val size = file.length() / 1024
+            val sdf = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault())
+            val date = sdf.format(java.util.Date(file.lastModified()))
+            "${file.name}  (${size}KB, $date)"
+        }.toTypedArray()
+
+        val selectedItems = BooleanArray(fileNames.size)
+
+        MaterialAlertDialogBuilder(this)
+            .setTitle("管理备份文件 (${dbFiles.size}个)")
+            .setMultiChoiceItems(fileNames, selectedItems) { _, which, isChecked ->
+                selectedItems[which] = isChecked
+            }
+            .setPositiveButton("删除选中") { _, _ ->
+                val toDelete = dbFiles.filterIndexed { index, _ -> selectedItems[index] }
+                if (toDelete.isEmpty()) {
+                    Toast.makeText(this, "未选择任何文件", Toast.LENGTH_SHORT).show()
+                    return@setPositiveButton
+                }
+                confirmDeleteBackups(toDelete)
+            }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+
+    private fun confirmDeleteBackups(files: List<File>) {
+        val names = files.joinToString("\n") { it.name }
+        MaterialAlertDialogBuilder(this)
+            .setTitle("确认删除")
+            .setMessage("确定要删除以下 ${files.size} 个备份文件吗？\n\n$names")
+            .setPositiveButton("删除") { _, _ ->
+                var deleted = 0
+                files.forEach { file ->
+                    if (file.delete()) {
+                        // Also delete associated meta and WAL/SHM files
+                        File(file.path + "-wal").delete()
+                        File(file.path + "-shm").delete()
+                        File(file.path.replace(".db", ".meta")).delete()
+                        deleted++
+                    }
+                }
+                Toast.makeText(this, "已删除 $deleted 个文件", Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton("取消", null)
+            .show()
     }
 }

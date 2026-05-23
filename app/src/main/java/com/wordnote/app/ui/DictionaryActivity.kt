@@ -2,7 +2,10 @@ package com.wordnote.app.ui
 
 import android.app.Activity
 import android.content.Intent
+import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
+import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.widget.EditText
 import android.widget.ImageView
@@ -13,6 +16,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import com.google.android.flexbox.FlexboxLayout
 import com.wordnote.app.R
 import com.wordnote.app.data.DictionaryDatabase
 import com.wordnote.app.util.compatOverridePendingTransition
@@ -33,8 +37,12 @@ class DictionaryActivity : AppCompatActivity() {
     private lateinit var tagsContainer: com.google.android.flexbox.FlexboxLayout
     private lateinit var selectDbButton: com.google.android.material.button.MaterialButton
     private lateinit var searchModeButton: TextView
+    private lateinit var searchHistoryContainer: LinearLayout
+    private lateinit var historyChipContainer: FlexboxLayout
+    private lateinit var clearHistoryButton: TextView
 
     private var isChineseMode = false
+    private val MAX_HISTORY = 10
 
     private val selectFileLauncher = registerForActivityResult(
         ActivityResultContracts.OpenDocument()
@@ -72,12 +80,26 @@ class DictionaryActivity : AppCompatActivity() {
         tagsContainer = findViewById(R.id.tagsContainer)
         selectDbButton = findViewById(R.id.selectDbButton)
         searchModeButton = findViewById(R.id.searchModeButton)
+        searchHistoryContainer = findViewById(R.id.searchHistoryContainer)
+        historyChipContainer = findViewById(R.id.historyChipContainer)
+        clearHistoryButton = findViewById(R.id.clearHistoryButton)
 
         updateSearchModeUI()
 
         searchModeButton.setOnClickListener {
             isChineseMode = !isChineseMode
             updateSearchModeUI()
+            showHistory()
+        }
+
+        clearHistoryButton.setOnClickListener {
+            clearHistory()
+        }
+
+        searchEditText.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus && searchEditText.text.isEmpty()) {
+                showHistory()
+            }
         }
 
         findViewById<ImageView>(R.id.backButton).setOnClickListener {
@@ -112,6 +134,9 @@ class DictionaryActivity : AppCompatActivity() {
     private fun doSearch() {
         val query = searchEditText.text.toString().trim()
         if (query.isEmpty()) return
+
+        saveSearchHistory(query)
+        searchHistoryContainer.visibility = View.GONE
 
         if (!dictDb.isReady()) {
             noDatabaseView.visibility = android.view.View.VISIBLE
@@ -407,6 +432,76 @@ class DictionaryActivity : AppCompatActivity() {
     private fun getDbUri(): String? {
         return getSharedPreferences("dictionary", MODE_PRIVATE)
             .getString("db_uri", null)
+    }
+
+    // Search history methods
+    private fun getHistoryKey(): String = if (isChineseMode) "history_cn" else "history_en"
+
+    private fun getSearchHistory(): MutableList<String> {
+        val prefs = getSharedPreferences("dictionary_history", MODE_PRIVATE)
+        val json = prefs.getString(getHistoryKey(), null) ?: return mutableListOf()
+        return try {
+            org.json.JSONArray(json).let { arr ->
+                (0 until arr.length()).map { arr.getString(it) }.toMutableList()
+            }
+        } catch (_: Exception) {
+            mutableListOf()
+        }
+    }
+
+    private fun saveSearchHistory(query: String) {
+        val history = getSearchHistory()
+        history.remove(query)
+        history.add(0, query)
+        if (history.size > MAX_HISTORY) {
+            history.subList(MAX_HISTORY, history.size).clear()
+        }
+        val prefs = getSharedPreferences("dictionary_history", MODE_PRIVATE)
+        prefs.edit().putString(getHistoryKey(), org.json.JSONArray(history).toString()).apply()
+    }
+
+    private fun clearHistory() {
+        val prefs = getSharedPreferences("dictionary_history", MODE_PRIVATE)
+        prefs.edit().remove(getHistoryKey()).apply()
+        searchHistoryContainer.visibility = View.GONE
+    }
+
+    private fun showHistory() {
+        val history = getSearchHistory()
+        if (history.isEmpty()) {
+            searchHistoryContainer.visibility = View.GONE
+            return
+        }
+        searchHistoryContainer.visibility = View.VISIBLE
+        historyChipContainer.removeAllViews()
+
+        history.forEach { item ->
+            val chip = TextView(this).apply {
+                text = item
+                textSize = 13f
+                setTextColor(resources.getColor(R.color.text_secondary, null))
+                setPadding(dpToPx(12), dpToPx(6), dpToPx(12), dpToPx(6))
+                val bg = GradientDrawable().apply {
+                    setColor(resources.getColor(R.color.background, null))
+                    cornerRadius = 16f * resources.displayMetrics.density
+                    setStroke(dpToPx(1), resources.getColor(R.color.divider, null))
+                }
+                background = bg
+                setOnClickListener {
+                    searchEditText.setText(item)
+                    searchEditText.setSelection(item.length)
+                    doSearch()
+                }
+            }
+            val params = FlexboxLayout.LayoutParams(
+                FlexboxLayout.LayoutParams.WRAP_CONTENT,
+                FlexboxLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                setMargins(0, 0, dpToPx(6), dpToPx(6))
+            }
+            chip.layoutParams = params
+            historyChipContainer.addView(chip)
+        }
     }
 
     private fun dpToPx(dp: Int): Int {
