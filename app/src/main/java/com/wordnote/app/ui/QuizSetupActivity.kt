@@ -15,8 +15,10 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.card.MaterialCardView
 import com.wordnote.app.R
 import com.wordnote.app.data.Category
+import com.wordnote.app.data.QuizHistory
 import com.wordnote.app.util.compatOverridePendingTransition
 
 class QuizSetupActivity : AppCompatActivity() {
@@ -28,6 +30,8 @@ class QuizSetupActivity : AppCompatActivity() {
     private lateinit var allCheckBox: CheckBox
     private lateinit var randomCheckBox: CheckBox
     private lateinit var forgetCountCheckBox: CheckBox
+    private lateinit var historyContainer: LinearLayout
+    private lateinit var historySection: View
 
     private var selectedCategories = mutableSetOf<Long>()
     private var allCategories = emptyList<Category>()
@@ -55,6 +59,8 @@ class QuizSetupActivity : AppCompatActivity() {
         allCheckBox = findViewById(R.id.allCheckBox)
         randomCheckBox = findViewById(R.id.randomCheckBox)
         forgetCountCheckBox = findViewById(R.id.forgetCountCheckBox)
+        historyContainer = findViewById(R.id.historyContainer)
+        historySection = findViewById(R.id.historySection)
 
         wordCountSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
@@ -85,6 +91,15 @@ class QuizSetupActivity : AppCompatActivity() {
             allCategories = categories
             setupCategorySelection(categories)
         }
+
+        viewModel.allQuizHistory.observe(this) { history ->
+            if (history.isEmpty()) {
+                historySection.visibility = View.GONE
+            } else {
+                historySection.visibility = View.VISIBLE
+                displayHistory(history)
+            }
+        }
     }
 
     private fun setupCategorySelection(categories: List<Category>) {
@@ -102,37 +117,19 @@ class QuizSetupActivity : AppCompatActivity() {
                 Color.parseColor("#757575")
             }
 
-            val row = LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER_VERTICAL
-                setPadding(dpToPx(4), dpToPx(6), dpToPx(4), dpToPx(6))
-                tag = category.id
-            }
-
-            val colorDot = View(this).apply {
-                layoutParams = LinearLayout.LayoutParams(dpToPx(12), dpToPx(12)).apply {
-                    marginEnd = dpToPx(12)
-                }
-                background = GradientDrawable().apply {
-                    shape = GradientDrawable.OVAL
-                    setColor(color)
-                }
-            }
-            row.addView(colorDot)
-
             val checkBox = CheckBox(this).apply {
                 text = category.name
                 textSize = 15f
                 buttonTintList = android.content.res.ColorStateList.valueOf(color)
                 isChecked = true
                 tag = category.id
+                setPadding(dpToPx(4), dpToPx(6), dpToPx(8), dpToPx(6))
                 layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.MATCH_PARENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
                 )
             }
             styleCheckBox(checkBox, color)
-            row.addView(checkBox)
 
             categoryCheckBoxes.add(category.id to checkBox)
 
@@ -140,7 +137,7 @@ class QuizSetupActivity : AppCompatActivity() {
                 onCategoryToggled(category.id, isChecked)
             }
 
-            categorySelectionContainer.addView(row)
+            categorySelectionContainer.addView(checkBox)
         }
     }
 
@@ -151,11 +148,10 @@ class QuizSetupActivity : AppCompatActivity() {
             setStroke(0, Color.TRANSPARENT)
         }
         checkBox.background = bg
-        checkBox.setPadding(dpToPx(4), dpToPx(2), dpToPx(8), dpToPx(2))
         checkBox.setTextColor(getColor(R.color.text_primary))
 
         val originalColor = color
-        checkBox.tag = checkBox.tag // preserve original tag
+        checkBox.tag = checkBox.tag
         checkBox.setOnCheckedChangeListener { buttonView, isChecked ->
             val tag = buttonView.tag
             val itemColor = if (tag is Long) {
@@ -225,6 +221,84 @@ class QuizSetupActivity : AppCompatActivity() {
             }
             selectedCategories.add(-1)
             allCheckBox.isChecked = true
+        }
+    }
+
+    private fun displayHistory(history: List<QuizHistory>) {
+        historyContainer.removeAllViews()
+
+        history.take(10).forEachIndexed { index, record ->
+            val percentage = if (record.totalWords > 0) (record.correctCount * 100 / record.totalWords) else 0
+            val dateStr = java.text.SimpleDateFormat("MM/dd HH:mm", java.util.Locale.getDefault())
+                .format(java.util.Date(record.createdAt))
+            val forgottenCount = record.totalWords - record.correctCount
+
+            val row = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(dpToPx(4), dpToPx(10), dpToPx(4), dpToPx(10))
+            }
+
+            // Date
+            val dateText = TextView(this).apply {
+                text = dateStr
+                setTextColor(getColor(R.color.text_hint))
+                textSize = 13f
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+            }
+            row.addView(dateText)
+
+            // Score
+            val scoreColor = when {
+                percentage >= 80 -> getColor(R.color.primary)
+                percentage >= 50 -> Color.parseColor("#FB8C00")
+                else -> getColor(R.color.cat_hard)
+            }
+            val scoreText = TextView(this).apply {
+                text = "$percentage%"
+                setTextColor(scoreColor)
+                textSize = 15f
+                paint.isFakeBoldText = true
+                layoutParams = LinearLayout.LayoutParams(
+                    0,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    1f
+                ).apply {
+                    marginStart = dpToPx(16)
+                }
+                gravity = Gravity.END
+            }
+            row.addView(scoreText)
+
+            // Detail
+            val detailText = TextView(this).apply {
+                text = "${record.correctCount}/${record.totalWords}"
+                setTextColor(getColor(R.color.text_secondary))
+                textSize = 13f
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    marginStart = dpToPx(12)
+                }
+            }
+            row.addView(detailText)
+
+            historyContainer.addView(row)
+
+            if (index < history.size - 1 && index < 9) {
+                val divider = View(this).apply {
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        1
+                    )
+                    setBackgroundColor(getColor(R.color.divider))
+                }
+                historyContainer.addView(divider)
+            }
         }
     }
 

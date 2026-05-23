@@ -3,6 +3,8 @@ package com.wordnote.app.ui
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.View
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -44,10 +46,14 @@ class QuizActivity : AppCompatActivity() {
     private var categoryIds: List<Long>? = null
     private var useForgetCount = false
 
+    private val autoAdvanceHandler = Handler(Looper.getMainLooper())
+    private var isShowingMeaning = false
+
     companion object {
         private const val EXTRA_WORD_COUNT = "word_count"
         private const val EXTRA_CATEGORY_IDS = "category_ids"
         private const val EXTRA_USE_FORGET_COUNT = "use_forget_count"
+        private const val AUTO_ADVANCE_DELAY = 2000L
 
         fun launch(context: Context, wordCount: Int, categoryIds: List<Long>?, useForgetCount: Boolean) {
             val intent = Intent(context, QuizActivity::class.java).apply {
@@ -75,6 +81,7 @@ class QuizActivity : AppCompatActivity() {
 
     private fun initViews() {
         findViewById<ImageView>(R.id.backButton).setOnClickListener {
+            autoAdvanceHandler.removeCallbacksAndMessages(null)
             finish()
             compatOverridePendingTransition(R.anim.slide_in_left, R.anim.slide_out_right)
         }
@@ -92,7 +99,7 @@ class QuizActivity : AppCompatActivity() {
 
         forgetButton.setOnClickListener { onWordForgotten() }
         rememberButton.setOnClickListener { onWordRemembered() }
-        nextButton.setOnClickListener { showNextWord() }
+        nextButton.setOnClickListener { advanceToNext() }
     }
 
     private fun loadWords() {
@@ -125,7 +132,7 @@ class QuizActivity : AppCompatActivity() {
                 return@launch
             }
 
-            showNextWord()
+            showWord()
         }
     }
 
@@ -143,12 +150,13 @@ class QuizActivity : AppCompatActivity() {
         }
     }
 
-    private fun showNextWord() {
+    private fun showWord() {
         if (quizWords.isEmpty() || currentIndex >= quizWords.size) {
-            showResults()
+            finishQuiz()
             return
         }
 
+        isShowingMeaning = false
         val word = quizWords[currentIndex]
 
         progressText.text = "${currentIndex + 1} / ${quizWords.size}"
@@ -156,13 +164,12 @@ class QuizActivity : AppCompatActivity() {
         progressBar.progress = currentIndex + 1
 
         quizWordText.text = word.word
-
         val category = word.categoryId?.let { viewModel.getCategoryById(it) }
         quizCategoryText.text = category?.name ?: ""
 
         meaningCard.visibility = View.GONE
         forgetButton.visibility = View.VISIBLE
-        rememberButton.visibility = View.GONE
+        rememberButton.visibility = View.VISIBLE
         nextButton.visibility = View.GONE
 
         wordDisplayContainer.let {
@@ -171,7 +178,7 @@ class QuizActivity : AppCompatActivity() {
             it.animate()
                 .alpha(1f)
                 .translationY(0f)
-                .setDuration(250)
+                .setDuration(200)
                 .setInterpolator(android.view.animation.DecelerateInterpolator())
                 .start()
         }
@@ -179,7 +186,9 @@ class QuizActivity : AppCompatActivity() {
 
     private fun onWordForgotten() {
         if (quizWords.isEmpty() || currentIndex < 0 || currentIndex >= quizWords.size) return
+        if (isShowingMeaning) return
 
+        isShowingMeaning = true
         val word = quizWords[currentIndex]
         forgottenWords.add(word)
 
@@ -190,20 +199,6 @@ class QuizActivity : AppCompatActivity() {
             }
         }
 
-        showMeaning()
-    }
-
-    private fun onWordRemembered() {
-        correctCount++
-        currentIndex++
-        showNextWord()
-    }
-
-    private fun showMeaning() {
-        if (quizWords.isEmpty() || currentIndex < 0 || currentIndex >= quizWords.size) return
-
-        val word = quizWords[currentIndex]
-
         meaningCard.visibility = View.VISIBLE
         quizMeaningText.text = word.meaning
 
@@ -212,7 +207,34 @@ class QuizActivity : AppCompatActivity() {
         nextButton.visibility = View.VISIBLE
     }
 
-    private fun showResults() {
+    private fun onWordRemembered() {
+        correctCount++
+        currentIndex++
+        showWord()
+    }
+
+    private fun advanceToNext() {
+        autoAdvanceHandler.removeCallbacksAndMessages(null)
+        currentIndex++
+        showWord()
+    }
+
+    private fun finishQuiz() {
+        autoAdvanceHandler.removeCallbacksAndMessages(null)
+
+        lifecycleScope.launch {
+            withContext(Dispatchers.IO) {
+                val history = com.wordnote.app.data.QuizHistory(
+                    totalWords = quizWords.size,
+                    correctCount = correctCount,
+                    categoryIds = categoryIds?.joinToString(",") ?: "",
+                    forgottenWordIds = forgottenWords.joinToString(",") { it.id.toString() },
+                    forgottenWordTexts = forgottenWords.joinToString("||") { "${it.word}=${it.meaning}" }
+                )
+                viewModel.insertQuizHistory(history)
+            }
+        }
+
         if (!isFinishing && !isDestroyed) {
             val intent = Intent(this, QuizResultActivity::class.java).apply {
                 putExtra(QuizResultActivity.EXTRA_TOTAL, quizWords.size)
@@ -222,5 +244,10 @@ class QuizActivity : AppCompatActivity() {
             startActivity(intent)
             finish()
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        autoAdvanceHandler.removeCallbacksAndMessages(null)
     }
 }

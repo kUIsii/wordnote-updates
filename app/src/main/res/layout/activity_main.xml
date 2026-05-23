@@ -138,7 +138,8 @@
             android:scrollbarTrackVertical="@drawable/scrollbar_track"
             android:scrollbars="vertical"
             android:fadeScrollbars="false"
-            android:scrollbarDefaultDelayBeforeFade="0" />
+            android:scrollbarDefaultDelayBeforeFade="0"
+            android:scrollbarFadeDuration="0" />
 
         <LinearLayout
             android:id="@+id/emptyView"

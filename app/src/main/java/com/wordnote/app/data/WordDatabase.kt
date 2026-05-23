@@ -11,8 +11,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @Database(
-    entities = [Word::class, Category::class, Tag::class, WordTag::class, WordMeaning::class, WordGroup::class],
-    version = 11,
+    entities = [Word::class, Category::class, Tag::class, WordTag::class, WordMeaning::class, WordGroup::class, QuizHistory::class],
+    version = 12,
     exportSchema = false
 )
 abstract class WordDatabase : RoomDatabase() {
@@ -21,6 +21,7 @@ abstract class WordDatabase : RoomDatabase() {
     abstract fun tagDao(): TagDao
     abstract fun wordMeaningDao(): WordMeaningDao
     abstract fun wordGroupDao(): WordGroupDao
+    abstract fun quizHistoryDao(): QuizHistoryDao
 
     companion object {
         @Volatile
@@ -153,6 +154,22 @@ abstract class WordDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_11_12 = object : Migration(11, 12) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS quiz_history (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        createdAt INTEGER NOT NULL DEFAULT 0,
+                        totalWords INTEGER NOT NULL DEFAULT 0,
+                        correctCount INTEGER NOT NULL DEFAULT 0,
+                        categoryIds TEXT NOT NULL DEFAULT '',
+                        forgottenWordIds TEXT NOT NULL DEFAULT '',
+                        forgottenWordTexts TEXT NOT NULL DEFAULT ''
+                    )
+                """)
+            }
+        }
+
         fun getDatabase(context: Context): WordDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -160,7 +177,7 @@ abstract class WordDatabase : RoomDatabase() {
                     WordDatabase::class.java,
                     "word_database"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12)
                     .fallbackToDestructiveMigration()
                     .addCallback(DatabaseCallback())
                     .build()

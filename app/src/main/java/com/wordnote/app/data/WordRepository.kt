@@ -7,7 +7,8 @@ class WordRepository(
     private val categoryDao: CategoryDao,
     private val tagDao: TagDao,
     private val wordMeaningDao: WordMeaningDao,
-    private val wordGroupDao: WordGroupDao
+    private val wordGroupDao: WordGroupDao,
+    private val quizHistoryDao: QuizHistoryDao
 ) {
 
     // Word operations
@@ -125,4 +126,9 @@ class WordRepository(
         wordDao.permanentDeleteOlderThan(cutoffTime)
     }
 
+    // Quiz History operations
+    val allQuizHistory: LiveData<List<QuizHistory>> = quizHistoryDao.getAll()
+    suspend fun insertQuizHistory(history: QuizHistory): Long = quizHistoryDao.insert(history)
+    suspend fun deleteQuizHistory(history: QuizHistory) = quizHistoryDao.delete(history)
+    suspend fun deleteAllQuizHistory() = quizHistoryDao.deleteAll()
 }

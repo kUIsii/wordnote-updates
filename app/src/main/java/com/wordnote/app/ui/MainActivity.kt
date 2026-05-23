@@ -224,7 +224,6 @@ class MainActivity : AppCompatActivity() {
             layoutManager = LinearLayoutManager(this@MainActivity)
             adapter = wordAdapter
             isVerticalScrollBarEnabled = true
-            scrollBarSize = dpToPx(6)
         }
     }
 

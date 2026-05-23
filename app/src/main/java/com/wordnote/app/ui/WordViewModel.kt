@@ -271,4 +271,15 @@ class WordViewModel(application: Application) : AndroidViewModel(application) {
     fun getWordCountForGroup(groupId: Long): LiveData<Int> = liveData {
         emit(repository.getWordCountForGroup(groupId))
     }
+
+    // Quiz History operations
+    val allQuizHistory: LiveData<List<QuizHistory>> = repository.allQuizHistory
+
+    fun insertQuizHistory(history: QuizHistory) = viewModelScope.launch {
+        repository.insertQuizHistory(history)
+    }
+
+    fun deleteQuizHistory(history: QuizHistory) = viewModelScope.launch {
+        repository.deleteQuizHistory(history)
+    }
 }
