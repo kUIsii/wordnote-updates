@@ -11,6 +11,9 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.recyclerview.widget.ItemTouchHelper
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import androidx.lifecycle.ViewModelProvider
 import com.google.android.material.button.MaterialButton
@@ -18,6 +21,7 @@ import com.google.android.material.card.MaterialCardView
 import com.wordnote.app.R
 import com.wordnote.app.data.Word
 import com.wordnote.app.data.WordMeaning
+import com.wordnote.app.ui.adapter.MeaningAdapter
 import com.wordnote.app.util.compatOverridePendingTransition
 import com.wordnote.app.util.compatOverridePendingTransitionClose
 
@@ -39,6 +43,11 @@ class WordDetailActivity : AppCompatActivity() {
     private lateinit var deleteButton: MaterialButton
     private lateinit var meaningsContainer: LinearLayout
     private lateinit var meaningsCard: MaterialCardView
+    private lateinit var meaningsRecyclerView: RecyclerView
+    private lateinit var meaningsLabel: TextView
+    private lateinit var meaningsHint: TextView
+    private lateinit var meaningAdapter: MeaningAdapter
+    private lateinit var itemTouchHelper: ItemTouchHelper
 
     private var wordId: Long = -1
     private var currentWord: Word? = null
@@ -73,6 +82,34 @@ class WordDetailActivity : AppCompatActivity() {
         deleteButton = findViewById(R.id.deleteButton)
         meaningsContainer = findViewById(R.id.meaningsContainer)
         meaningsCard = findViewById(R.id.meaningsCard)
+        meaningsRecyclerView = findViewById(R.id.meaningsRecyclerView)
+        meaningsLabel = findViewById(R.id.meaningsLabel)
+        meaningsHint = findViewById(R.id.meaningsHint)
+
+        // Setup adapter
+        meaningAdapter = MeaningAdapter(
+            onHighlightToggle = { meaning ->
+                viewModel.toggleMeaningHighlighted(meaning)
+            },
+            onNoteClick = { meaning ->
+                showNoteDialog(meaning)
+            },
+            onOrderChanged = { newOrder ->
+                viewModel.reorderMeanings(newOrder)
+            }
+        )
+        meaningsRecyclerView.layoutManager = LinearLayoutManager(this)
+        meaningsRecyclerView.adapter = meaningAdapter
+
+        // Setup ItemTouchHelper for drag
+        itemTouchHelper = ItemTouchHelper(meaningAdapter.itemTouchHelperCallback)
+        itemTouchHelper.attachToRecyclerView(meaningsRecyclerView)
+
+        meaningAdapter.startDragListener = object : MeaningAdapter.OnStartDragListener {
+            override fun onStartDrag(viewHolder: RecyclerView.ViewHolder) {
+                itemTouchHelper.startDrag(viewHolder)
+            }
+        }
     }
 
     private fun setupListeners() {
@@ -107,16 +144,16 @@ class WordDetailActivity : AppCompatActivity() {
 
         deleteButton.setOnClickListener {
             MaterialAlertDialogBuilder(this)
-                .setTitle(R.string.confirm_delete)
-                .setMessage(R.string.confirm_delete_message)
-                .setPositiveButton(R.string.yes) { _, _ ->
+                .setTitle("删除单词")
+                .setMessage("确定要删除 \"${currentWord?.word}\" 吗？\n可从回收站恢复")
+                .setPositiveButton("删除") { _, _ ->
                     currentWord?.let { word ->
                         viewModel.deleteWord(word)
-                        Toast.makeText(this, "已删除", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this, "已移入回收站", Toast.LENGTH_SHORT).show()
                         finish()
                     }
                 }
-                .setNegativeButton(R.string.no, null)
+                .setNegativeButton("取消", null)
                 .show()
         }
     }
@@ -165,7 +202,6 @@ class WordDetailActivity : AppCompatActivity() {
     }
 
     private fun displayMeanings(meanings: List<WordMeaning>) {
-        meaningsContainer.removeAllViews()
         if (meanings.isEmpty()) {
             val word = currentWord
             if (word != null) {
@@ -174,23 +210,16 @@ class WordDetailActivity : AppCompatActivity() {
                     // Multiple meanings - show split button
                     meaningsCard.visibility = View.VISIBLE
                     meaningTextView.visibility = View.GONE
+                    meaningsLabel.visibility = View.VISIBLE
+                    meaningsHint.visibility = View.GONE
+                    meaningsRecyclerView.visibility = View.GONE
 
-                    val label = TextView(this).apply {
-                        text = "各释义标注"
-                        textSize = 15f
-                        setTextColor(getColor(R.color.text_primary))
-                        setPadding(0, 0, 0, dpToPx(8))
+                    // Clear any existing dynamic views
+                    while (meaningsContainer.childCount > 3) {
+                        meaningsContainer.removeViewAt(meaningsContainer.childCount - 1)
                     }
-                    meaningsContainer.addView(label)
 
-                    val hint = TextView(this).apply {
-                        text = "点击下方按钮拆分释义，即可对每个释义单独标记和排序"
-                        textSize = 13f
-                        setTextColor(getColor(R.color.text_secondary))
-                        setPadding(0, 0, 0, dpToPx(12))
-                    }
-                    meaningsContainer.addView(hint)
-
+                    // Add split button
                     val splitButton = TextView(this).apply {
                         text = "拆分释义"
                         textSize = 14f
@@ -206,7 +235,7 @@ class WordDetailActivity : AppCompatActivity() {
                             Toast.makeText(this@WordDetailActivity, "已拆分 ${parts.size} 个释义", Toast.LENGTH_SHORT).show()
                         }
                     }
-                    meaningsContainer.addView(splitButton)
+                    (meaningsContainer as LinearLayout).addView(splitButton)
                     return
                 } else if (parts.size == 1) {
                     // Single meaning - auto-create and show marking UI
@@ -220,158 +249,16 @@ class WordDetailActivity : AppCompatActivity() {
         }
         meaningsCard.visibility = View.VISIBLE
         meaningTextView.visibility = View.GONE
+        meaningsLabel.visibility = View.VISIBLE
+        meaningsHint.visibility = View.VISIBLE
+        meaningsRecyclerView.visibility = View.VISIBLE
 
-        val label = TextView(this).apply {
-            text = "各释义标注"
-            textSize = 15f
-            setTextColor(getColor(R.color.text_primary))
-            setPadding(0, 0, 0, dpToPx(8))
+        // Clear any existing dynamic views (like split button)
+        while (meaningsContainer.childCount > 3) {
+            meaningsContainer.removeViewAt(meaningsContainer.childCount - 1)
         }
-        meaningsContainer.addView(label)
 
-        // Highlight color is always blue for all categories
-        val highlightColor = Color.parseColor("#5B9BD5")
-
-        meanings.forEachIndexed { index, meaning ->
-            val row = LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL
-                setPadding(dpToPx(4), dpToPx(10), dpToPx(4), dpToPx(10))
-                gravity = android.view.Gravity.CENTER_VERTICAL
-                val params = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT
-                ).apply {
-                    bottomMargin = dpToPx(2)
-                }
-                layoutParams = params
-            }
-
-            // Sequence number
-            val seqText = TextView(this).apply {
-                text = "${index + 1}."
-                textSize = 13f
-                setTextColor(getColor(R.color.text_secondary))
-                setPadding(dpToPx(2), 0, dpToPx(6), 0)
-                minWidth = dpToPx(24)
-            }
-            row.addView(seqText)
-
-            // Up/Down buttons for reorder
-            val upButton = TextView(this).apply {
-                text = "▲"
-                textSize = 10f
-                setPadding(dpToPx(4), dpToPx(2), dpToPx(4), dpToPx(2))
-                setTextColor(if (index > 0) getColor(R.color.text_secondary) else getColor(R.color.text_hint))
-                alpha = if (index > 0) 1f else 0.3f
-                if (index > 0) {
-                    setOnClickListener {
-                        val mutableMeanings = meanings.toMutableList()
-                        val item = mutableMeanings.removeAt(index)
-                        mutableMeanings.add(index - 1, item)
-                        viewModel.reorderMeanings(mutableMeanings)
-                    }
-                }
-            }
-            row.addView(upButton)
-
-            val downButton = TextView(this).apply {
-                text = "▼"
-                textSize = 10f
-                setPadding(dpToPx(4), dpToPx(2), dpToPx(4), dpToPx(2))
-                setTextColor(if (index < meanings.size - 1) getColor(R.color.text_secondary) else getColor(R.color.text_hint))
-                alpha = if (index < meanings.size - 1) 1f else 0.3f
-                if (index < meanings.size - 1) {
-                    setOnClickListener {
-                        val mutableMeanings = meanings.toMutableList()
-                        val item = mutableMeanings.removeAt(index)
-                        mutableMeanings.add(index + 1, item)
-                        viewModel.reorderMeanings(mutableMeanings)
-                    }
-                }
-            }
-            row.addView(downButton)
-
-            // Meaning text styling
-            val meaningText = TextView(this).apply {
-                text = meaning.meaningText
-                textSize = 15f
-                val density = resources.displayMetrics.density
-                if (meaning.isProblematic) {
-                    setTextColor(getColor(R.color.cat_hard))
-                    val bg = GradientDrawable().apply {
-                        setColor(Color.parseColor("#1AE8636A"))
-                        cornerRadius = 6f * density
-                    }
-                    background = bg
-                    setPadding(dpToPx(8), dpToPx(2), dpToPx(8), dpToPx(2))
-                    paint.isFakeBoldText = true
-                } else if (meaning.isHighlighted) {
-                    setTextColor(highlightColor)
-                    val bg = GradientDrawable().apply {
-                        setColor(Color.argb(35, Color.red(highlightColor), Color.green(highlightColor), Color.blue(highlightColor)))
-                        cornerRadius = 6f * density
-                    }
-                    background = bg
-                    setPadding(dpToPx(8), dpToPx(4), dpToPx(8), dpToPx(4))
-                    paint.isFakeBoldText = true
-                } else {
-                    setTextColor(getColor(R.color.text_primary))
-                }
-                val params = LinearLayout.LayoutParams(
-                    0,
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                    1f
-                )
-                layoutParams = params
-            }
-            row.addView(meaningText)
-
-            // "标记" button - for ALL categories
-            val highlightButton = TextView(this).apply {
-                text = if (meaning.isHighlighted) "已标记" else "标记"
-                textSize = 11f
-                setPadding(dpToPx(10), dpToPx(4), dpToPx(10), dpToPx(4))
-                if (meaning.isHighlighted) {
-                    setTextColor(highlightColor)
-                } else {
-                    val bg = GradientDrawable().apply {
-                        setStroke(dpToPx(1), getColor(R.color.divider))
-                        cornerRadius = 16f * resources.displayMetrics.density
-                        setColor(Color.TRANSPARENT)
-                    }
-                    background = bg
-                    setTextColor(getColor(R.color.text_secondary))
-                }
-                setOnClickListener {
-                    viewModel.toggleMeaningHighlighted(meaning)
-                }
-            }
-            row.addView(highlightButton)
-
-            // Note button
-            val noteButton = TextView(this).apply {
-                text = if (meaning.note != null) "有备注" else "备注"
-                textSize = 12f
-                setPadding(dpToPx(10), dpToPx(4), dpToPx(10), dpToPx(4))
-                setTextColor(getColor(R.color.text_secondary))
-                setOnClickListener {
-                    showNoteDialog(meaning)
-                }
-            }
-            row.addView(noteButton)
-
-            meaningsContainer.addView(row)
-
-            if (meaning.note != null && meaning.note.isNotBlank()) {
-                val noteText = TextView(this).apply {
-                    text = "备注: ${meaning.note}"
-                    textSize = 12f
-                    setTextColor(getColor(R.color.text_hint))
-                    setPadding(dpToPx(8), 0, dpToPx(8), dpToPx(6))
-                }
-                meaningsContainer.addView(noteText)
-            }
-        }
+        meaningAdapter.submitList(meanings)
     }
 
     private fun showNoteDialog(meaning: WordMeaning) {

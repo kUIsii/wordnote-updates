@@ -11,7 +11,7 @@ class WordRepository(
 ) {
 
     // Word operations
-    val allWords: LiveData<List<Word>> = wordDao.getAllWords()
+    val allWords: LiveData<List<Word>> = wordDao.getAllActiveWords()
 
     suspend fun insertWord(word: Word): Long = wordDao.insertWord(word)
     suspend fun insertWords(words: List<Word>): List<Long> = wordDao.insertWords(words)
@@ -19,7 +19,7 @@ class WordRepository(
     suspend fun deleteWord(word: Word) = wordDao.deleteWord(word)
     suspend fun getWordById(wordId: Long): Word? = wordDao.getWordById(wordId)
 
-    fun getWordsByCategory(categoryId: Long): LiveData<List<Word>> = wordDao.getWordsByCategory(categoryId)
+    fun getWordsByCategory(categoryId: Long): LiveData<List<Word>> = wordDao.getActiveWordsByCategory(categoryId)
     fun searchWords(query: String): LiveData<List<Word>> = wordDao.searchWords(query)
 
     // Review operations
@@ -107,5 +107,22 @@ class WordRepository(
     // Word with group operations
     suspend fun getWordsByGroup(groupId: Long): List<Word> = wordDao.getWordsByGroupSync(groupId)
     suspend fun setWordGroup(wordId: Long, groupId: Long?) = wordDao.setWordGroup(wordId, groupId)
+
+    // Soft delete / Recycle bin operations
+    suspend fun softDeleteWord(wordId: Long) {
+        wordDao.softDelete(wordId, System.currentTimeMillis())
+    }
+
+    suspend fun restoreWord(wordId: Long) {
+        wordDao.restore(wordId)
+    }
+
+    val deletedWords: LiveData<List<Word>> = wordDao.getDeletedWords()
+
+    suspend fun getDeletedWordsSync(): List<Word> = wordDao.getDeletedWordsSync()
+
+    suspend fun permanentDeleteOlderThan(cutoffTime: Long) {
+        wordDao.permanentDeleteOlderThan(cutoffTime)
+    }
 
 }

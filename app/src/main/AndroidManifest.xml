@@ -47,6 +47,14 @@
             android:name=".ui.DictionaryActivity"
             android:parentActivityName=".ui.MainActivity" />
 
+        <activity
+            android:name=".ui.ChangelogActivity"
+            android:parentActivityName=".ui.SettingsActivity" />
+
+        <activity
+            android:name=".ui.RecycleBinActivity"
+            android:parentActivityName=".ui.SettingsActivity" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

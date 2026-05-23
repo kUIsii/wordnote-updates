@@ -300,11 +300,11 @@ class MainActivity : AppCompatActivity() {
     private fun showBatchDeleteDialog(wordIds: Set<Long>) {
         MaterialAlertDialogBuilder(this)
             .setTitle("批量删除")
-            .setMessage("确定要删除选中的 ${wordIds.size} 个单词吗？")
+            .setMessage("确定要删除选中的 ${wordIds.size} 个单词吗？\n可从回收站恢复")
             .setPositiveButton("删除") { _, _ ->
                 viewModel.deleteWordsByIds(wordIds.toList())
                 wordAdapter.deleteSelectedWords()
-                Toast.makeText(this, "已删除 ${wordIds.size} 个单词", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "已移入回收站 ${wordIds.size} 个单词", Toast.LENGTH_SHORT).show()
             }
             .setNegativeButton("取消", null)
             .show()
@@ -725,10 +725,10 @@ class MainActivity : AppCompatActivity() {
     private fun showDeleteWordDialog(word: Word) {
         MaterialAlertDialogBuilder(this)
             .setTitle("删除单词")
-            .setMessage("确定要删除 \"${word.word}\" 吗？")
+            .setMessage("确定要删除 \"${word.word}\" 吗？\n可从回收站恢复")
             .setPositiveButton("删除") { _, _ ->
                 viewModel.deleteWord(word)
-                Toast.makeText(this, "已删除", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "已移入回收站", Toast.LENGTH_SHORT).show()
             }
             .setNegativeButton("取消", null)
             .show()

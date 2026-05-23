@@ -41,6 +41,7 @@ Android 英语单词记忆工具，支持分类管理、一词多义标注、分
 | 中文检索英文 | 词典页面支持中→英反向查询，输入中文可查找包含该释义的所有英文单词 |
 | 应用内自动更新 | 启动时检查 GitHub 私有仓库 Releases，有新版本弹窗提示下载安装，无需数据线 |
 | 日记/备忘录 | 每日记录想法、待办事项，支持心情追踪、关联单词、学习摘要统计 |
+| 单词回收站 | 删除的单词移入回收站，30 天内可恢复，支持批量恢复和彻底删除 |
 
 ### 开发中 / 待做
 
@@ -89,6 +90,7 @@ app/src/main/java/com/wordnote/app/
 │   ├── DiaryActivity.kt            # 日记列表页面
 │   ├── DiaryDetailActivity.kt      # 日记详情/编辑页面
 │   ├── DiaryViewModel.kt           # 日记 ViewModel
+│   ├── RecycleBinActivity.kt       # 回收站页面
 │   └── adapter/
 │       ├── WordAdapter.kt          # 单词列表适配器 (紧凑单行布局，支持批量选择)
 │       ├── CategoryAdapter.kt      # 分类列表适配器
@@ -109,6 +111,8 @@ app/src/main/res/
 │   ├── activity_dictionary.xml     # 离线词典搜索页
 │   ├── activity_diary.xml          # 日记列表页
 │   ├── activity_diary_detail.xml   # 日记详情/编辑页
+│   ├── activity_recycle_bin.xml    # 回收站页面
+│   ├── item_recycle_bin_word.xml   # 回收站单词条目
 │   ├── item_word_compact.xml       # 单词条目 (单行紧凑)
 │   ├── item_date_header.xml        # 日期分组标题
 │   ├── item_category.xml           # 分类条目
@@ -124,6 +128,7 @@ app/src/main/res/
 │   ├── ic_settings.xml             # 设置图标
 │   ├── ic_backup.xml               # 备份图标
 │   ├── ic_restore.xml              # 恢复图标
+│   ├── ic_trash_restore.xml        # 回收站图标
 │   ├── ic_back.xml                 # 返回图标
 │   ├── ic_dictionary.xml           # 词典图标 (书本形状)
 │   ├── search_box_background.xml   # 搜索框背景
@@ -136,7 +141,7 @@ app/src/main/res/
 └── values-night/themes.xml         # 暗色主题
 ```
 
-### 数据库 Schema (v7)
+### 数据库 Schema (v11)
 
 ```
 words
@@ -150,7 +155,9 @@ words
 ├── forgetCount: Int
 ├── nextReviewAt: Long
 ├── lastReviewedAt: Long
-└── batchId: Long? (批量输入分组ID)
+├── batchId: Long? (批量输入分组ID)
+├── isDeleted: Boolean (软删除标记)
+└── deletedAt: Long (删除时间)
 
 categories
 ├── id (PK)
@@ -203,6 +210,10 @@ tags / word_tag (标签系统，目前未在 UI 使用)
 - MIGRATION_4_5: 添加 word.batchId (批量输入分组)
 - MIGRATION_5_6: 添加 word_meanings.isHighlighted (释义颜色标记)
 - MIGRATION_6_7: 创建 diary_entries, diary_todos, diary_word_refs 表 (日记/备忘录功能)
+- MIGRATION_7_8: 删除 diary_todos, diary_word_refs 表
+- MIGRATION_8_9: 添加 word_meanings.sortOrder (释义排序)
+- MIGRATION_9_10: 删除 diary_entries, diary_todos, diary_word_refs 表
+- MIGRATION_10_11: 添加 words.isDeleted, words.deletedAt (单词回收站)
 
 ---
 
@@ -222,6 +233,21 @@ tags / word_tag (标签系统，目前未在 UI 使用)
 ---
 
 ## 开发日志
+
+### 2026-05-23 (v2.4.1)
+
+- 新增单词回收站功能
+  - 删除的单词不再直接移除，而是标记为软删除移入回收站
+  - 回收站页面：显示已删除单词列表，支持勾选批量操作
+  - 支持单个恢复、批量恢复、批量彻底删除
+  - 已删除单词保留 30 天后自动清除
+  - 设置页添加回收站入口
+  - 数据库升级至 v11，添加 isDeleted 和 deletedAt 字段
+  - 删除对话框提示"可从回收站恢复"
+- 多义词拖动排序
+  - 释义列表改为 RecyclerView，支持拖动排序
+  - 左侧拖动图标可长按拖动调整释义顺序
+  - 移除旧的上下箭头排序按钮
 
 ### 2026-05-21 (v2.2.1)
 

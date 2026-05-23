@@ -29,5 +29,7 @@ data class Word(
     val forgetCount: Int = 0,
     val nextReviewAt: Long = 0L,
     val lastReviewedAt: Long = 0L,
-    val batchId: Long? = null
+    val batchId: Long? = null,
+    val isDeleted: Boolean = false,
+    val deletedAt: Long = 0L
 )

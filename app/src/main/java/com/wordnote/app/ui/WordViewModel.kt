@@ -103,14 +103,40 @@ class WordViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun deleteWord(word: Word) = viewModelScope.launch {
-        repository.deleteWord(word)
+        repository.softDeleteWord(word.id)
     }
 
     fun deleteWordsByIds(wordIds: List<Long>) = viewModelScope.launch {
         wordIds.forEach { id ->
+            repository.softDeleteWord(id)
+        }
+    }
+
+    // Recycle bin operations
+    val deletedWords: LiveData<List<Word>> = repository.deletedWords
+
+    fun restoreWord(wordId: Long) = viewModelScope.launch {
+        repository.restoreWord(wordId)
+    }
+
+    fun restoreWords(wordIds: List<Long>) = viewModelScope.launch {
+        wordIds.forEach { id -> repository.restoreWord(id) }
+    }
+
+    fun permanentDelete(word: Word) = viewModelScope.launch {
+        repository.deleteWord(word)
+    }
+
+    fun permanentDeleteWords(wordIds: List<Long>) = viewModelScope.launch {
+        wordIds.forEach { id ->
             val word = repository.getWordById(id)
             word?.let { repository.deleteWord(it) }
         }
+    }
+
+    fun clearOldDeletedWords(daysToKeep: Int = 30) = viewModelScope.launch {
+        val cutoff = System.currentTimeMillis() - daysToKeep * 24L * 60 * 60 * 1000
+        repository.permanentDeleteOlderThan(cutoff)
     }
 
     fun getWordById(wordId: Long): LiveData<Word?> = liveData {

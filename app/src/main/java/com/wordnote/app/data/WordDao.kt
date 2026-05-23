@@ -70,4 +70,27 @@ interface WordDao {
 
     @Query("SELECT * FROM words WHERE word = :word LIMIT 1")
     suspend fun getWordByWord(word: String): Word?
+
+    // Soft delete operations
+    @Query("UPDATE words SET isDeleted = 1, deletedAt = :deletedAt WHERE id = :wordId")
+    suspend fun softDelete(wordId: Long, deletedAt: Long)
+
+    @Query("UPDATE words SET isDeleted = 0, deletedAt = 0 WHERE id = :wordId")
+    suspend fun restore(wordId: Long)
+
+    @Query("SELECT * FROM words WHERE isDeleted = 1 ORDER BY deletedAt DESC")
+    fun getDeletedWords(): LiveData<List<Word>>
+
+    @Query("SELECT * FROM words WHERE isDeleted = 1 ORDER BY deletedAt DESC")
+    suspend fun getDeletedWordsSync(): List<Word>
+
+    @Query("DELETE FROM words WHERE isDeleted = 1 AND deletedAt < :cutoffTime")
+    suspend fun permanentDeleteOlderThan(cutoffTime: Long)
+
+    // Non-deleted word queries
+    @Query("SELECT * FROM words WHERE isDeleted = 0 ORDER BY createdAt ASC")
+    fun getAllActiveWords(): LiveData<List<Word>>
+
+    @Query("SELECT * FROM words WHERE isDeleted = 0 AND categoryId = :categoryId ORDER BY createdAt ASC")
+    fun getActiveWordsByCategory(categoryId: Long): LiveData<List<Word>>
 }

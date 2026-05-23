@@ -201,12 +201,29 @@ class WordAdapter(
         private val deleteButton: ImageView = itemView.findViewById(R.id.deleteWordButton)
 
         fun bind(word: Word, index: Int, isFirstInBatch: Boolean = false, isLastInBatch: Boolean = false) {
+            val density = itemView.resources.displayMetrics.density
+            val indentWidth = (36 * density).toInt() // Width of index area (number + margin)
+
             // Only show index on first word of batch, or on non-batch words
             if (word.batchId != null && !isFirstInBatch) {
                 indexTextView.visibility = View.GONE
+                // Indent word and meaning to align with first row
+                val wordLp = wordTextView.layoutParams as ViewGroup.MarginLayoutParams
+                wordLp.marginStart = indentWidth
+                wordTextView.layoutParams = wordLp
+                val contentLp = contentTextView.layoutParams as ViewGroup.MarginLayoutParams
+                contentLp.marginStart = 0
+                contentTextView.layoutParams = contentLp
             } else {
                 indexTextView.visibility = View.VISIBLE
                 indexTextView.text = "$index."
+                // Reset margins for first row or non-batch words
+                val wordLp = wordTextView.layoutParams as ViewGroup.MarginLayoutParams
+                wordLp.marginStart = 0
+                wordTextView.layoutParams = wordLp
+                val contentLp = contentTextView.layoutParams as ViewGroup.MarginLayoutParams
+                contentLp.marginStart = 0
+                contentTextView.layoutParams = contentLp
             }
             wordTextView.text = word.word
 
@@ -256,24 +273,26 @@ class WordAdapter(
             }
 
             // Batch: merge same-batch items into one visual card
-            val density = itemView.resources.displayMetrics.density
-            val borderWidth = (2 * density).toInt()
+            val borderWidth = (1 * density).toInt()
             val cr = 12f * density
 
             val batchGroupDivider = itemView.findViewById<View>(R.id.batchGroupDivider)
             batchGroupDivider?.visibility = View.GONE
 
-            cardView.strokeWidth = 0
             cardView.cardElevation = 0f
             updateBatchCorners(cardView, cr, isFirstInBatch, isLastInBatch, word.batchId != null)
 
             if (word.batchId != null) {
                 cardView.setCardBackgroundColor(itemView.context.getColor(R.color.batch_group_bg))
+                // Add subtle border for batch groups
+                cardView.strokeWidth = borderWidth
+                cardView.strokeColor = itemView.context.getColor(R.color.divider)
                 val lp = cardView.layoutParams as ViewGroup.MarginLayoutParams
-                lp.topMargin = if (isFirstInBatch) (10 * density).toInt() else 0
-                lp.bottomMargin = if (isLastInBatch) (10 * density).toInt() else (1 * density).toInt()
+                lp.topMargin = if (isFirstInBatch) (12 * density).toInt() else 0
+                lp.bottomMargin = if (isLastInBatch) (12 * density).toInt() else (1 * density).toInt()
                 cardView.layoutParams = lp
             } else {
+                cardView.strokeWidth = 0
                 val lp = cardView.layoutParams as ViewGroup.MarginLayoutParams
                 lp.topMargin = (2 * density).toInt()
                 lp.bottomMargin = (2 * density).toInt()

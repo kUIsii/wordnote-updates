@@ -6,9 +6,14 @@ import java.util.concurrent.TimeUnit
 
 object DateUtils {
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+    private val dateTimeFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
 
     fun formatDate(timestamp: Long): String {
         return dateFormat.format(Date(timestamp))
+    }
+
+    fun formatDateTime(timestamp: Long): String {
+        return dateTimeFormat.format(Date(timestamp))
     }
 
     fun daysBetween(timestamp1: Long, timestamp2: Long): Long {

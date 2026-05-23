@@ -141,6 +141,16 @@ class SettingsActivity : AppCompatActivity() {
         findViewById<LinearLayout>(R.id.restoreButton).setOnClickListener {
             confirmRestore()
         }
+
+        findViewById<LinearLayout>(R.id.recycleBinButton).setOnClickListener {
+            startActivity(Intent(this, RecycleBinActivity::class.java))
+            compatOverridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left)
+        }
+
+        findViewById<LinearLayout>(R.id.changelogButton).setOnClickListener {
+            startActivity(Intent(this, ChangelogActivity::class.java))
+            compatOverridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left)
+        }
     }
 
     private fun backupDatabase() {
