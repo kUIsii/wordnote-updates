@@ -30,6 +30,17 @@ class ChangelogActivity : AppCompatActivity() {
 
         val changelog = listOf(
             VersionLog(
+                "v2.7.1", "2026-05-23",
+                listOf(
+                    "修复测验页面无法进入下一个单词的bug",
+                    "修复记忆滚动位置不生效的问题",
+                    "测验分类选择改用标准checkbox图标",
+                    "统计图表分类名完整显示",
+                    "搜索栏与分类标签间距优化",
+                    "滚动条更明显且不自动隐藏"
+                )
+            ),
+            VersionLog(
                 "v2.7.0", "2026-05-23",
                 listOf(
                     "单词测验：支持随机或按遗忘次数选词，自定义测验数量和分类",
