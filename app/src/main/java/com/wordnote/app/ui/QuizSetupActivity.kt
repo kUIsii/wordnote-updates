@@ -12,10 +12,12 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.SeekBar
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.wordnote.app.R
 import com.wordnote.app.data.Category
 import com.wordnote.app.data.QuizHistory
@@ -70,10 +72,6 @@ class QuizSetupActivity : AppCompatActivity() {
             override fun onStopTrackingTouch(seekBar: SeekBar?) {}
         })
 
-        allCheckBox.setOnCheckedChangeListener { _, isChecked ->
-            toggleAllCategories(isChecked)
-        }
-
         randomCheckBox.setOnCheckedChangeListener { _, isChecked ->
             if (isChecked) forgetCountCheckBox.isChecked = false
         }
@@ -105,10 +103,13 @@ class QuizSetupActivity : AppCompatActivity() {
     private fun setupCategorySelection(categories: List<Category>) {
         categoryCheckBoxes.clear()
         selectedCategories.clear()
-        selectedCategories.add(-1)
+        categories.forEach { selectedCategories.add(it.id) }
 
         allCheckBox.isChecked = true
         styleCheckBox(allCheckBox, getColor(R.color.primary))
+        allCheckBox.setOnCheckedChangeListener { _, isChecked ->
+            toggleAllCategories(isChecked)
+        }
 
         categories.forEach { category ->
             val color = try {
@@ -130,6 +131,7 @@ class QuizSetupActivity : AppCompatActivity() {
                 )
             }
             styleCheckBox(checkBox, color)
+            setCheckBoxCheckedState(checkBox, true)
 
             categoryCheckBoxes.add(category.id to checkBox)
 
@@ -185,43 +187,51 @@ class QuizSetupActivity : AppCompatActivity() {
 
     private fun onCategoryToggled(categoryId: Long, isChecked: Boolean) {
         if (isChecked) {
-            selectedCategories.remove(-1)
             selectedCategories.add(categoryId)
-            allCheckBox.isChecked = false
         } else {
             selectedCategories.remove(categoryId)
-            if (selectedCategories.isEmpty()) {
-                selectedCategories.add(-1)
-                allCheckBox.isChecked = true
-            }
         }
+        // Sync "全部" checkbox state
+        allCheckBox.setOnCheckedChangeListener(null)
+        allCheckBox.isChecked = selectedCategories.size == allCategories.size && allCategories.isNotEmpty()
+        allCheckBox.setOnCheckedChangeListener { _, isChecked2 -> toggleAllCategories(isChecked2) }
     }
 
     private fun toggleAllCategories(selectAll: Boolean) {
         if (selectAll) {
             selectedCategories.clear()
-            selectedCategories.add(-1)
-            categoryCheckBoxes.forEach { (_, cb) ->
-                cb.setOnCheckedChangeListener(null)
-                cb.isChecked = true
-                cb.setOnCheckedChangeListener { buttonView, isChecked ->
-                    val id = buttonView.tag as Long
-                    onCategoryToggled(id, isChecked)
-                }
-            }
+            allCategories.forEach { selectedCategories.add(it.id) }
         } else {
             selectedCategories.clear()
-            categoryCheckBoxes.forEach { (_, cb) ->
-                cb.setOnCheckedChangeListener(null)
-                cb.isChecked = false
-                cb.setOnCheckedChangeListener { buttonView, isChecked ->
-                    val id = buttonView.tag as Long
-                    onCategoryToggled(id, isChecked)
-                }
-            }
-            selectedCategories.add(-1)
-            allCheckBox.isChecked = true
         }
+        categoryCheckBoxes.forEach { (_, cb) ->
+            setCheckBoxCheckedState(cb, selectAll)
+        }
+    }
+
+    private fun setCheckBoxCheckedState(checkBox: CheckBox, checked: Boolean) {
+        checkBox.setOnCheckedChangeListener(null)
+        checkBox.isChecked = checked
+        checkBox.setOnCheckedChangeListener { buttonView, isChecked ->
+            val id = buttonView.tag as Long
+            onCategoryToggled(id, isChecked)
+        }
+        val bg = checkBox.background as? GradientDrawable
+        if (bg != null) {
+            val tag = checkBox.tag
+            val itemColor = if (tag is Long) {
+                allCategories.find { it.id == tag }?.let {
+                    try { Color.parseColor(it.color) } catch (e: Exception) { Color.parseColor("#757575") }
+                } ?: Color.parseColor("#757575")
+            } else {
+                getColor(R.color.primary)
+            }
+            val targetAlpha = if (checked) 30 else 0
+            bg.setColor(Color.argb(targetAlpha, Color.red(itemColor), Color.green(itemColor), Color.blue(itemColor)))
+        }
+        val scale = if (checked) 1.05f else 1.0f
+        checkBox.scaleX = scale
+        checkBox.scaleY = scale
     }
 
     private fun displayHistory(history: List<QuizHistory>) {
@@ -231,12 +241,29 @@ class QuizSetupActivity : AppCompatActivity() {
             val percentage = if (record.totalWords > 0) (record.correctCount * 100 / record.totalWords) else 0
             val dateStr = java.text.SimpleDateFormat("MM/dd HH:mm", java.util.Locale.getDefault())
                 .format(java.util.Date(record.createdAt))
-            val forgottenCount = record.totalWords - record.correctCount
 
             val row = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
                 setPadding(dpToPx(4), dpToPx(10), dpToPx(4), dpToPx(10))
+                isClickable = true
+                isFocusable = true
+                setBackgroundResource(android.R.attr.selectableItemBackground)
+            }
+
+            row.setOnClickListener { showQuizDetail(record) }
+
+            row.setOnLongClickListener {
+                MaterialAlertDialogBuilder(this, R.style.Theme_WordNoteApp_Dialog)
+                    .setTitle("删除记录")
+                    .setMessage("确定要删除这次测验记录吗？")
+                    .setPositiveButton("删除") { _, _ ->
+                        viewModel.deleteQuizHistory(record)
+                        Toast.makeText(this, "已删除", Toast.LENGTH_SHORT).show()
+                    }
+                    .setNegativeButton("取消", null)
+                    .show()
+                true
             }
 
             // Date
@@ -302,11 +329,41 @@ class QuizSetupActivity : AppCompatActivity() {
         }
     }
 
+    private fun showQuizDetail(record: QuizHistory) {
+        val percentage = if (record.totalWords > 0) (record.correctCount * 100 / record.totalWords) else 0
+        val forgottenCount = record.totalWords - record.correctCount
+        val dateStr = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault())
+            .format(java.util.Date(record.createdAt))
+
+        val detail = StringBuilder()
+        detail.appendLine("时间: $dateStr")
+        detail.appendLine("总计: ${record.totalWords} 个单词")
+        detail.appendLine("正确: ${record.correctCount} 个 ($percentage%)")
+        detail.appendLine("不熟悉: $forgottenCount 个")
+
+        if (record.forgottenWordTexts.isNotBlank()) {
+            detail.appendLine()
+            detail.appendLine("不熟悉的单词:")
+            record.forgottenWordTexts.split("||").forEach { item ->
+                val parts = item.split("=", limit = 2)
+                if (parts.size == 2) {
+                    detail.appendLine("  ${parts[0]} - ${parts[1]}")
+                }
+            }
+        }
+
+        MaterialAlertDialogBuilder(this, R.style.Theme_WordNoteApp_Dialog)
+            .setTitle("测验详情")
+            .setMessage(detail.toString())
+            .setPositiveButton("确定", null)
+            .show()
+    }
+
     private fun startQuiz() {
         val wordCount = wordCountSeekBar.progress
         val useForgetCount = forgetCountCheckBox.isChecked && !randomCheckBox.isChecked
 
-        if (selectedCategories.isEmpty() || selectedCategories.contains(-1)) {
+        if (selectedCategories.size == allCategories.size) {
             QuizActivity.launch(this, wordCount, null, useForgetCount)
         } else {
             QuizActivity.launch(this, wordCount, selectedCategories.toList(), useForgetCount)

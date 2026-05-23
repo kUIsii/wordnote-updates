@@ -13,6 +13,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
 import com.wordnote.app.R
 import com.wordnote.app.data.Category
+import com.wordnote.app.data.QuizHistory
 import com.wordnote.app.data.Word
 import com.wordnote.app.util.compatOverridePendingTransitionClose
 import java.util.Calendar
@@ -22,6 +23,8 @@ class StatisticsActivity : AppCompatActivity() {
     private lateinit var viewModel: WordViewModel
     private lateinit var heatmapView: HeatmapView
     private lateinit var categoryContainer: LinearLayout
+    private lateinit var quizStatsContainer: LinearLayout
+    private lateinit var forgottenWordsContainer: LinearLayout
 
     private var allWords: List<Word> = emptyList()
     private var categoriesList: List<Category> = emptyList()
@@ -44,12 +47,12 @@ class StatisticsActivity : AppCompatActivity() {
 
         heatmapView = findViewById(R.id.heatmapView)
         categoryContainer = findViewById(R.id.categoryDistributionContainer)
+        quizStatsContainer = findViewById(R.id.quizStatsContainer)
+        forgottenWordsContainer = findViewById(R.id.forgottenWordsContainer)
 
-        // Set heatmap year
         val yearText = findViewById<TextView>(R.id.heatmapYearText)
         yearText.text = "${Calendar.getInstance().get(Calendar.YEAR)} 年"
 
-        // Setup legend colors
         val legendColors = intArrayOf(
             Color.parseColor("#EBEDF0"),
             Color.parseColor("#9BE9A8"),
@@ -71,11 +74,16 @@ class StatisticsActivity : AppCompatActivity() {
             allWords = words
             updateStats()
             updateHeatmap()
+            updateForgottenWords()
         }
 
         viewModel.allCategories.observe(this) { categories ->
             categoriesList = categories
             updateCategoryDistribution()
+        }
+
+        viewModel.allQuizHistory.observe(this) { history ->
+            updateQuizStats(history)
         }
     }
 
@@ -261,6 +269,152 @@ class StatisticsActivity : AppCompatActivity() {
             set(Calendar.MILLISECOND, 0)
         }
         return cal.timeInMillis
+    }
+
+    private fun updateQuizStats(history: List<QuizHistory>) {
+        quizStatsContainer.removeAllViews()
+
+        if (history.isEmpty()) {
+            val emptyText = TextView(this).apply {
+                text = "暂无测验记录"
+                setTextColor(resources.getColor(R.color.text_hint, null))
+                textSize = 14f
+                gravity = Gravity.CENTER
+                setPadding(0, dpToPx(12), 0, dpToPx(12))
+            }
+            quizStatsContainer.addView(emptyText)
+            return
+        }
+
+        val totalQuizzes = history.size
+        val totalWordsTested = history.sumOf { it.totalWords }
+        val avgScore = if (totalWordsTested > 0) {
+            history.sumOf { it.correctCount } * 100 / totalWordsTested
+        } else 0
+        val bestScore = history.maxOfOrNull {
+            if (it.totalWords > 0) it.correctCount * 100 / it.totalWords else 0
+        } ?: 0
+
+        val stats = listOf(
+            "测验次数" to "$totalQuizzes",
+            "累计测验单词" to "$totalWordsTested",
+            "平均正确率" to "$avgScore%",
+            "最高正确率" to "$bestScore%"
+        )
+
+        stats.forEach { (label, value) ->
+            val row = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(0, dpToPx(8), 0, dpToPx(8))
+            }
+
+            val labelText = TextView(this).apply {
+                text = label
+                setTextColor(resources.getColor(R.color.text_secondary, null))
+                textSize = 14f
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            }
+            row.addView(labelText)
+
+            val valueText = TextView(this).apply {
+                text = value
+                setTextColor(resources.getColor(R.color.text_primary, null))
+                textSize = 15f
+                paint.isFakeBoldText = true
+            }
+            row.addView(valueText)
+
+            quizStatsContainer.addView(row)
+
+            if (label != stats.last().first) {
+                val divider = View(this).apply {
+                    layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 1)
+                    setBackgroundColor(resources.getColor(R.color.divider, null))
+                }
+                quizStatsContainer.addView(divider)
+            }
+        }
+    }
+
+    private fun updateForgottenWords() {
+        forgottenWordsContainer.removeAllViews()
+
+        val forgottenWords = allWords
+            .filter { it.forgetCount > 0 }
+            .sortedByDescending { it.forgetCount }
+            .take(15)
+
+        if (forgottenWords.isEmpty()) {
+            val emptyText = TextView(this).apply {
+                text = "暂无数据"
+                setTextColor(resources.getColor(R.color.text_hint, null))
+                textSize = 14f
+                gravity = Gravity.CENTER
+                setPadding(0, dpToPx(12), 0, dpToPx(12))
+            }
+            forgottenWordsContainer.addView(emptyText)
+            return
+        }
+
+        val maxForgetCount = forgottenWords.first().forgetCount.coerceAtLeast(1)
+
+        forgottenWords.forEachIndexed { index, word ->
+            val row = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(0, dpToPx(8), 0, dpToPx(8))
+            }
+
+            // Word name
+            val wordText = TextView(this).apply {
+                text = word.word
+                setTextColor(resources.getColor(R.color.text_primary, null))
+                textSize = 14f
+                paint.isFakeBoldText = true
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+            }
+            row.addView(wordText)
+
+            // Meaning
+            val meaningText = TextView(this).apply {
+                text = word.meaning
+                setTextColor(resources.getColor(R.color.text_hint, null))
+                textSize = 12f
+                maxLines = 1
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+                    marginStart = dpToPx(8)
+                }
+            }
+            row.addView(meaningText)
+
+            // Forget count badge
+            val badge = TextView(this).apply {
+                text = "${word.forgetCount}次"
+                setTextColor(Color.WHITE)
+                textSize = 11f
+                val bg = GradientDrawable().apply {
+                    setColor(getColor(R.color.cat_hard))
+                    cornerRadius = 10f * resources.displayMetrics.density
+                }
+                background = bg
+                setPadding(dpToPx(8), dpToPx(2), dpToPx(8), dpToPx(2))
+            }
+            row.addView(badge)
+
+            forgottenWordsContainer.addView(row)
+
+            if (index < forgottenWords.size - 1) {
+                val divider = View(this).apply {
+                    layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 1)
+                    setBackgroundColor(resources.getColor(R.color.divider, null))
+                }
+                forgottenWordsContainer.addView(divider)
+            }
+        }
     }
 
     private fun dpToPx(dp: Int): Int {
