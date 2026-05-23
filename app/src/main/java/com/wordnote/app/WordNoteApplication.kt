@@ -9,8 +9,23 @@ import kotlinx.coroutines.launch
 import java.io.File
 
 class WordNoteApplication : Application() {
-    val database by lazy { WordDatabase.getDatabase(this) }
-    val repository by lazy { WordRepository(database.wordDao(), database.categoryDao(), database.tagDao(), database.wordMeaningDao(), database.wordGroupDao(), database.quizHistoryDao()) }
+    val database by lazy {
+        try {
+            WordDatabase.getDatabase(this)
+        } catch (e: Exception) {
+            android.util.Log.e("WordNoteApp", "Database construction failed, clearing instance: ${e.message}")
+            WordDatabase.clearInstance()
+            WordDatabase.getDatabase(this)
+        }
+    }
+    val repository by lazy {
+        try {
+            WordRepository(database.wordDao(), database.categoryDao(), database.tagDao(), database.wordMeaningDao(), database.wordGroupDao(), database.quizHistoryDao())
+        } catch (e: Exception) {
+            android.util.Log.e("WordNoteApp", "Repository construction failed: ${e.message}")
+            throw e
+        }
+    }
 
     override fun onCreate() {
         super.onCreate()

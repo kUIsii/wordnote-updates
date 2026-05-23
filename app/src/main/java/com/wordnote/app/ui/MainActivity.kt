@@ -1,11 +1,16 @@
 package com.wordnote.app.ui
 
 import android.content.Intent
+import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.View
 import android.view.inputmethod.EditorInfo
+import android.widget.FrameLayout
 import androidx.core.view.GestureDetectorCompat
 import android.widget.ArrayAdapter
 import android.widget.EditText
@@ -60,6 +65,7 @@ class MainActivity : AppCompatActivity() {
     private data class ScrollState(val position: Int, val offset: Int)
     private val scrollPositions = mutableMapOf<Long, ScrollState>()
     private var pendingScrollRestore: ScrollState? = null
+    private val scrollHandler = Handler(Looper.getMainLooper())
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -223,8 +229,66 @@ class MainActivity : AppCompatActivity() {
         wordRecyclerView.apply {
             layoutManager = LinearLayoutManager(this@MainActivity)
             adapter = wordAdapter
-            isVerticalScrollBarEnabled = true
         }
+
+        // Custom scrollbar indicator
+        val scrollbarThumb = View(this).apply {
+            layoutParams = FrameLayout.LayoutParams(dpToPx(4), 0).apply {
+                gravity = android.view.Gravity.END or android.view.Gravity.TOP
+                marginEnd = dpToPx(2)
+            }
+            background = GradientDrawable().apply {
+                setColor(Color.parseColor("#60000000"))
+                cornerRadius = 2f * resources.displayMetrics.density
+            }
+            alpha = 0f
+        }
+        (wordRecyclerView.parent as FrameLayout).addView(scrollbarThumb)
+
+        var scrollBarHideRunnable: Runnable? = null
+        val hideScrollbar = Runnable {
+            scrollbarThumb.animate().alpha(0f).setDuration(300).start()
+        }
+
+        wordRecyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrolled(rv: RecyclerView, dx: Int, dy: Int) {
+                val lm = rv.layoutManager as? LinearLayoutManager ?: return
+                val totalItemCount = lm.itemCount
+                if (totalItemCount <= 0) {
+                    scrollbarThumb.alpha = 0f
+                    return
+                }
+
+                val firstVisible = lm.findFirstVisibleItemPosition()
+                val lastVisible = lm.findLastVisibleItemPosition()
+                val visibleCount = (lastVisible - firstVisible + 1).coerceAtLeast(1)
+
+                if (visibleCount >= totalItemCount) {
+                    scrollbarThumb.alpha = 0f
+                    return
+                }
+
+                val rvHeight = rv.height
+                val thumbHeight = (visibleCount.toFloat() / totalItemCount * rvHeight).toInt()
+                    .coerceAtLeast(dpToPx(32))
+                    .coerceAtMost(rvHeight)
+
+                val maxFirstVisible = totalItemCount - visibleCount
+                val scrollRatio = if (maxFirstVisible > 0) firstVisible.toFloat() / maxFirstVisible else 0f
+                val thumbTop = (scrollRatio * (rvHeight - thumbHeight)).toInt()
+
+                val lp = scrollbarThumb.layoutParams as FrameLayout.LayoutParams
+                lp.height = thumbHeight
+                lp.topMargin = thumbTop
+                scrollbarThumb.layoutParams = lp
+
+                scrollbarThumb.animate().alpha(1f).setDuration(150).start()
+
+                scrollBarHideRunnable?.let { scrollHandler.removeCallbacks(it) }
+                scrollBarHideRunnable = hideScrollbar
+                scrollHandler.postDelayed(hideScrollbar, 1500)
+            }
+        })
     }
 
     private fun setupSwipeGesture() {

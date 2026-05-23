@@ -90,13 +90,18 @@ class QuizSetupActivity : AppCompatActivity() {
             setupCategorySelection(categories)
         }
 
-        viewModel.allQuizHistory.observe(this) { history ->
-            if (history.isEmpty()) {
-                historySection.visibility = View.GONE
-            } else {
-                historySection.visibility = View.VISIBLE
-                displayHistory(history)
+        try {
+            viewModel.allQuizHistory.observe(this) { history ->
+                if (history.isEmpty()) {
+                    historySection.visibility = View.GONE
+                } else {
+                    historySection.visibility = View.VISIBLE
+                    displayHistory(history)
+                }
             }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            historySection.visibility = View.GONE
         }
     }
 

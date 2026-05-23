@@ -134,8 +134,6 @@
             android:paddingHorizontal="8dp"
             android:paddingBottom="8dp"
             android:overScrollMode="never"
-            android:scrollbarThumbVertical="@drawable/scrollbar_thumb"
-            android:scrollbarTrackVertical="@drawable/scrollbar_track"
             android:scrollbars="vertical"
             android:fadeScrollbars="false"
             android:scrollbarDefaultDelayBeforeFade="0"
