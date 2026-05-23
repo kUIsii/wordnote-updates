@@ -30,6 +30,14 @@ class ChangelogActivity : AppCompatActivity() {
 
         val changelog = listOf(
             VersionLog(
+                "v2.6.0", "2026-05-23",
+                listOf(
+                    "学习统计：热力图展示每日学习量",
+                    "数据概览：总词汇量、本月新增、分类数",
+                    "分类分布：按分类显示词汇占比"
+                )
+            ),
+            VersionLog(
                 "v2.5.0", "2026-05-23",
                 listOf(
                     "词典搜索记录：英译中/中译英搜索记录分开存储，支持一键清除",

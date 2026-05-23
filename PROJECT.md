@@ -46,6 +46,7 @@ Android 英语单词记忆工具，支持分类管理、一词多义标注、分
 | 备份文件管理 | 在设置页查看并批量删除旧备份文件 |
 | 释义排序同步 | 拖动排序释义后主页显示顺序同步更新 |
 | 日历高亮同步 | 日历查看页显示被标记的释义时显示加粗蓝色 |
+| 学习统计 | 热力图展示每日学习量，统计总词汇/本月新增/分类分布 |
 
 ### 开发中 / 待做
 
@@ -95,6 +96,8 @@ app/src/main/java/com/wordnote/app/
 │   ├── DiaryDetailActivity.kt      # 日记详情/编辑页面
 │   ├── DiaryViewModel.kt           # 日记 ViewModel
 │   ├── RecycleBinActivity.kt       # 回收站页面
+│   ├── StatisticsActivity.kt       # 学习统计页面
+│   ├── HeatmapView.kt              # 热力图自定义View
 │   └── adapter/
 │       ├── WordAdapter.kt          # 单词列表适配器 (紧凑单行布局，支持批量选择)
 │       ├── CategoryAdapter.kt      # 分类列表适配器
