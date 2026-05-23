@@ -202,11 +202,20 @@ class WordAdapter(
 
         fun bind(word: Word, index: Int, isFirstInBatch: Boolean = false, isLastInBatch: Boolean = false) {
             val density = itemView.resources.displayMetrics.density
-            val indentWidth = (36 * density).toInt() // Width of index area (number + margin)
 
             // Only show index on first word of batch, or on non-batch words
             if (word.batchId != null && !isFirstInBatch) {
                 indexTextView.visibility = View.GONE
+                // Measure indexTextView width dynamically for accurate alignment
+                indexTextView.text = "$index."
+                indexTextView.measure(
+                    View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
+                    View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+                )
+                val indexWidth = indexTextView.measuredWidth
+                val indexMarginEnd = (indexTextView.layoutParams as ViewGroup.MarginLayoutParams).marginEnd
+                val indentWidth = indexWidth + indexMarginEnd
+
                 // Indent word and meaning to align with first row
                 val wordLp = wordTextView.layoutParams as ViewGroup.MarginLayoutParams
                 wordLp.marginStart = indentWidth
