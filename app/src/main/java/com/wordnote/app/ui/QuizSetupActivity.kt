@@ -1,21 +1,20 @@
 package com.wordnote.app.ui
 
-import android.content.Intent
+import android.animation.ValueAnimator
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.view.Gravity
 import android.view.View
+import android.view.animation.DecelerateInterpolator
+import android.widget.CheckBox
 import android.widget.ImageView
 import android.widget.LinearLayout
-import android.widget.RadioButton
-import android.widget.RadioGroup
 import android.widget.SeekBar
 import android.widget.TextView
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
-import com.google.android.material.card.MaterialCardView
+import com.google.android.material.button.MaterialButton
 import com.wordnote.app.R
 import com.wordnote.app.data.Category
 import com.wordnote.app.util.compatOverridePendingTransition
@@ -26,12 +25,13 @@ class QuizSetupActivity : AppCompatActivity() {
     private lateinit var wordCountText: TextView
     private lateinit var wordCountSeekBar: SeekBar
     private lateinit var categorySelectionContainer: LinearLayout
-    private lateinit var randomRadio: RadioButton
-    private lateinit var forgetCountRadio: RadioButton
+    private lateinit var allCheckBox: CheckBox
+    private lateinit var randomCheckBox: CheckBox
+    private lateinit var forgetCountCheckBox: CheckBox
 
     private var selectedCategories = mutableSetOf<Long>()
     private var allCategories = emptyList<Category>()
-    private var allCategoryViews = mutableListOf<View>()
+    private var categoryCheckBoxes = mutableListOf<Pair<Long, CheckBox>>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -52,8 +52,9 @@ class QuizSetupActivity : AppCompatActivity() {
         wordCountText = findViewById(R.id.wordCountText)
         wordCountSeekBar = findViewById(R.id.wordCountSeekBar)
         categorySelectionContainer = findViewById(R.id.categorySelectionContainer)
-        randomRadio = findViewById(R.id.randomRadio)
-        forgetCountRadio = findViewById(R.id.forgetCountRadio)
+        allCheckBox = findViewById(R.id.allCheckBox)
+        randomCheckBox = findViewById(R.id.randomCheckBox)
+        forgetCountCheckBox = findViewById(R.id.forgetCountCheckBox)
 
         wordCountSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
@@ -63,7 +64,18 @@ class QuizSetupActivity : AppCompatActivity() {
             override fun onStopTrackingTouch(seekBar: SeekBar?) {}
         })
 
-        findViewById<com.google.android.material.button.MaterialButton>(R.id.startQuizButton).setOnClickListener {
+        allCheckBox.setOnCheckedChangeListener { _, isChecked ->
+            toggleAllCategories(isChecked)
+        }
+
+        randomCheckBox.setOnCheckedChangeListener { _, isChecked ->
+            if (isChecked) forgetCountCheckBox.isChecked = false
+        }
+        forgetCountCheckBox.setOnCheckedChangeListener { _, isChecked ->
+            if (isChecked) randomCheckBox.isChecked = false
+        }
+
+        findViewById<MaterialButton>(R.id.startQuizButton).setOnClickListener {
             startQuiz()
         }
     }
@@ -76,159 +88,153 @@ class QuizSetupActivity : AppCompatActivity() {
     }
 
     private fun setupCategorySelection(categories: List<Category>) {
-        categorySelectionContainer.removeAllViews()
-        allCategoryViews.clear()
+        categoryCheckBoxes.clear()
+        selectedCategories.clear()
+        selectedCategories.add(-1)
 
-        // Add "All" option
-        val allRow = createCategoryRow(null, "全部分类", 0)
-        categorySelectionContainer.addView(allRow)
-        allCategoryViews.add(allRow)
-        selectedCategories.add(-1) // -1 means all
+        allCheckBox.isChecked = true
+        styleCheckBox(allCheckBox, getColor(R.color.primary))
 
-        // Add dividers and category rows
         categories.forEach { category ->
-            val divider = View(this).apply {
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    1
-                ).apply {
-                    topMargin = dpToPx(8)
-                    bottomMargin = dpToPx(8)
-                }
-                setBackgroundColor(getColor(R.color.divider))
-            }
-            categorySelectionContainer.addView(divider)
-
             val color = try {
                 Color.parseColor(category.color)
             } catch (e: Exception) {
                 Color.parseColor("#757575")
             }
 
-            val row = createCategoryRow(category.id, category.name, color)
-            categorySelectionContainer.addView(row)
-            allCategoryViews.add(row)
-        }
-    }
-
-    private fun createCategoryRow(categoryId: Long?, name: String, color: Int): View {
-        val row = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(dpToPx(4), dpToPx(8), dpToPx(4), dpToPx(8))
-            background = android.util.TypedValue().let {
-                theme.resolveAttribute(android.R.attr.selectableItemBackground, it, true)
-                resources.getDrawable(it.resourceId, null)
+            val row = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(dpToPx(4), dpToPx(6), dpToPx(4), dpToPx(6))
+                tag = category.id
             }
-            tag = categoryId
-        }
 
-        // Checkbox
-        val checkbox = ImageView(this).apply {
-            layoutParams = LinearLayout.LayoutParams(dpToPx(24), dpToPx(24))
-            setImageResource(R.drawable.ic_checkbox_unchecked)
-            if (categoryId == null) {
-                setColorFilter(getColor(R.color.primary))
-            } else {
-                setColorFilter(color)
-            }
-            tag = "checkbox"
-        }
-        row.addView(checkbox)
-
-        // Color dot (for categories)
-        if (categoryId != null) {
-            val dot = View(this).apply {
+            val colorDot = View(this).apply {
                 layoutParams = LinearLayout.LayoutParams(dpToPx(12), dpToPx(12)).apply {
-                    marginStart = dpToPx(12)
+                    marginEnd = dpToPx(12)
                 }
                 background = GradientDrawable().apply {
                     shape = GradientDrawable.OVAL
                     setColor(color)
                 }
             }
-            row.addView(dot)
-        }
+            row.addView(colorDot)
 
-        // Name
-        val nameText = TextView(this).apply {
-            text = name
-            setTextColor(getColor(R.color.text_primary))
-            textSize = 15f
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply {
-                marginStart = if (categoryId != null) dpToPx(8) else dpToPx(12)
+            val checkBox = CheckBox(this).apply {
+                text = category.name
+                textSize = 15f
+                buttonTintList = android.content.res.ColorStateList.valueOf(color)
+                isChecked = true
+                tag = category.id
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                )
             }
-        }
-        row.addView(nameText)
+            styleCheckBox(checkBox, color)
+            row.addView(checkBox)
 
-        row.setOnClickListener {
-            toggleCategory(categoryId, row)
-        }
+            categoryCheckBoxes.add(category.id to checkBox)
 
-        return row
+            checkBox.setOnCheckedChangeListener { _, isChecked ->
+                onCategoryToggled(category.id, isChecked)
+            }
+
+            categorySelectionContainer.addView(row)
+        }
     }
 
-    private fun toggleCategory(categoryId: Long?, row: View) {
-        val checkbox = row.findViewWithTag<ImageView>("checkbox")
+    private fun styleCheckBox(checkBox: CheckBox, color: Int) {
+        val bg = GradientDrawable().apply {
+            cornerRadius = 20f * resources.displayMetrics.density
+            setColor(Color.TRANSPARENT)
+            setStroke(0, Color.TRANSPARENT)
+        }
+        checkBox.background = bg
+        checkBox.setPadding(dpToPx(4), dpToPx(2), dpToPx(8), dpToPx(2))
+        checkBox.setTextColor(getColor(R.color.text_primary))
 
-        if (categoryId == null) {
-            // Toggle all
-            if (selectedCategories.contains(-1)) {
-                selectedCategories.clear()
-                allCategoryViews.forEach { view ->
-                    val cb = view.findViewWithTag<ImageView>("checkbox")
-                    cb?.setImageResource(R.drawable.ic_checkbox_unchecked)
-                }
+        val originalColor = color
+        checkBox.tag = checkBox.tag // preserve original tag
+        checkBox.setOnCheckedChangeListener { buttonView, isChecked ->
+            val tag = buttonView.tag
+            val itemColor = if (tag is Long) {
+                allCategories.find { it.id == tag }?.let {
+                    try { Color.parseColor(it.color) } catch (e: Exception) { Color.parseColor("#757575") }
+                } ?: Color.parseColor("#757575")
             } else {
-                selectedCategories.clear()
+                originalColor
+            }
+
+            val targetAlpha = if (isChecked) 30 else 0
+            val animator = ValueAnimator.ofArgb(
+                Color.argb(0, Color.red(itemColor), Color.green(itemColor), Color.blue(itemColor)),
+                Color.argb(targetAlpha, Color.red(itemColor), Color.green(itemColor), Color.blue(itemColor))
+            )
+            animator.duration = 200
+            animator.interpolator = DecelerateInterpolator()
+            animator.addUpdateListener { animator ->
+                bg.setColor(animator.animatedValue as Int)
+            }
+            animator.start()
+
+            val scale = if (isChecked) 1.05f else 1.0f
+            buttonView.animate()
+                .scaleX(scale).scaleY(scale)
+                .setDuration(150)
+                .setInterpolator(DecelerateInterpolator())
+                .start()
+        }
+    }
+
+    private fun onCategoryToggled(categoryId: Long, isChecked: Boolean) {
+        if (isChecked) {
+            selectedCategories.remove(-1)
+            selectedCategories.add(categoryId)
+            allCheckBox.isChecked = false
+        } else {
+            selectedCategories.remove(categoryId)
+            if (selectedCategories.isEmpty()) {
                 selectedCategories.add(-1)
-                allCategoryViews.forEach { view ->
-                    val cb = view.findViewWithTag<ImageView>("checkbox")
-                    cb?.setImageResource(R.drawable.ic_checkbox_checked)
-                    cb?.setColorFilter(getColor(R.color.primary))
+                allCheckBox.isChecked = true
+            }
+        }
+    }
+
+    private fun toggleAllCategories(selectAll: Boolean) {
+        if (selectAll) {
+            selectedCategories.clear()
+            selectedCategories.add(-1)
+            categoryCheckBoxes.forEach { (_, cb) ->
+                cb.setOnCheckedChangeListener(null)
+                cb.isChecked = true
+                cb.setOnCheckedChangeListener { buttonView, isChecked ->
+                    val id = buttonView.tag as Long
+                    onCategoryToggled(id, isChecked)
                 }
             }
         } else {
-            // Remove "all" if specific category selected
-            selectedCategories.remove(-1)
-            val allRow = allCategoryViews.firstOrNull { it.tag == null }
-            allRow?.findViewWithTag<ImageView>("checkbox")?.setImageResource(R.drawable.ic_checkbox_unchecked)
-
-            if (selectedCategories.contains(categoryId)) {
-                selectedCategories.remove(categoryId)
-                checkbox?.setImageResource(R.drawable.ic_checkbox_unchecked)
-            } else {
-                selectedCategories.add(categoryId)
-                checkbox?.setImageResource(R.drawable.ic_checkbox_checked)
-                val color = try {
-                    Color.parseColor(allCategories.find { it.id == categoryId }?.color ?: "#757575")
-                } catch (e: Exception) {
-                    Color.parseColor("#757575")
+            selectedCategories.clear()
+            categoryCheckBoxes.forEach { (_, cb) ->
+                cb.setOnCheckedChangeListener(null)
+                cb.isChecked = false
+                cb.setOnCheckedChangeListener { buttonView, isChecked ->
+                    val id = buttonView.tag as Long
+                    onCategoryToggled(id, isChecked)
                 }
-                checkbox?.setColorFilter(color)
             }
-
-            // If no categories selected, select all
-            if (selectedCategories.isEmpty()) {
-                selectedCategories.add(-1)
-                allRow?.findViewWithTag<ImageView>("checkbox")?.setImageResource(R.drawable.ic_checkbox_checked)
-                allRow?.findViewWithTag<ImageView>("checkbox")?.setColorFilter(getColor(R.color.primary))
-            }
+            selectedCategories.add(-1)
+            allCheckBox.isChecked = true
         }
     }
 
     private fun startQuiz() {
         val wordCount = wordCountSeekBar.progress
-        val useForgetCount = forgetCountRadio.isChecked
+        val useForgetCount = forgetCountCheckBox.isChecked && !randomCheckBox.isChecked
 
         if (selectedCategories.isEmpty() || selectedCategories.contains(-1)) {
-            // All categories
             QuizActivity.launch(this, wordCount, null, useForgetCount)
         } else {
-            // Specific categories
             QuizActivity.launch(this, wordCount, selectedCategories.toList(), useForgetCount)
         }
 

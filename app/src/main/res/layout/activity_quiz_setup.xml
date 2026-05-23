@@ -145,11 +145,30 @@
                 app:cardBackgroundColor="@color/card_background">
 
                 <LinearLayout
-                    android:id="@+id/categorySelectionContainer"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="16dp" />
+                    android:padding="12dp">
+
+                    <CheckBox
+                        android:id="@+id/allCheckBox"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="全部分类"
+                        android:textColor="@color/text_primary"
+                        android:textSize="15sp"
+                        android:checked="true"
+                        android:paddingStart="4dp"
+                        android:paddingEnd="8dp"
+                        android:layout_marginBottom="4dp" />
+
+                    <LinearLayout
+                        android:id="@+id/categorySelectionContainer"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical" />
+
+                </LinearLayout>
 
             </com.google.android.material.card.MaterialCardView>
 
@@ -177,26 +196,29 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="16dp">
+                    android:padding="12dp">
 
-                    <com.google.android.material.radiobutton.MaterialRadioButton
-                        android:id="@+id/randomRadio"
+                    <CheckBox
+                        android:id="@+id/randomCheckBox"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="完全随机"
                         android:textColor="@color/text_primary"
                         android:textSize="15sp"
-                        android:padding="8dp"
-                        android:checked="true" />
+                        android:checked="true"
+                        android:paddingStart="4dp"
+                        android:paddingEnd="8dp"
+                        android:layout_marginBottom="4dp" />
 
-                    <com.google.android.material.radiobutton.MaterialRadioButton
-                        android:id="@+id/forgetCountRadio"
+                    <CheckBox
+                        android:id="@+id/forgetCountCheckBox"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="优先抽取忘记次数多的词"
                         android:textColor="@color/text_primary"
                         android:textSize="15sp"
-                        android:padding="8dp" />
+                        android:paddingStart="4dp"
+                        android:paddingEnd="8dp" />
 
                 </LinearLayout>
 

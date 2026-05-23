@@ -57,8 +57,9 @@ class MainActivity : AppCompatActivity() {
     private var categoriesList: List<Category> = emptyList()
     private var groupsList: List<WordGroup> = emptyList()
     private var updateDialogShown = false
-    private val scrollPositions = mutableMapOf<Long, Int>()
-    private var pendingScrollPosition: Int? = null
+    private data class ScrollState(val position: Int, val offset: Int)
+    private val scrollPositions = mutableMapOf<Long, ScrollState>()
+    private var pendingScrollRestore: ScrollState? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -222,6 +223,8 @@ class MainActivity : AppCompatActivity() {
         wordRecyclerView.apply {
             layoutManager = LinearLayoutManager(this@MainActivity)
             adapter = wordAdapter
+            isVerticalScrollBarEnabled = true
+            scrollBarSize = dpToPx(6)
         }
     }
 
@@ -394,10 +397,17 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun selectTab(tab: TextView, categoryId: Long?) {
-        // Save current scroll position before switching
+        // Save current scroll position + offset before switching
         selectedCategoryId?.let { currentId ->
-            val pos = (wordRecyclerView.layoutManager as? LinearLayoutManager)?.findFirstCompletelyVisibleItemPosition() ?: 0
-            scrollPositions[currentId] = pos
+            val lm = wordRecyclerView.layoutManager as? LinearLayoutManager
+            if (lm != null) {
+                val pos = lm.findFirstVisibleItemPosition()
+                if (pos != RecyclerView.NO_POSITION) {
+                    val view = lm.findViewByPosition(pos)
+                    val offset = view?.top ?: 0
+                    scrollPositions[currentId] = ScrollState(pos, offset)
+                }
+            }
         }
 
         selectedTab?.let { prevTab ->
@@ -418,11 +428,9 @@ class MainActivity : AppCompatActivity() {
         selectedCategoryName = categoriesList.find { it.id == categoryId }?.name
         viewModel.selectCategory(categoryId)
 
-        // Update input mode based on category
         updateInputMode()
 
-        // Set pending scroll position to be restored after data loads
-        pendingScrollPosition = scrollPositions[categoryId]
+        pendingScrollRestore = scrollPositions[categoryId]
     }
 
     private fun updateInputMode() {
@@ -721,14 +729,16 @@ class MainActivity : AppCompatActivity() {
             emptyView.visibility = if (words.isEmpty()) View.VISIBLE else View.GONE
             wordRecyclerView.visibility = if (words.isEmpty()) View.GONE else View.VISIBLE
 
-            // Restore scroll position after data loads
-            pendingScrollPosition?.let { pos ->
-                if (pos > 0) {
-                    wordRecyclerView.post {
-                        (wordRecyclerView.layoutManager as? LinearLayoutManager)?.scrollToPosition(pos)
+            pendingScrollRestore?.let { state ->
+                pendingScrollRestore = null
+                wordRecyclerView.post {
+                    val lm = wordRecyclerView.layoutManager as? LinearLayoutManager ?: return@post
+                    if (state.position > 0) {
+                        lm.scrollToPositionWithOffset(state.position, state.offset)
+                    } else {
+                        lm.scrollToPositionWithOffset(0, 0)
                     }
                 }
-                pendingScrollPosition = null
             }
         }
 

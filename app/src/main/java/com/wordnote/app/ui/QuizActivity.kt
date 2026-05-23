@@ -11,12 +11,12 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import com.wordnote.app.R
 import com.wordnote.app.data.Word
 import com.wordnote.app.util.compatOverridePendingTransition
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -34,14 +34,11 @@ class QuizActivity : AppCompatActivity() {
     private lateinit var rememberButton: MaterialButton
     private lateinit var nextButton: MaterialButton
     private lateinit var wordDisplayContainer: LinearLayout
-    private lateinit var buttonContainer: LinearLayout
 
-    private var allWords = emptyList<Word>()
     private var quizWords = emptyList<Word>()
     private var currentIndex = 0
     private var correctCount = 0
     private var forgottenWords = mutableListOf<Word>()
-    private var showingMeaning = false
 
     private var wordCount = 35
     private var categoryIds: List<Long>? = null
@@ -92,47 +89,43 @@ class QuizActivity : AppCompatActivity() {
         rememberButton = findViewById(R.id.rememberButton)
         nextButton = findViewById(R.id.nextButton)
         wordDisplayContainer = findViewById(R.id.wordDisplayContainer)
-        buttonContainer = findViewById(R.id.buttonContainer)
 
-        forgetButton.setOnClickListener {
-            onWordForgotten()
-        }
-
-        rememberButton.setOnClickListener {
-            onWordRemembered()
-        }
-
-        nextButton.setOnClickListener {
-            showNextWord()
-        }
+        forgetButton.setOnClickListener { onWordForgotten() }
+        rememberButton.setOnClickListener { onWordRemembered() }
+        nextButton.setOnClickListener { showNextWord() }
     }
 
     private fun loadWords() {
-        CoroutineScope(Dispatchers.IO).launch {
-            val words = if (categoryIds == null || categoryIds!!.isEmpty()) {
-                viewModel.allWords.value ?: emptyList()
-            } else {
-                viewModel.allWords.value?.filter { word ->
-                    word.categoryId?.let { categoryIds!!.contains(it) } ?: false
-                } ?: emptyList()
-            }
-
-            allWords = words
-
-            withContext(Dispatchers.Main) {
-                if (allWords.isEmpty()) {
-                    Toast.makeText(this@QuizActivity, "没有可测验的单词", Toast.LENGTH_SHORT).show()
-                    finish()
-                    return@withContext
+        lifecycleScope.launch {
+            val allWords = withContext(Dispatchers.IO) {
+                val words = viewModel.allWords.value ?: emptyList()
+                if (categoryIds.isNullOrEmpty()) {
+                    words
+                } else {
+                    words.filter { word ->
+                        word.categoryId?.let { categoryIds!!.contains(it) } ?: false
+                    }
                 }
-
-                quizWords = selectQuizWords(allWords, wordCount, useForgetCount)
-                currentIndex = 0
-                correctCount = 0
-                forgottenWords.clear()
-
-                showNextWord()
             }
+
+            if (allWords.isEmpty()) {
+                Toast.makeText(this@QuizActivity, "没有可测验的单词", Toast.LENGTH_SHORT).show()
+                finish()
+                return@launch
+            }
+
+            quizWords = selectQuizWords(allWords, wordCount, useForgetCount)
+            currentIndex = 0
+            correctCount = 0
+            forgottenWords.clear()
+
+            if (quizWords.isEmpty()) {
+                Toast.makeText(this@QuizActivity, "没有可测验的单词", Toast.LENGTH_SHORT).show()
+                finish()
+                return@launch
+            }
+
+            showNextWord()
         }
     }
 
@@ -140,7 +133,6 @@ class QuizActivity : AppCompatActivity() {
         if (words.size <= count) return words.shuffled()
 
         return if (useForgetCount) {
-            // Sort by forgetCount descending, then take top words with some randomness
             val sorted = words.sortedByDescending { it.forgetCount }
             val topCount = (count * 0.7).toInt().coerceAtLeast(count)
             val topWords = sorted.take(topCount).shuffled()
@@ -152,43 +144,50 @@ class QuizActivity : AppCompatActivity() {
     }
 
     private fun showNextWord() {
-        if (currentIndex >= quizWords.size) {
+        if (quizWords.isEmpty() || currentIndex >= quizWords.size) {
             showResults()
             return
         }
 
         val word = quizWords[currentIndex]
-        showingMeaning = false
 
-        // Update UI
         progressText.text = "${currentIndex + 1} / ${quizWords.size}"
         progressBar.max = quizWords.size
         progressBar.progress = currentIndex + 1
 
         quizWordText.text = word.word
 
-        // Get category name
         val category = word.categoryId?.let { viewModel.getCategoryById(it) }
         quizCategoryText.text = category?.name ?: ""
 
-        // Hide meaning and buttons
         meaningCard.visibility = View.GONE
         forgetButton.visibility = View.VISIBLE
         rememberButton.visibility = View.GONE
         nextButton.visibility = View.GONE
 
-        // Increment index after showing the word
-        currentIndex++
+        wordDisplayContainer.let {
+            it.alpha = 0f
+            it.translationY = 20f
+            it.animate()
+                .alpha(1f)
+                .translationY(0f)
+                .setDuration(250)
+                .setInterpolator(android.view.animation.DecelerateInterpolator())
+                .start()
+        }
     }
 
     private fun onWordForgotten() {
+        if (quizWords.isEmpty() || currentIndex < 0 || currentIndex >= quizWords.size) return
+
         val word = quizWords[currentIndex]
         forgottenWords.add(word)
 
-        // Increment forgetCount
-        CoroutineScope(Dispatchers.IO).launch {
-            val updatedWord = word.copy(forgetCount = word.forgetCount + 1)
-            viewModel.updateWord(updatedWord)
+        lifecycleScope.launch {
+            withContext(Dispatchers.IO) {
+                val updatedWord = word.copy(forgetCount = word.forgetCount + 1)
+                viewModel.updateWord(updatedWord)
+            }
         }
 
         showMeaning()
@@ -196,30 +195,32 @@ class QuizActivity : AppCompatActivity() {
 
     private fun onWordRemembered() {
         correctCount++
+        currentIndex++
         showNextWord()
     }
 
     private fun showMeaning() {
-        showingMeaning = true
+        if (quizWords.isEmpty() || currentIndex < 0 || currentIndex >= quizWords.size) return
+
         val word = quizWords[currentIndex]
 
-        // Show meaning
         meaningCard.visibility = View.VISIBLE
         quizMeaningText.text = word.meaning
 
-        // Update buttons
         forgetButton.visibility = View.GONE
         rememberButton.visibility = View.GONE
         nextButton.visibility = View.VISIBLE
     }
 
     private fun showResults() {
-        val intent = Intent(this, QuizResultActivity::class.java).apply {
-            putExtra(QuizResultActivity.EXTRA_TOTAL, quizWords.size)
-            putExtra(QuizResultActivity.EXTRA_CORRECT, correctCount)
-            putExtra(QuizResultActivity.EXTRA_FORGOTTEN_IDS, forgottenWords.map { it.id }.toLongArray())
+        if (!isFinishing && !isDestroyed) {
+            val intent = Intent(this, QuizResultActivity::class.java).apply {
+                putExtra(QuizResultActivity.EXTRA_TOTAL, quizWords.size)
+                putExtra(QuizResultActivity.EXTRA_CORRECT, correctCount)
+                putExtra(QuizResultActivity.EXTRA_FORGOTTEN_IDS, forgottenWords.map { it.id }.toLongArray())
+            }
+            startActivity(intent)
+            finish()
         }
-        startActivity(intent)
-        finish()
     }
 }

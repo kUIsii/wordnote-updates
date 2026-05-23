@@ -17,7 +17,7 @@ import com.google.android.material.card.MaterialCardView
 import com.wordnote.app.R
 import com.wordnote.app.data.Word
 import com.wordnote.app.util.compatOverridePendingTransition
-import kotlinx.coroutines.CoroutineScope
+import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -88,10 +88,17 @@ class QuizResultActivity : AppCompatActivity() {
             return
         }
 
-        CoroutineScope(Dispatchers.IO).launch {
-            val words = mutableListOf<Word>()
-            forgottenIds.forEach { id ->
-                viewModel.getWordByIdSync(id)?.let { words.add(it) }
+        lifecycleScope.launch {
+            val words = withContext(Dispatchers.IO) {
+                val result = mutableListOf<Word>()
+                forgottenIds.forEach { id ->
+                    try {
+                        viewModel.getWordByIdSync(id)?.let { result.add(it) }
+                    } catch (e: Exception) {
+                        // Skip words that can't be loaded
+                    }
+                }
+                result
             }
             forgottenWords = words
 

@@ -241,6 +241,23 @@ tags / word_tag (标签系统，目前未在 UI 使用)
 
 ## 开发日志
 
+### 2026-05-23 (v2.7.2)
+
+- 修复单词测验多项严重 bug
+  - 修复测验索引错误：currentIndex 在显示单词前就递增，导致处理错误的单词、测验结果不准确
+  - 修复测验结束后应用崩溃：添加生命周期安全检查和空列表防护
+  - 改用 lifecycleScope 替代 CoroutineScope，防止 Activity 销毁后协程继续执行导致崩溃
+  - 添加测验过程中的渐入动画效果
+- 修复测验设置页选择体验
+  - 分类选择改为 CheckBox，支持单独取消选择
+  - 选择时添加缩放和背景色渐变动画
+  - 抽取方式改为 CheckBox，支持独立选择/取消
+- 修复主页滚动位置记忆
+  - 切换分类 Tab 后返回时正确恢复滚动位置（保存 adapter position + pixel offset）
+  - 使用 scrollToPositionWithOffset 替代 scrollToPosition 确保精确恢复
+- 修复主页滚动条显示
+  - 编程启用垂直滚动条，确保始终可见
+
 ### 2026-05-23 (v2.7.0)
 
 - 新增单词测验功能
