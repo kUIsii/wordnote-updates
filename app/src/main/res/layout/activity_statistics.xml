@@ -175,7 +175,7 @@
 
             </LinearLayout>
 
-            <!-- Heatmap Section -->
+            <!-- Learning Streak Card -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -189,96 +189,88 @@
                     android:orientation="vertical"
                     android:padding="16dp">
 
-                    <!-- Header -->
-                    <LinearLayout
-                        android:layout_width="match_parent"
+                    <TextView
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:layout_marginBottom="12dp">
-
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="学习热力图"
-                            android:textColor="@color/text_primary"
-                            android:textSize="15sp"
-                            android:textStyle="bold" />
-
-                        <TextView
-                            android:id="@+id/heatmapYearText"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:textColor="@color/text_hint"
-                            android:textSize="13sp" />
-
-                    </LinearLayout>
-
-                    <!-- Heatmap grid -->
-                    <com.wordnote.app.ui.HeatmapView
-                        android:id="@+id/heatmapView"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
+                        android:text="学习连续天数"
+                        android:textColor="@color/text_primary"
+                        android:textSize="15sp"
+                        android:textStyle="bold"
                         android:layout_marginBottom="12dp" />
 
-                    <!-- Legend -->
                     <LinearLayout
+                        android:id="@+id/streakContainer"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical">
+                        android:orientation="vertical" />
 
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="少"
-                            android:textColor="@color/text_hint"
-                            android:textSize="11sp" />
+                </LinearLayout>
 
-                        <View
-                            android:id="@+id/legend0"
-                            android:layout_width="12dp"
-                            android:layout_height="12dp"
-                            android:layout_marginHorizontal="4dp"
-                            android:background="@drawable/heatmap_cell_bg" />
+            </com.google.android.material.card.MaterialCardView>
 
-                        <View
-                            android:id="@+id/legend1"
-                            android:layout_width="12dp"
-                            android:layout_height="12dp"
-                            android:layout_marginHorizontal="4dp"
-                            android:background="@drawable/heatmap_cell_bg" />
+            <!-- Weekly Activity Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="0dp"
+                app:cardBackgroundColor="@color/card_background">
 
-                        <View
-                            android:id="@+id/legend2"
-                            android:layout_width="12dp"
-                            android:layout_height="12dp"
-                            android:layout_marginHorizontal="4dp"
-                            android:background="@drawable/heatmap_cell_bg" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
 
-                        <View
-                            android:id="@+id/legend3"
-                            android:layout_width="12dp"
-                            android:layout_height="12dp"
-                            android:layout_marginHorizontal="4dp"
-                            android:background="@drawable/heatmap_cell_bg" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="近7天学习量"
+                        android:textColor="@color/text_primary"
+                        android:textSize="15sp"
+                        android:textStyle="bold"
+                        android:layout_marginBottom="12dp" />
 
-                        <View
-                            android:id="@+id/legend4"
-                            android:layout_width="12dp"
-                            android:layout_height="12dp"
-                            android:layout_marginHorizontal="4dp"
-                            android:background="@drawable/heatmap_cell_bg" />
+                    <LinearLayout
+                        android:id="@+id/weeklyActivityContainer"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical" />
 
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="多"
-                            android:textColor="@color/text_hint"
-                            android:textSize="11sp" />
+                </LinearLayout>
 
-                    </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Review Schedule Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="0dp"
+                app:cardBackgroundColor="@color/card_background">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="复习进度"
+                        android:textColor="@color/text_primary"
+                        android:textSize="15sp"
+                        android:textStyle="bold"
+                        android:layout_marginBottom="12dp" />
+
+                    <LinearLayout
+                        android:id="@+id/reviewScheduleContainer"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical" />
 
                 </LinearLayout>
 

@@ -159,7 +159,6 @@ class QuizSetupActivity : AppCompatActivity() {
         checkBox.setTextColor(getColor(R.color.text_primary))
 
         val originalColor = color
-        checkBox.tag = checkBox.tag
         checkBox.setOnCheckedChangeListener { buttonView, isChecked ->
             val tag = buttonView.tag
             val itemColor = if (tag is Long) {
@@ -219,7 +218,7 @@ class QuizSetupActivity : AppCompatActivity() {
         checkBox.setOnCheckedChangeListener(null)
         checkBox.isChecked = checked
         checkBox.setOnCheckedChangeListener { buttonView, isChecked ->
-            val id = buttonView.tag as Long
+            val id = buttonView.tag as? Long ?: return@setOnCheckedChangeListener
             onCategoryToggled(id, isChecked)
         }
         val bg = checkBox.background as? GradientDrawable

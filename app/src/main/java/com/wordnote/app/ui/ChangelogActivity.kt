@@ -30,6 +30,13 @@ class ChangelogActivity : AppCompatActivity() {
 
         val changelog = listOf(
             VersionLog(
+                "v2.11.0", "2026-05-24",
+                listOf(
+                    "学习统计重做：移除热力图，新增学习连续天数、近7天学习量柱状图、复习进度",
+                    "单词测试闪退修复：修复测验设置页「全部分类」CheckBox 类型转换崩溃"
+                )
+            ),
+            VersionLog(
                 "v2.10.3", "2026-05-24",
                 listOf(
                     "测验闪退修复：finishQuiz等待数据库写入完成后再跳转结果页，解决竞态条件导致的崩溃"
