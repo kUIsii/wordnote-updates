@@ -3,22 +3,34 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="horizontal"
-    android:paddingVertical="6dp"
-    android:paddingHorizontal="16dp"
-    android:paddingStart="60dp"
+    android:paddingVertical="8dp"
+    android:paddingStart="32dp"
+    android:paddingEnd="16dp"
     android:gravity="center_vertical">
 
+    <!-- Small dot indicator -->
     <View
-        android:layout_width="4dp"
-        android:layout_height="4dp"
+        android:layout_width="5dp"
+        android:layout_height="5dp"
         android:background="@drawable/dot_indicator" />
 
+    <!-- Day label -->
     <TextView
         android:id="@+id/dayTextView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="8dp"
-        android:textColor="@color/text_hint"
-        android:textSize="13sp" />
+        android:layout_marginStart="10dp"
+        android:textColor="@color/text_secondary"
+        android:textSize="13sp"
+        android:fontFamily="sans-serif-medium" />
+
+    <!-- Subtle line -->
+    <View
+        android:layout_width="0dp"
+        android:layout_height="1dp"
+        android:layout_weight="1"
+        android:layout_marginStart="12dp"
+        android:background="@color/divider"
+        android:alpha="0.5" />
 
 </LinearLayout>

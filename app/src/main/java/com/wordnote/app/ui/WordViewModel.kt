@@ -275,7 +275,14 @@ class WordViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     // Quiz History operations
-    val allQuizHistory: LiveData<List<QuizHistory>> = repository.allQuizHistory
+    val allQuizHistory: LiveData<List<QuizHistory>> by lazy {
+        try {
+            repository.allQuizHistory
+        } catch (e: Exception) {
+            e.printStackTrace()
+            androidx.lifecycle.MutableLiveData<List<QuizHistory>>()
+        }
+    }
 
     fun insertQuizHistory(history: QuizHistory) = viewModelScope.launch {
         repository.insertQuizHistory(history)

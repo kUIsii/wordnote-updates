@@ -216,6 +216,8 @@ class MainActivity : AppCompatActivity() {
             val newMode = !wordAdapter.isDateGroupingMode()
             wordAdapter.setDateGroupingMode(newMode)
             updateDateGroupingButtonIcon(newMode)
+            getSharedPreferences("settings", MODE_PRIVATE).edit()
+                .putBoolean("date_grouping_mode", newMode).apply()
         }
     }
 
@@ -242,6 +244,14 @@ class MainActivity : AppCompatActivity() {
         wordRecyclerView.apply {
             layoutManager = LinearLayoutManager(this@MainActivity)
             adapter = wordAdapter
+        }
+
+        // Restore date grouping mode from SharedPreferences
+        val savedGroupingMode = getSharedPreferences("settings", MODE_PRIVATE)
+            .getBoolean("date_grouping_mode", false)
+        if (savedGroupingMode) {
+            wordAdapter.setDateGroupingMode(true)
+            updateDateGroupingButtonIcon(true)
         }
 
         // Custom scrollbar indicator
@@ -878,8 +888,6 @@ class MainActivity : AppCompatActivity() {
         }
         // Save selected category
         outState.putLong("selected_category_id", selectedCategoryId ?: -1L)
-        // Save date grouping mode
-        outState.putBoolean("date_grouping_mode", wordAdapter.isDateGroupingMode())
     }
 
     override fun onRestoreInstanceState(savedInstanceState: Bundle) {
@@ -893,13 +901,8 @@ class MainActivity : AppCompatActivity() {
         val catId = savedInstanceState.getLong("selected_category_id", -1L)
         if (catId != -1L) {
             selectedCategoryId = catId
-        }
-
-        // Restore date grouping mode
-        val dateGroupingMode = savedInstanceState.getBoolean("date_grouping_mode", false)
-        if (dateGroupingMode) {
-            wordAdapter.setDateGroupingMode(true)
-            updateDateGroupingButtonIcon(true)
+            // Update ViewModel with restored category
+            viewModel.selectCategory(catId)
         }
     }
 }

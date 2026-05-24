@@ -30,6 +30,23 @@ class ChangelogActivity : AppCompatActivity() {
 
         val changelog = listOf(
             VersionLog(
+                "v2.9.2", "2026-05-24",
+                listOf(
+                    "单词测试闪退修复：数据库添加quiz_history表安全检查，ViewModel加防御性错误处理",
+                    "备份管理统一化：合并备份/恢复/管理为一个界面，支持重命名备份文件",
+                    "日期折叠优化：简化为月->日两级，重新设计头部视觉，支持动画展开/折叠",
+                    "日期分组模式持久化：重启app后保持上次选择"
+                )
+            ),
+            VersionLog(
+                "v2.9.1", "2026-05-24",
+                listOf(
+                    "深色模式滚动位置修复增强：修复切换深色模式后页面位置自动跑到最上方的问题",
+                    "在onRestoreInstanceState中正确恢复ViewModel状态",
+                    "确保选中分类在Activity重建后正确恢复"
+                )
+            ),
+            VersionLog(
                 "v2.9.0", "2026-05-24",
                 listOf(
                     "首页日期折叠分组：支持按月-周-日层级分组显示单词",

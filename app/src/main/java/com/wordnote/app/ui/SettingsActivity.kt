@@ -2,11 +2,19 @@ package com.wordnote.app.ui
 
 import android.content.Intent
 import android.os.Bundle
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.EditText
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.switchmaterial.SwitchMaterial
 import com.wordnote.app.R
@@ -135,15 +143,7 @@ class SettingsActivity : AppCompatActivity() {
         }
 
         findViewById<LinearLayout>(R.id.backupButton).setOnClickListener {
-            backupDatabase()
-        }
-
-        findViewById<LinearLayout>(R.id.restoreButton).setOnClickListener {
-            confirmRestore()
-        }
-
-        findViewById<LinearLayout>(R.id.manageBackupsButton).setOnClickListener {
-            showManageBackups()
+            showBackupManager()
         }
 
         findViewById<LinearLayout>(R.id.recycleBinButton).setOnClickListener {
@@ -167,6 +167,154 @@ class SettingsActivity : AppCompatActivity() {
         }
     }
 
+    // ==================== Unified Backup Manager ====================
+
+    private fun showBackupManager() {
+        val dialog = BottomSheetDialog(this, R.style.Theme_WordNoteApp_BottomSheet)
+        val sheetView = layoutInflater.inflate(R.layout.sheet_backup_manager, null)
+
+        val fileList = sheetView.findViewById<RecyclerView>(R.id.backupFileList)
+        val emptyText = sheetView.findViewById<TextView>(R.id.emptyText)
+        val newBackupButton = sheetView.findViewById<com.google.android.material.button.MaterialButton>(R.id.newBackupButton)
+        val cancelButton = sheetView.findViewById<com.google.android.material.button.MaterialButton>(R.id.cancelButton)
+
+        fileList.layoutManager = LinearLayoutManager(this)
+
+        newBackupButton.setOnClickListener {
+            dialog.dismiss()
+            backupDatabase()
+        }
+
+        cancelButton.setOnClickListener {
+            dialog.dismiss()
+        }
+
+        dialog.setContentView(sheetView)
+        dialog.show()
+
+        loadBackupFiles(fileList, emptyText)
+    }
+
+    private fun loadBackupFiles(fileList: RecyclerView, emptyText: TextView) {
+        val backupDir = File(android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS), "WordNoteBackup")
+
+        CoroutineScope(Dispatchers.IO).launch {
+            val dbFiles = if (backupDir.exists()) {
+                backupDir.listFiles()?.filter { it.name.endsWith(".db") }?.sortedByDescending { it.lastModified() } ?: emptyList()
+            } else {
+                emptyList()
+            }
+
+            withContext(Dispatchers.Main) {
+                if (dbFiles.isEmpty()) {
+                    fileList.visibility = View.GONE
+                    emptyText.visibility = View.VISIBLE
+                } else {
+                    fileList.visibility = View.VISIBLE
+                    emptyText.visibility = View.GONE
+                    fileList.adapter = BackupFileAdapter(
+                        files = dbFiles,
+                        onRestore = { file -> confirmRestoreFile(file) },
+                        onRename = { file -> showRenameDialog(file, fileList, emptyText) },
+                        onDelete = { file -> confirmDeleteFile(file, fileList, emptyText) }
+                    )
+                }
+            }
+        }
+    }
+
+    private fun showRenameDialog(file: File, fileList: RecyclerView, emptyText: TextView) {
+        val input = EditText(this).apply {
+            hint = "输入新文件名"
+            setText(file.nameWithoutExtension)
+            setSelection(file.nameWithoutExtension.length)
+            setPadding(48, 32, 48, 32)
+        }
+
+        MaterialAlertDialogBuilder(this, R.style.Theme_WordNoteApp_Dialog)
+            .setTitle("重命名备份")
+            .setView(input)
+            .setPositiveButton("确定") { _, _ ->
+                val newName = input.text.toString().trim()
+                if (newName.isBlank()) {
+                    Toast.makeText(this, "文件名不能为空", Toast.LENGTH_SHORT).show()
+                    return@setPositiveButton
+                }
+                if (newName == file.nameWithoutExtension) return@setPositiveButton
+
+                val newFile = File(file.parent, "$newName.db")
+                if (newFile.exists()) {
+                    Toast.makeText(this, "已存在同名文件", Toast.LENGTH_SHORT).show()
+                    return@setPositiveButton
+                }
+
+                CoroutineScope(Dispatchers.IO).launch {
+                    try {
+                        // Rename main db file
+                        file.renameTo(newFile)
+                        // Rename associated files
+                        File(file.path + "-wal").let { if (it.exists()) it.renameTo(File(newFile.path + "-wal")) }
+                        File(file.path + "-shm").let { if (it.exists()) it.renameTo(File(newFile.path + "-shm")) }
+                        File(file.path.replace(".db", ".meta")).let { if (it.exists()) it.renameTo(File(newFile.path.replace(".db", ".meta"))) }
+
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(this@SettingsActivity, "已重命名", Toast.LENGTH_SHORT).show()
+                            loadBackupFiles(fileList, emptyText)
+                        }
+                    } catch (e: Exception) {
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(this@SettingsActivity, "重命名失败: ${e.message}", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+
+    private fun confirmDeleteFile(file: File, fileList: RecyclerView, emptyText: TextView) {
+        MaterialAlertDialogBuilder(this, R.style.Theme_WordNoteApp_Dialog)
+            .setTitle("删除备份")
+            .setMessage("确定要删除 ${file.name} 吗？")
+            .setPositiveButton("删除") { _, _ ->
+                CoroutineScope(Dispatchers.IO).launch {
+                    try {
+                        file.delete()
+                        File(file.path + "-wal").delete()
+                        File(file.path + "-shm").delete()
+                        File(file.path.replace(".db", ".meta")).delete()
+
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(this@SettingsActivity, "已删除", Toast.LENGTH_SHORT).show()
+                            loadBackupFiles(fileList, emptyText)
+                        }
+                    } catch (e: Exception) {
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(this@SettingsActivity, "删除失败: ${e.message}", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+
+    private fun confirmRestoreFile(backupFile: File) {
+        if (!backupFile.exists()) {
+            Toast.makeText(this, "备份文件不存在", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        MaterialAlertDialogBuilder(this, R.style.Theme_WordNoteApp_Dialog)
+            .setTitle("确认恢复")
+            .setMessage("恢复将覆盖当前所有数据，确定继续吗？\n\n文件：${backupFile.name}")
+            .setPositiveButton("恢复") { _, _ ->
+                restoreDatabase(backupFile)
+            }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+
     private fun backupDatabase() {
         val dbFile = getDatabasePath("word_database")
         if (!dbFile.exists()) {
@@ -175,27 +323,23 @@ class SettingsActivity : AppCompatActivity() {
         }
 
         val backupDir = File(android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS), "WordNoteBackup")
-        if (!backupDir.exists()) backupDir.exists() || backupDir.mkdirs()
+        if (!backupDir.exists()) backupDir.mkdirs()
 
         val timestamp = java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.getDefault()).format(java.util.Date())
         val backupFile = File(backupDir, "wordnote_$timestamp.db")
 
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                // Copy main db
                 dbFile.copyTo(backupFile, overwrite = true)
-                // Copy WAL if exists
                 val walFile = File(dbFile.path + "-wal")
                 if (walFile.exists()) {
                     walFile.copyTo(File(backupFile.path + "-wal"), overwrite = true)
                 }
-                // Copy SHM if exists
                 val shmFile = File(dbFile.path + "-shm")
                 if (shmFile.exists()) {
                     shmFile.copyTo(File(backupFile.path + "-shm"), overwrite = true)
                 }
 
-                // Write meta file with version info
                 val metaFile = File(backupDir, "wordnote_${timestamp}.meta")
                 val meta = JSONObject().apply {
                     put("version", 6)
@@ -205,7 +349,7 @@ class SettingsActivity : AppCompatActivity() {
                 metaFile.writeText(meta.toString())
 
                 withContext(Dispatchers.Main) {
-                    MaterialAlertDialogBuilder(this@SettingsActivity)
+                    MaterialAlertDialogBuilder(this@SettingsActivity, R.style.Theme_WordNoteApp_Dialog)
                         .setTitle("备份成功")
                         .setMessage("已保存到:\nDownloads/WordNoteBackup/wordnote_$timestamp.db")
                         .setPositiveButton("确定", null)
@@ -219,59 +363,11 @@ class SettingsActivity : AppCompatActivity() {
         }
     }
 
-    private fun confirmRestore() {
-        val backupDir = File(android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS), "WordNoteBackup")
-        if (!backupDir.exists()) {
-            Toast.makeText(this, "备份目录不存在\n请先备份数据", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        val files = backupDir.listFiles()
-        if (files == null || files.isEmpty()) {
-            Toast.makeText(this, "备份目录为空\n请先备份数据", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        val dbFiles = files.filter { it.name.endsWith(".db") }.sortedByDescending { it.lastModified() }
-        if (dbFiles.isEmpty()) {
-            Toast.makeText(this, "没有找到备份文件\n请先备份数据", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        val fileNames = dbFiles.map { it.name }.toTypedArray()
-
-        MaterialAlertDialogBuilder(this)
-            .setTitle("选择备份文件")
-            .setItems(fileNames) { _, which ->
-                confirmRestoreFile(dbFiles[which])
-            }
-            .setNegativeButton("取消", null)
-            .show()
-    }
-
-    private fun confirmRestoreFile(backupFile: File) {
-        // Verify file exists before proceeding
-        if (!backupFile.exists()) {
-            Toast.makeText(this, "备份文件不存在", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        MaterialAlertDialogBuilder(this)
-            .setTitle("确认恢复")
-            .setMessage("恢复将覆盖当前所有数据，确定继续吗？\n\n文件：${backupFile.name}")
-            .setPositiveButton("恢复") { _, _ ->
-                restoreDatabase(backupFile)
-            }
-            .setNegativeButton("取消", null)
-            .show()
-    }
-
     private fun restoreDatabase(backupFile: File) {
         val dbFile = getDatabasePath("word_database")
 
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                // Verify backup file exists
                 if (!backupFile.exists()) {
                     withContext(Dispatchers.Main) {
                         Toast.makeText(this@SettingsActivity, "备份文件不存在", Toast.LENGTH_LONG).show()
@@ -279,31 +375,25 @@ class SettingsActivity : AppCompatActivity() {
                     return@launch
                 }
 
-                // Close database and clear singleton to avoid stale instance
                 WordDatabase.clearInstance()
 
-                // Copy backup over current db
                 backupFile.copyTo(dbFile, overwrite = true)
-                // Copy WAL
                 val walFile = File(backupFile.path + "-wal")
                 if (walFile.exists()) {
                     walFile.copyTo(File(dbFile.path + "-wal"), overwrite = true)
                 } else {
                     File(dbFile.path + "-wal").delete()
                 }
-                // Copy SHM
                 val shmFile = File(backupFile.path + "-shm")
                 if (shmFile.exists()) {
                     shmFile.copyTo(File(dbFile.path + "-shm"), overwrite = true)
                 } else {
                     File(dbFile.path + "-shm").delete()
                 }
-                // Delete journal files that may conflict
                 File(dbFile.path + "-journal").delete()
 
                 withContext(Dispatchers.Main) {
                     Toast.makeText(this@SettingsActivity, "恢复成功，重启应用生效", Toast.LENGTH_LONG).show()
-                    // Restart app
                     val intent = packageManager.getLaunchIntentForPackage(packageName)
                     intent?.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
                     startActivity(intent)
@@ -317,70 +407,44 @@ class SettingsActivity : AppCompatActivity() {
         }
     }
 
-    private fun showManageBackups() {
-        val backupDir = File(android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS), "WordNoteBackup")
-        if (!backupDir.exists()) {
-            Toast.makeText(this, "备份目录不存在", Toast.LENGTH_SHORT).show()
-            return
+    // ==================== Backup File Adapter ====================
+
+    private class BackupFileAdapter(
+        private val files: List<File>,
+        private val onRestore: (File) -> Unit,
+        private val onRename: (File) -> Unit,
+        private val onDelete: (File) -> Unit
+    ) : RecyclerView.Adapter<BackupFileAdapter.ViewHolder>() {
+
+        class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+            val fileNameText: TextView = itemView.findViewById(R.id.fileNameText)
+            val fileSizeText: TextView = itemView.findViewById(R.id.fileSizeText)
+            val fileDateText: TextView = itemView.findViewById(R.id.fileDateText)
+            val renameButton: ImageView = itemView.findViewById(R.id.renameButton)
+            val deleteButton: ImageView = itemView.findViewById(R.id.deleteButton)
         }
 
-        val files = backupDir.listFiles()
-        if (files == null || files.isEmpty()) {
-            Toast.makeText(this, "没有备份文件", Toast.LENGTH_SHORT).show()
-            return
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+            val view = LayoutInflater.from(parent.context).inflate(R.layout.item_backup_file, parent, false)
+            return ViewHolder(view)
         }
 
-        val dbFiles = files.filter { it.name.endsWith(".db") }.sortedByDescending { it.lastModified() }
-        if (dbFiles.isEmpty()) {
-            Toast.makeText(this, "没有备份文件", Toast.LENGTH_SHORT).show()
-            return
-        }
+        override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+            val file = files[position]
+            holder.fileNameText.text = file.name
 
-        val fileNames = dbFiles.map { file ->
-            val size = file.length() / 1024
+            val sizeKB = file.length() / 1024
+            val sizeText = if (sizeKB > 1024) "${sizeKB / 1024}MB" else "${sizeKB}KB"
+            holder.fileSizeText.text = sizeText
+
             val sdf = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault())
-            val date = sdf.format(java.util.Date(file.lastModified()))
-            "${file.name}  (${size}KB, $date)"
-        }.toTypedArray()
+            holder.fileDateText.text = sdf.format(java.util.Date(file.lastModified()))
 
-        val selectedItems = BooleanArray(fileNames.size)
+            holder.itemView.setOnClickListener { onRestore(file) }
+            holder.renameButton.setOnClickListener { onRename(file) }
+            holder.deleteButton.setOnClickListener { onDelete(file) }
+        }
 
-        MaterialAlertDialogBuilder(this)
-            .setTitle("管理备份文件 (${dbFiles.size}个)")
-            .setMultiChoiceItems(fileNames, selectedItems) { _, which, isChecked ->
-                selectedItems[which] = isChecked
-            }
-            .setPositiveButton("删除选中") { _, _ ->
-                val toDelete = dbFiles.filterIndexed { index, _ -> selectedItems[index] }
-                if (toDelete.isEmpty()) {
-                    Toast.makeText(this, "未选择任何文件", Toast.LENGTH_SHORT).show()
-                    return@setPositiveButton
-                }
-                confirmDeleteBackups(toDelete)
-            }
-            .setNegativeButton("取消", null)
-            .show()
-    }
-
-    private fun confirmDeleteBackups(files: List<File>) {
-        val names = files.joinToString("\n") { it.name }
-        MaterialAlertDialogBuilder(this)
-            .setTitle("确认删除")
-            .setMessage("确定要删除以下 ${files.size} 个备份文件吗？\n\n$names")
-            .setPositiveButton("删除") { _, _ ->
-                var deleted = 0
-                files.forEach { file ->
-                    if (file.delete()) {
-                        // Also delete associated meta and WAL/SHM files
-                        File(file.path + "-wal").delete()
-                        File(file.path + "-shm").delete()
-                        File(file.path.replace(".db", ".meta")).delete()
-                        deleted++
-                    }
-                }
-                Toast.makeText(this, "已删除 $deleted 个文件", Toast.LENGTH_SHORT).show()
-            }
-            .setNegativeButton("取消", null)
-            .show()
+        override fun getItemCount() = files.size
     }
 }

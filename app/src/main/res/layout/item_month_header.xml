@@ -3,34 +3,50 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="horizontal"
-    android:paddingVertical="10dp"
-    android:paddingHorizontal="16dp"
+    android:paddingVertical="12dp"
+    android:paddingStart="16dp"
+    android:paddingEnd="20dp"
     android:gravity="center_vertical"
     android:background="?attr/selectableItemBackground">
 
-    <ImageView
-        android:id="@+id/expandIcon"
-        android:layout_width="20dp"
+    <!-- Left accent bar -->
+    <View
+        android:layout_width="3dp"
         android:layout_height="20dp"
-        android:src="@android:drawable/arrow_down_float"
-        android:contentDescription="展开/折叠" />
+        android:background="@color/primary" />
 
+    <!-- Month name -->
     <TextView
         android:id="@+id/monthTextView"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
-        android:layout_marginStart="8dp"
-        android:textColor="@color/primary"
+        android:layout_marginStart="12dp"
+        android:textColor="@color/text_primary"
         android:textSize="16sp"
         android:textStyle="bold"
-        android:letterSpacing="0.04" />
+        android:fontFamily="sans-serif-medium" />
 
+    <!-- Word count badge -->
     <TextView
         android:id="@+id/wordCountTextView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textColor="@color/text_hint"
-        android:textSize="12sp" />
+        android:paddingHorizontal="10dp"
+        android:paddingVertical="3dp"
+        android:background="@drawable/bg_count_badge"
+        android:textColor="@color/primary"
+        android:textSize="12sp"
+        android:fontFamily="sans-serif-medium" />
+
+    <!-- Expand/collapse chevron -->
+    <ImageView
+        android:id="@+id/expandIcon"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:layout_marginStart="8dp"
+        android:src="@drawable/ic_expand_more"
+        android:contentDescription="展开/折叠"
+        android:alpha="0.5" />
 
 </LinearLayout>

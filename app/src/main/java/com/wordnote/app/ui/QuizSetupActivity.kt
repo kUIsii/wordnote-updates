@@ -91,13 +91,23 @@ class QuizSetupActivity : AppCompatActivity() {
         }
 
         try {
-            viewModel.allQuizHistory.observe(this) { history ->
-                if (history.isEmpty()) {
-                    historySection.visibility = View.GONE
-                } else {
-                    historySection.visibility = View.VISIBLE
-                    displayHistory(history)
+            val historyLiveData = viewModel.allQuizHistory
+            if (historyLiveData != null) {
+                historyLiveData.observe(this) { history ->
+                    try {
+                        if (history.isNullOrEmpty()) {
+                            historySection.visibility = View.GONE
+                        } else {
+                            historySection.visibility = View.VISIBLE
+                            displayHistory(history)
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        historySection.visibility = View.GONE
+                    }
                 }
+            } else {
+                historySection.visibility = View.GONE
             }
         } catch (e: Exception) {
             e.printStackTrace()
@@ -366,15 +376,23 @@ class QuizSetupActivity : AppCompatActivity() {
 
     private fun startQuiz() {
         val wordCount = wordCountSeekBar.progress
+        if (wordCount <= 0) {
+            Toast.makeText(this, "请选择测验数量", Toast.LENGTH_SHORT).show()
+            return
+        }
         val useForgetCount = forgetCountCheckBox.isChecked && !randomCheckBox.isChecked
 
-        if (selectedCategories.size == allCategories.size) {
-            QuizActivity.launch(this, wordCount, null, useForgetCount)
-        } else {
-            QuizActivity.launch(this, wordCount, selectedCategories.toList(), useForgetCount)
+        try {
+            if (selectedCategories.size == allCategories.size) {
+                QuizActivity.launch(this, wordCount, null, useForgetCount)
+            } else {
+                QuizActivity.launch(this, wordCount, selectedCategories.toList(), useForgetCount)
+            }
+            compatOverridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Toast.makeText(this, "启动测验失败: ${e.message}", Toast.LENGTH_SHORT).show()
         }
-
-        compatOverridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left)
     }
 
     private fun dpToPx(dp: Int): Int {

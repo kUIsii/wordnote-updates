@@ -127,8 +127,15 @@ class WordRepository(
         wordDao.permanentDeleteOlderThan(cutoffTime)
     }
 
-    // Quiz History operations
-    val allQuizHistory: LiveData<List<QuizHistory>> = quizHistoryDao.getAll()
+    // Quiz History operations - lazy to avoid blocking if table is missing
+    val allQuizHistory: LiveData<List<QuizHistory>> by lazy {
+        try {
+            quizHistoryDao.getAll()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            androidx.lifecycle.MutableLiveData<List<QuizHistory>>()
+        }
+    }
     suspend fun insertQuizHistory(history: QuizHistory): Long = quizHistoryDao.insert(history)
     suspend fun deleteQuizHistory(history: QuizHistory) = quizHistoryDao.delete(history)
     suspend fun deleteAllQuizHistory() = quizHistoryDao.deleteAll()
