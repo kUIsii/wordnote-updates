@@ -30,6 +30,15 @@ class ChangelogActivity : AppCompatActivity() {
 
         val changelog = listOf(
             VersionLog(
+                "v2.10.1", "2026-05-24",
+                listOf(
+                    "修复热力图不显示数据：根据屏幕宽度动态调整格子大小，今天的数据现在可以正常显示",
+                    "修复batch追加创建新框框：追加的单词现在正确显示在原有分组中",
+                    "修复单词测试闪退：添加异常处理，测试页面不再崩溃",
+                    "修复测验分类名不显示：添加allCategories LiveData观察"
+                )
+            ),
+            VersionLog(
                 "v2.10.0", "2026-05-24",
                 listOf(
                     "周数计算修复：显式设置周一为一周第一天，5月24日(周日)与5月23日(周六)现在在同一周",
