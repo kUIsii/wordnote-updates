@@ -9,6 +9,7 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
 import com.wordnote.app.R
@@ -60,6 +61,22 @@ class StatisticsActivity : AppCompatActivity() {
 
         val yearText = findViewById<TextView>(R.id.heatmapYearText)
         yearText.text = "${Calendar.getInstance().get(Calendar.YEAR)} 年"
+
+        // Set up heatmap click listener
+        heatmapView.setOnDayClickListener(object : HeatmapView.OnDayClickListener {
+            override fun onDayClick(date: String, count: Int) {
+                val message = if (count > 0) {
+                    "在 $date 学习了 $count 个单词"
+                } else {
+                    "在 $date 没有学习记录"
+                }
+                AlertDialog.Builder(this@StatisticsActivity)
+                    .setTitle("学习记录")
+                    .setMessage(message)
+                    .setPositiveButton("确定", null)
+                    .show()
+            }
+        })
 
         val legendColors = intArrayOf(
             Color.parseColor("#EBEDF0"),

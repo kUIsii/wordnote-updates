@@ -30,6 +30,13 @@ class ChangelogActivity : AppCompatActivity() {
 
         val changelog = listOf(
             VersionLog(
+                "v2.10.2", "2026-05-24",
+                listOf(
+                    "热力图优化：增大格子尺寸提升可读性，点击格子可查看当天学习记录",
+                    "单词测试修复：修复测验完成后闪退问题，保存记录完成后再跳转结果页"
+                )
+            ),
+            VersionLog(
                 "v2.10.1", "2026-05-24",
                 listOf(
                     "修复热力图不显示数据：根据屏幕宽度动态调整格子大小，今天的数据现在可以正常显示",

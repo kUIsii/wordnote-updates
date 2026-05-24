@@ -19,9 +19,9 @@ class HeatmapView @JvmOverloads constructor(
     private var data: Map<Long, Int> = emptyMap()
     private var maxCount = 0
 
-    private var cellSize = 14f * resources.displayMetrics.density
-    private val cellGap = 3f * resources.displayMetrics.density
-    private val cornerRadius = 3f * resources.displayMetrics.density
+    private var cellSize = 16f * resources.displayMetrics.density
+    private val cellGap = 4f * resources.displayMetrics.density
+    private val cornerRadius = 4f * resources.displayMetrics.density
 
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
 
@@ -34,6 +34,18 @@ class HeatmapView @JvmOverloads constructor(
         Color.parseColor("#216E39")   // very high
     )
 
+    // Click listener interface
+    interface OnDayClickListener {
+        fun onDayClick(date: String, count: Int)
+    }
+
+    private var onDayClickListener: OnDayClickListener? = null
+    private var startDate: Long = 0
+
+    fun setOnDayClickListener(listener: OnDayClickListener?) {
+        onDayClickListener = listener
+    }
+
     fun setData(wordCounts: Map<Long, Int>) {
         data = wordCounts
         maxCount = wordCounts.values.maxOrNull() ?: 0
@@ -43,7 +55,8 @@ class HeatmapView @JvmOverloads constructor(
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val parentWidth = MeasureSpec.getSize(widthMeasureSpec)
         // Dynamically calculate cell size to fit 53 columns within parent width
-        cellSize = ((parentWidth - cellGap) / 53 - cellGap).coerceAtLeast(8f)
+        // Minimum cell size is 12dp for better readability
+        cellSize = ((parentWidth - cellGap) / 53 - cellGap).coerceAtLeast(12f * resources.displayMetrics.density)
         val width = ((cellSize + cellGap) * 53 + cellGap).toInt()
         val height = ((cellSize + cellGap) * 7 + cellGap).toInt()
         setMeasuredDimension(width, height)
@@ -63,7 +76,7 @@ class HeatmapView @JvmOverloads constructor(
         calendar.set(Calendar.SECOND, 0)
         calendar.set(Calendar.MILLISECOND, 0)
 
-        val startDate = calendar.timeInMillis
+        startDate = calendar.timeInMillis
 
         var dayIndex = 0
         val totalDays = 53 * 7
@@ -91,6 +104,33 @@ class HeatmapView @JvmOverloads constructor(
 
             dayIndex++
         }
+    }
+
+    override fun onTouchEvent(event: android.view.MotionEvent): Boolean {
+        if (event.action == android.view.MotionEvent.ACTION_DOWN) {
+            val x = event.x
+            val y = event.y
+
+            // Calculate which cell was clicked
+            val col = (x / (cellSize + cellGap)).toInt()
+            val row = (y / (cellSize + cellGap)).toInt()
+
+            // Check if click is within valid range
+            if (col in 0 until 53 && row in 0 until 7) {
+                val dayIndex = col * 7 + row
+                val dayTime = startDate + dayIndex * 24L * 60 * 60 * 1000
+                val today = Calendar.getInstance().timeInMillis
+
+                if (dayTime <= today) {
+                    val count = data[getDayKey(dayTime)] ?: 0
+                    val dateFormat = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
+                    val dateStr = dateFormat.format(java.util.Date(dayTime))
+                    onDayClickListener?.onDayClick(dateStr, count)
+                    return true
+                }
+            }
+        }
+        return super.onTouchEvent(event)
     }
 
     private fun getLevel(count: Int): Int {

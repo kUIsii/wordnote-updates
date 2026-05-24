@@ -160,7 +160,7 @@ class QuizActivity : AppCompatActivity() {
 
     private fun showWord() {
         if (quizWords.isEmpty() || currentIndex >= quizWords.size) {
-            finishQuiz()
+            if (!isFinishingQuiz) finishQuiz()
             return
         }
 
@@ -227,30 +227,42 @@ class QuizActivity : AppCompatActivity() {
         showWord()
     }
 
+    private var isFinishingQuiz = false
+
     private fun finishQuiz() {
+        if (isFinishingQuiz) return
+        isFinishingQuiz = true
         autoAdvanceHandler.removeCallbacksAndMessages(null)
 
-        lifecycleScope.launch {
-            withContext(Dispatchers.IO) {
-                val history = com.wordnote.app.data.QuizHistory(
-                    totalWords = quizWords.size,
-                    correctCount = correctCount,
-                    categoryIds = categoryIds?.joinToString(",") ?: "",
-                    forgottenWordIds = forgottenWords.joinToString(",") { it.id.toString() },
-                    forgottenWordTexts = forgottenWords.joinToString("||") { "${it.word}=${it.meaning}" }
-                )
-                viewModel.insertQuizHistory(history)
-            }
-        }
+        val totalWords = quizWords.size
+        val correctCountVal = correctCount
+        val forgottenIds = forgottenWords.map { it.id }.toLongArray()
 
-        if (!isFinishing && !isDestroyed) {
-            val intent = Intent(this, QuizResultActivity::class.java).apply {
-                putExtra(QuizResultActivity.EXTRA_TOTAL, quizWords.size)
-                putExtra(QuizResultActivity.EXTRA_CORRECT, correctCount)
-                putExtra(QuizResultActivity.EXTRA_FORGOTTEN_IDS, forgottenWords.map { it.id }.toLongArray())
+        lifecycleScope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    val history = com.wordnote.app.data.QuizHistory(
+                        totalWords = totalWords,
+                        correctCount = correctCountVal,
+                        categoryIds = categoryIds?.joinToString(",") ?: "",
+                        forgottenWordIds = forgottenWords.joinToString(",") { it.id.toString() },
+                        forgottenWordTexts = forgottenWords.joinToString("||") { "${it.word}=${it.meaning}" }
+                    )
+                    viewModel.insertQuizHistory(history)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
-            startActivity(intent)
-            finish()
+
+            if (!isFinishing && !isDestroyed) {
+                val intent = Intent(this@QuizActivity, QuizResultActivity::class.java).apply {
+                    putExtra(QuizResultActivity.EXTRA_TOTAL, totalWords)
+                    putExtra(QuizResultActivity.EXTRA_CORRECT, correctCountVal)
+                    putExtra(QuizResultActivity.EXTRA_FORGOTTEN_IDS, forgottenIds)
+                }
+                startActivity(intent)
+                finish()
+            }
         }
     }
 
