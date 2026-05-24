@@ -110,6 +110,11 @@ class WordRepository(
     suspend fun getWordsByGroup(groupId: Long): List<Word> = wordDao.getWordsByGroupSync(groupId)
     suspend fun setWordGroup(wordId: Long, groupId: Long?) = wordDao.setWordGroup(wordId, groupId)
 
+    // Similar word detection
+    suspend fun findSimilarWordsExcluding(wordText: String, excludeWordId: Long): List<Word> {
+        return wordDao.findSimilarWordsExcluding(wordText, excludeWordId)
+    }
+
     // Soft delete / Recycle bin operations
     suspend fun softDeleteWord(wordId: Long) {
         wordDao.softDelete(wordId, System.currentTimeMillis())
@@ -127,15 +132,8 @@ class WordRepository(
         wordDao.permanentDeleteOlderThan(cutoffTime)
     }
 
-    // Quiz History operations - lazy to avoid blocking if table is missing
-    val allQuizHistory: LiveData<List<QuizHistory>> by lazy {
-        try {
-            quizHistoryDao.getAll()
-        } catch (e: Exception) {
-            e.printStackTrace()
-            androidx.lifecycle.MutableLiveData<List<QuizHistory>>()
-        }
-    }
+    // Quiz History operations
+    val allQuizHistory: LiveData<List<QuizHistory>> = quizHistoryDao.getAll()
     suspend fun insertQuizHistory(history: QuizHistory): Long = quizHistoryDao.insert(history)
     suspend fun deleteQuizHistory(history: QuizHistory) = quizHistoryDao.delete(history)
     suspend fun deleteAllQuizHistory() = quizHistoryDao.deleteAll()

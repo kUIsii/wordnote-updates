@@ -71,37 +71,19 @@ class QuizHistoryActivity : AppCompatActivity() {
             true
         }
 
-        try {
-            val historyLiveData = viewModel.allQuizHistory
-            if (historyLiveData != null) {
-                historyLiveData.observe(this) { history ->
-                    try {
-                        if (history.isNullOrEmpty()) {
-                            recyclerView.visibility = View.GONE
-                            emptyView.visibility = View.VISIBLE
-                            recordCountText.text = ""
-                            updateStats(emptyList())
-                        } else {
-                            recyclerView.visibility = View.VISIBLE
-                            emptyView.visibility = View.GONE
-                            recordCountText.text = "共 ${history.size} 条"
-                            adapter.submitList(history)
-                            updateStats(history)
-                        }
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                        recyclerView.visibility = View.GONE
-                        emptyView.visibility = View.VISIBLE
-                    }
-                }
-            } else {
+        viewModel.allQuizHistory.observe(this) { history ->
+            if (history.isNullOrEmpty()) {
                 recyclerView.visibility = View.GONE
                 emptyView.visibility = View.VISIBLE
+                recordCountText.text = ""
+                updateStats(emptyList())
+            } else {
+                recyclerView.visibility = View.VISIBLE
+                emptyView.visibility = View.GONE
+                recordCountText.text = "共 ${history.size} 条"
+                adapter.submitList(history)
+                updateStats(history)
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
-            recyclerView.visibility = View.GONE
-            emptyView.visibility = View.VISIBLE
         }
     }
 

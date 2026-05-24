@@ -275,13 +275,11 @@ class WordViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     // Quiz History operations
-    val allQuizHistory: LiveData<List<QuizHistory>> by lazy {
-        try {
-            repository.allQuizHistory
-        } catch (e: Exception) {
-            e.printStackTrace()
-            androidx.lifecycle.MutableLiveData<List<QuizHistory>>()
-        }
+    val allQuizHistory: LiveData<List<QuizHistory>> = repository.allQuizHistory
+
+    // Similar word detection
+    suspend fun findSimilarWordsExcluding(wordText: String, excludeWordId: Long): List<Word> {
+        return repository.findSimilarWordsExcluding(wordText, excludeWordId)
     }
 
     fun insertQuizHistory(history: QuizHistory) = viewModelScope.launch {

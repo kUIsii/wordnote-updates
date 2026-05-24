@@ -96,28 +96,13 @@ class QuizSetupActivity : AppCompatActivity() {
             setupCategorySelection(categories)
         }
 
-        try {
-            val historyLiveData = viewModel.allQuizHistory
-            if (historyLiveData != null) {
-                historyLiveData.observe(this) { history ->
-                    try {
-                        if (history.isNullOrEmpty()) {
-                            historySection.visibility = View.GONE
-                        } else {
-                            historySection.visibility = View.VISIBLE
-                            displayHistory(history)
-                        }
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                        historySection.visibility = View.GONE
-                    }
-                }
-            } else {
+        viewModel.allQuizHistory.observe(this) { history ->
+            if (history.isNullOrEmpty()) {
                 historySection.visibility = View.GONE
+            } else {
+                historySection.visibility = View.VISIBLE
+                displayHistory(history)
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
-            historySection.visibility = View.GONE
         }
     }
 

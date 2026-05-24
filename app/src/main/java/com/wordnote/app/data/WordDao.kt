@@ -96,4 +96,8 @@ interface WordDao {
 
     @Query("SELECT * FROM words WHERE isDeleted = 0 AND categoryId = :categoryId ORDER BY createdAt ASC")
     fun getActiveWordsByCategory(categoryId: Long): LiveData<List<Word>>
+
+    // Find words with same text in other categories (for duplicate detection)
+    @Query("SELECT * FROM words WHERE isDeleted = 0 AND LOWER(word) = LOWER(:wordText) AND id != :excludeWordId")
+    suspend fun findSimilarWordsExcluding(wordText: String, excludeWordId: Long): List<Word>
 }

@@ -30,14 +30,15 @@ sealed class ListItem {
     data class WordItem(val word: Word, val index: Int, val isFirstInBatch: Boolean = false, val isLastInBatch: Boolean = false) : ListItem()
     data class MonthHeader(val yearMonth: String, val label: String, val wordCount: Int) : ListItem()
     data class WeekHeader(val weekKey: String, val label: String, val wordCount: Int) : ListItem()
-    data class DayHeader(val date: String, val label: String) : ListItem()
+    data class DayHeader(val dayKey: String, val label: String, val wordCount: Int) : ListItem()
 }
 
 class WordAdapter(
     private val onWordClick: (Word) -> Unit,
     private val onEditClick: (Word) -> Unit = {},
     private val onDeleteClick: (Word) -> Unit = {},
-    private val onSelectionChanged: (Set<Long>) -> Unit = {}
+    private val onSelectionChanged: (Set<Long>) -> Unit = {},
+    private val onBatchAppend: (Word) -> Unit = {}
 ) : ListAdapter<ListItem, RecyclerView.ViewHolder>(ListItemDiffCallback()) {
 
     private var categories: Map<Long, Category> = emptyMap()
@@ -50,6 +51,7 @@ class WordAdapter(
     private var isDateGroupingMode = false
     private val collapsedMonths = mutableSetOf<String>()
     private val collapsedWeeks = mutableSetOf<String>()
+    private val collapsedDays = mutableSetOf<String>()
     private var allWords: List<Word> = emptyList()
 
     fun setCategories(categoryList: List<Category>) {
@@ -103,6 +105,7 @@ class WordAdapter(
             isDateGroupingMode = enabled
             collapsedMonths.clear()
             collapsedWeeks.clear()
+            collapsedDays.clear()
             submitWordList(allWords)
         }
     }
@@ -158,7 +161,7 @@ class WordAdapter(
             is ListItem.WordItem -> (holder as WordViewHolder).bind(item.word, item.index, item.isFirstInBatch, item.isLastInBatch)
             is ListItem.MonthHeader -> (holder as MonthHeaderViewHolder).bind(item)
             is ListItem.WeekHeader -> (holder as WeekHeaderViewHolder).bind(item)
-            is ListItem.DayHeader -> (holder as DayHeaderViewHolder).bind(item.label)
+            is ListItem.DayHeader -> (holder as DayHeaderViewHolder).bind(item)
         }
     }
 
@@ -248,24 +251,26 @@ class WordAdapter(
                     if (!collapsedWeeks.contains(weekKey)) {
                         days.forEach { (dayKey, dayWords) ->
                             val dayLabel = formatDayLabel(dayWords.first().createdAt)
-                            items.add(ListItem.DayHeader(dayKey, dayLabel))
+                            items.add(ListItem.DayHeader(dayKey, dayLabel, dayWords.size))
 
-                            var currentBatchId: Long? = null
-                            dayWords.forEach { word ->
-                                if (word.batchId != null) {
-                                    if (word.batchId != currentBatchId) {
-                                        currentBatchId = word.batchId
-                                        items.add(ListItem.WordItem(word, globalIndex, isFirstInBatch = true, isLastInBatch = false))
+                            if (!collapsedDays.contains(dayKey)) {
+                                var currentBatchId: Long? = null
+                                dayWords.forEach { word ->
+                                    if (word.batchId != null) {
+                                        if (word.batchId != currentBatchId) {
+                                            currentBatchId = word.batchId
+                                            items.add(ListItem.WordItem(word, globalIndex, isFirstInBatch = true, isLastInBatch = false))
+                                        } else {
+                                            val nextIdx = dayWords.indexOf(word) + 1
+                                            val isLast = nextIdx >= dayWords.size || dayWords[nextIdx].batchId != currentBatchId
+                                            items.add(ListItem.WordItem(word, globalIndex, isFirstInBatch = false, isLastInBatch = isLast))
+                                            if (isLast) globalIndex++
+                                        }
                                     } else {
-                                        val nextIdx = dayWords.indexOf(word) + 1
-                                        val isLast = nextIdx >= dayWords.size || dayWords[nextIdx].batchId != currentBatchId
-                                        items.add(ListItem.WordItem(word, globalIndex, isFirstInBatch = false, isLastInBatch = isLast))
-                                        if (isLast) globalIndex++
+                                        currentBatchId = null
+                                        items.add(ListItem.WordItem(word, globalIndex))
+                                        globalIndex++
                                     }
-                                } else {
-                                    currentBatchId = null
-                                    items.add(ListItem.WordItem(word, globalIndex))
-                                    globalIndex++
                                 }
                             }
                         }
@@ -276,9 +281,11 @@ class WordAdapter(
     }
 
     private fun getWeekKey(cal: Calendar): String {
-        val year = cal.get(Calendar.YEAR)
-        val weekOfYear = cal.get(Calendar.WEEK_OF_YEAR)
-        // Handle year boundary: week 1 of next year
+        val c = cal.clone() as Calendar
+        c.firstDayOfWeek = Calendar.MONDAY
+        c.minimalDaysInFirstWeek = 4
+        val year = c.get(Calendar.YEAR)
+        val weekOfYear = c.get(Calendar.WEEK_OF_YEAR)
         return "${year}-W${String.format("%02d", weekOfYear)}"
     }
 
@@ -389,9 +396,27 @@ class WordAdapter(
 
     inner class DayHeaderViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val dayTextView: TextView = itemView.findViewById(R.id.dayTextView)
+        private val dayWordCount: TextView = itemView.findViewById(R.id.dayWordCount)
+        private val dayExpandIcon: ImageView = itemView.findViewById(R.id.dayExpandIcon)
 
-        fun bind(label: String) {
-            dayTextView.text = label
+        fun bind(item: ListItem.DayHeader) {
+            dayTextView.text = item.label
+            dayWordCount.text = "${item.wordCount}个"
+
+            val isCollapsed = collapsedDays.contains(item.dayKey)
+            dayExpandIcon.animate()
+                .rotation(if (isCollapsed) -90f else 0f)
+                .setDuration(200)
+                .start()
+
+            itemView.setOnClickListener {
+                if (collapsedDays.contains(item.dayKey)) {
+                    collapsedDays.remove(item.dayKey)
+                } else {
+                    collapsedDays.add(item.dayKey)
+                }
+                submitWordList(allWords)
+            }
         }
     }
 
@@ -432,6 +457,7 @@ class WordAdapter(
         private val groupBadge: TextView = itemView.findViewById(R.id.groupBadge)
         private val editButton: ImageView = itemView.findViewById(R.id.editWordButton)
         private val deleteButton: ImageView = itemView.findViewById(R.id.deleteWordButton)
+        private val batchAppendButton: TextView = itemView.findViewById(R.id.batchAppendButton)
 
         fun bind(word: Word, index: Int, isFirstInBatch: Boolean = false, isLastInBatch: Boolean = false) {
             val density = itemView.resources.displayMetrics.density
@@ -558,6 +584,7 @@ class WordAdapter(
                 }
                 editButton.visibility = View.GONE
                 deleteButton.visibility = View.GONE
+                batchAppendButton.visibility = View.GONE
             } else {
                 cardView.setCardBackgroundColor(itemView.context.getColor(R.color.card_background))
                 itemView.setOnClickListener { onWordClick(word) }
@@ -565,6 +592,14 @@ class WordAdapter(
                 deleteButton.setOnClickListener { onDeleteClick(word) }
                 editButton.visibility = View.VISIBLE
                 deleteButton.visibility = View.VISIBLE
+
+                // Show batch append button only at end of batch
+                if (word.batchId != null && isLastInBatch) {
+                    batchAppendButton.visibility = View.VISIBLE
+                    batchAppendButton.setOnClickListener { onBatchAppend(word) }
+                } else {
+                    batchAppendButton.visibility = View.GONE
+                }
             }
 
             // Long click to enter selection mode
@@ -601,7 +636,7 @@ class WordAdapter(
                 oldItem is ListItem.WordItem && newItem is ListItem.WordItem -> oldItem.word.id == newItem.word.id
                 oldItem is ListItem.MonthHeader && newItem is ListItem.MonthHeader -> oldItem.yearMonth == newItem.yearMonth
                 oldItem is ListItem.WeekHeader && newItem is ListItem.WeekHeader -> oldItem.weekKey == newItem.weekKey
-                oldItem is ListItem.DayHeader && newItem is ListItem.DayHeader -> oldItem.date == newItem.date
+                oldItem is ListItem.DayHeader && newItem is ListItem.DayHeader -> oldItem.dayKey == newItem.dayKey
                 else -> false
             }
         }

@@ -93,6 +93,35 @@ class MainActivity : AppCompatActivity() {
         setupSearch()
         observeData()
         checkForUpdateOnStartup()
+
+        // Handle navigation to specific category
+        handleNavigationIntent(intent)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleNavigationIntent(intent)
+    }
+
+    private fun handleNavigationIntent(intent: Intent) {
+        val categoryId = intent.getLongExtra("navigate_to_category", -1L)
+        if (categoryId != -1L) {
+            // Wait for categories to load, then select the target
+            viewModel.allCategories.observe(this) { categories ->
+                val targetCategory = categories.find { it.id == categoryId }
+                if (targetCategory != null) {
+                    val idx = categories.indexOf(targetCategory)
+                    if (idx >= 0) {
+                        val tab = tabContainer.getChildAt(idx) as? TextView
+                        if (tab != null) {
+                            selectTab(tab, targetCategory.id)
+                        }
+                    }
+                }
+                // Remove the observer after handling
+                viewModel.allCategories.removeObservers(this)
+            }
+        }
     }
 
     private fun checkForUpdate() {
@@ -238,6 +267,9 @@ class MainActivity : AppCompatActivity() {
             },
             onSelectionChanged = { selectedIds ->
                 updateSelectionUI(selectedIds)
+            },
+            onBatchAppend = { word ->
+                showBatchAppendSheet(word)
             }
         )
 
@@ -602,6 +634,21 @@ class MainActivity : AppCompatActivity() {
 
         val meaningTexts = meaning.split("，", ",").map { it.trim() }.filter { it.isNotBlank() }
 
+        // Check for similar words in other categories
+        CoroutineScope(Dispatchers.Main).launch {
+            try {
+                val similarWords = viewModel.findSimilarWordsExcluding(word, -1L)
+                if (similarWords.isNotEmpty()) {
+                    val categoryNames = similarWords.mapNotNull { w ->
+                        w.categoryId?.let { catId -> viewModel.getCategoryById(catId)?.name }
+                    }.distinct().joinToString("、")
+                    Toast.makeText(this@MainActivity, "该单词已存在于: $categoryNames", Toast.LENGTH_LONG).show()
+                }
+            } catch (e: Exception) {
+                // Ignore errors in duplicate check
+            }
+        }
+
         val wordEntity = Word(
             word = word,
             meaning = meaning,
@@ -759,6 +806,59 @@ class MainActivity : AppCompatActivity() {
             viewModel.saveMeanings(word.id, meaningTexts)
 
             Toast.makeText(this, "已更新", Toast.LENGTH_SHORT).show()
+            dialog.dismiss()
+        }
+
+        dialog.setContentView(sheetView)
+        dialog.show()
+    }
+
+    private fun showBatchAppendSheet(lastWord: Word) {
+        val dialog = BottomSheetDialog(this, R.style.Theme_WordNoteApp_BottomSheet)
+        val sheetView = layoutInflater.inflate(R.layout.sheet_edit_word, null)
+
+        val sheetTitle = sheetView.findViewById<TextView>(R.id.sheetTitle)
+        sheetTitle.text = "追加到分组"
+
+        val wordInput = sheetView.findViewById<TextInputEditText>(R.id.wordInput)
+        val meaningInput = sheetView.findViewById<TextInputEditText>(R.id.meaningInput)
+        val categorySpinner = sheetView.findViewById<Spinner>(R.id.categorySpinner)
+        val groupSpinner = sheetView.findViewById<Spinner>(R.id.groupSpinner)
+        val saveButton = sheetView.findViewById<MaterialButton>(R.id.saveButton)
+
+        // Hide category and group spinners for batch append (keep same category/group)
+        categorySpinner.visibility = View.GONE
+        sheetView.findViewById<TextView>(R.id.sheetTitle).parent?.let { parent ->
+            // Find the "分类" label and hide it too
+        }
+        // Hide the "分类" label
+        val categoryLabel = sheetView.findViewById<TextView>(R.id.sheetTitle)
+        // Actually, let's just hide the spinners and their labels
+        categorySpinner.visibility = View.GONE
+        groupSpinner.visibility = View.GONE
+
+        saveButton.setOnClickListener {
+            val newWord = wordInput.text.toString().trim()
+            val newMeaning = meaningInput.text.toString().trim()
+
+            if (newWord.isEmpty()) {
+                wordInput.error = "不能为空"
+                return@setOnClickListener
+            }
+            if (newMeaning.isEmpty()) {
+                meaningInput.error = "不能为空"
+                return@setOnClickListener
+            }
+
+            val wordEntity = Word(
+                word = newWord,
+                meaning = newMeaning,
+                categoryId = lastWord.categoryId,
+                batchId = lastWord.batchId
+            )
+
+            viewModel.insertWord(wordEntity)
+            Toast.makeText(this, "已追加到分组", Toast.LENGTH_SHORT).show()
             dialog.dismiss()
         }
 

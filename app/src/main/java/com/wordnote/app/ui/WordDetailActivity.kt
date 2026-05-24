@@ -2,6 +2,9 @@ package com.wordnote.app.ui
 
 import android.content.Intent
 import android.graphics.Color
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.view.View
@@ -19,6 +22,7 @@ import androidx.lifecycle.ViewModelProvider
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import com.wordnote.app.R
+import com.wordnote.app.data.Category
 import com.wordnote.app.data.Word
 import com.wordnote.app.data.WordMeaning
 import com.wordnote.app.ui.adapter.MeaningAdapter
@@ -48,6 +52,8 @@ class WordDetailActivity : AppCompatActivity() {
     private lateinit var meaningsHint: TextView
     private lateinit var meaningAdapter: MeaningAdapter
     private lateinit var itemTouchHelper: ItemTouchHelper
+    private lateinit var similarWordsCard: MaterialCardView
+    private lateinit var similarWordsContainer: LinearLayout
 
     private var wordId: Long = -1
     private var currentWord: Word? = null
@@ -85,6 +91,8 @@ class WordDetailActivity : AppCompatActivity() {
         meaningsRecyclerView = findViewById(R.id.meaningsRecyclerView)
         meaningsLabel = findViewById(R.id.meaningsLabel)
         meaningsHint = findViewById(R.id.meaningsHint)
+        similarWordsCard = findViewById(R.id.similarWordsCard)
+        similarWordsContainer = findViewById(R.id.similarWordsContainer)
 
         // Setup adapter
         meaningAdapter = MeaningAdapter(
@@ -160,7 +168,115 @@ class WordDetailActivity : AppCompatActivity() {
 
     private fun loadWord() {
         viewModel.getWordById(wordId).observe(this) { word ->
-            word?.let { displayWord(it) }
+            word?.let {
+                displayWord(it)
+                loadSimilarWords(it)
+            }
+        }
+    }
+
+    private fun loadSimilarWords(word: Word) {
+        CoroutineScope(Dispatchers.Main).launch {
+            try {
+                val similarWords = viewModel.findSimilarWordsExcluding(word.word, word.id)
+                displaySimilarWords(similarWords)
+            } catch (e: Exception) {
+                similarWordsCard.visibility = View.GONE
+            }
+        }
+    }
+
+    private fun displaySimilarWords(similarWords: List<Word>) {
+        if (similarWords.isEmpty()) {
+            similarWordsCard.visibility = View.GONE
+            return
+        }
+
+        similarWordsCard.visibility = View.VISIBLE
+        similarWordsContainer.removeAllViews()
+
+        // Get categories to display category names
+        viewModel.allCategories.observe(this) { categories ->
+            val categoryMap = categories.associateBy { it.id }
+
+            similarWords.forEach { similarWord ->
+                val category = categoryMap[similarWord.categoryId]
+                val categoryName = category?.name ?: "未分类"
+                val categoryColor = try {
+                    Color.parseColor(category?.color ?: "#757575")
+                } catch (e: Exception) {
+                    Color.parseColor("#757575")
+                }
+
+                val row = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = android.view.Gravity.CENTER_VERTICAL
+                    setPadding(0, dpToPx(8), 0, dpToPx(8))
+                    isClickable = true
+                    isFocusable = true
+                    setBackgroundResource(android.R.attr.selectableItemBackground)
+                }
+
+                // Category color dot
+                val colorDot = View(this).apply {
+                    val dotSize = dpToPx(8)
+                    layoutParams = LinearLayout.LayoutParams(dotSize, dotSize)
+                    background = GradientDrawable().apply {
+                        shape = GradientDrawable.OVAL
+                        setColor(categoryColor)
+                    }
+                }
+                row.addView(colorDot)
+
+                // Category name
+                val nameText = TextView(this).apply {
+                    text = categoryName
+                    setTextColor(getColor(R.color.text_primary))
+                    textSize = 14f
+                    layoutParams = LinearLayout.LayoutParams(
+                        0,
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        1f
+                    ).apply {
+                        marginStart = dpToPx(8)
+                    }
+                }
+                row.addView(nameText)
+
+                // Meaning preview
+                val meaningText = TextView(this).apply {
+                    text = similarWord.meaning
+                    setTextColor(getColor(R.color.text_hint))
+                    textSize = 12f
+                    maxLines = 1
+                    maxWidth = dpToPx(120)
+                }
+                row.addView(meaningText)
+
+                // Click to navigate to MainActivity with this category
+                row.setOnClickListener {
+                    val intent = Intent(this, MainActivity::class.java).apply {
+                        putExtra("navigate_to_category", similarWord.categoryId)
+                        flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                    }
+                    startActivity(intent)
+                    finish()
+                }
+
+                similarWordsContainer.addView(row)
+
+                // Add divider
+                if (similarWord != similarWords.last()) {
+                    val divider = View(this).apply {
+                        layoutParams = LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.MATCH_PARENT,
+                            1
+                        )
+                        setBackgroundColor(getColor(R.color.divider))
+                    }
+                    similarWordsContainer.addView(divider)
+                }
+            }
         }
     }
 

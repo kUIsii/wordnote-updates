@@ -47,6 +47,10 @@ Android 英语单词记忆工具，支持分类管理、一词多义标注、分
 | 释义排序同步 | 拖动排序释义后主页显示顺序同步更新 |
 | 日历高亮同步 | 日历查看页显示被标记的释义时显示加粗蓝色 |
 | 学习统计 | 热力图展示每日学习量，统计总词汇/本月新增/分类分布 |
+| 日期三级折叠 | 月→周→日三级折叠，周数按ISO 8601标准计算（周一为一周第一天） |
+| 测验记录 | 独立测验历史页面，显示统计摘要和完整历史，支持查看详情和删除 |
+| 批量追加 | 在batch组末尾点击"+"追加新单词到同一分组 |
+| 跨分类重复检测 | 详情页显示该单词在其他分类中的出现，支持快速跳转；插入时提示重复 |
 
 ### 开发中 / 待做
 
@@ -240,6 +244,31 @@ tags / word_tag (标签系统，目前未在 UI 使用)
 ---
 
 ## 开发日志
+
+### 2026-05-24 (v2.10.0)
+
+- 周数计算修复
+  - 修复 getWeekKey() 周数计算bug：显式设置 Calendar.firstDayOfWeek = MONDAY 和 minimalDaysInFirstWeek = 4
+  - 5月24日(周日)现在与5月23日(周六)显示在同一周
+- 日级别折叠
+  - DayHeader 添加 dayKey 和 wordCount 字段
+  - 点击日头部可折叠/展开该日单词
+  - 添加展开箭头和单词数量显示
+- 测试记录修复
+  - 移除 WordRepository/WordViewModel 中的 try-catch，简化 allQuizHistory 初始化
+  - 修复 QuizSetupActivity/QuizHistoryActivity 中的三层 try-catch 导致 historySection 被隐藏
+- 首页布局优化
+  - Header paddingBottom: 2dp → 8dp
+  - Search Bar paddingTop: 8dp → 12dp, paddingBottom: 4dp → 8dp
+  - Category Tabs paddingTop: 4dp → 8dp, paddingBottom: 8dp → 12dp
+- batch追加功能
+  - 在batch组末尾添加"+"追加按钮
+  - 点击弹出 BottomSheet 输入新单词，自动归入同一分组
+- 跨分类重复检测
+  - WordDao 添加 findSimilarWordsExcluding() 查询（忽略大小写）
+  - 详情页显示"该单词也出现在以下分类"卡片
+  - 点击分类名可跳转到对应分类
+  - 插入新单词时 Toast 提示是否已存在于其他分类
 
 ### 2026-05-24 (v2.9.3)
 

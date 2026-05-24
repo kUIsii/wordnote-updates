@@ -7,7 +7,8 @@
     android:paddingBottom="4dp"
     android:paddingStart="44dp"
     android:paddingEnd="16dp"
-    android:gravity="center_vertical">
+    android:gravity="center_vertical"
+    android:background="?attr/selectableItemBackground">
 
     <!-- Small dot indicator -->
     <View
@@ -25,13 +26,32 @@
         android:textSize="12sp"
         android:fontFamily="sans-serif-medium" />
 
+    <!-- Word count -->
+    <TextView
+        android:id="@+id/dayWordCount"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:textColor="@color/text_hint"
+        android:textSize="11sp" />
+
     <!-- Subtle line -->
     <View
         android:layout_width="0dp"
         android:layout_height="1dp"
         android:layout_weight="1"
-        android:layout_marginStart="12dp"
+        android:layout_marginStart="8dp"
         android:background="@color/divider"
+        android:alpha="0.4" />
+
+    <!-- Expand/collapse arrow -->
+    <ImageView
+        android:id="@+id/dayExpandIcon"
+        android:layout_width="16dp"
+        android:layout_height="16dp"
+        android:layout_marginStart="4dp"
+        android:src="@drawable/ic_expand_more"
+        android:contentDescription="展开/折叠"
         android:alpha="0.4" />
 
 </LinearLayout>
