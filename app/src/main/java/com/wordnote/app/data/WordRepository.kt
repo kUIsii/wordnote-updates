@@ -13,6 +13,7 @@ class WordRepository(
 
     // Word operations
     val allWords: LiveData<List<Word>> = wordDao.getAllActiveWords()
+    suspend fun getAllActiveWordsSync(): List<Word> = wordDao.getAllActiveWordsSync()
 
     suspend fun insertWord(word: Word): Long = wordDao.insertWord(word)
     suspend fun insertWords(words: List<Word>): List<Long> = wordDao.insertWords(words)

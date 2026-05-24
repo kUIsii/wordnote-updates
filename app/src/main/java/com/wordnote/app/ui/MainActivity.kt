@@ -53,6 +53,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var searchEditText: EditText
     private lateinit var manageCategoriesButton: ImageView
     private lateinit var settingsButton: ImageView
+    private lateinit var dateGroupingButton: ImageView
 
     private lateinit var tabContainer: LinearLayout
 
@@ -66,6 +67,11 @@ class MainActivity : AppCompatActivity() {
     private val scrollPositions = mutableMapOf<Long, ScrollState>()
     private var pendingScrollRestore: ScrollState? = null
     private val scrollHandler = Handler(Looper.getMainLooper())
+
+    // Save scroll state for dark mode switch
+    private var savedScrollPosition = 0
+    private var savedScrollOffset = 0
+    private var isRestoringScrollState = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -189,6 +195,7 @@ class MainActivity : AppCompatActivity() {
         tabContainer = findViewById(R.id.tabContainer)
         manageCategoriesButton = findViewById(R.id.manageCategoriesButton)
         settingsButton = findViewById(R.id.settingsButton)
+        dateGroupingButton = findViewById(R.id.dateGroupingButton)
 
         findViewById<ImageView>(R.id.dictionaryButton).setOnClickListener {
             startActivity(Intent(this, DictionaryActivity::class.java))
@@ -203,6 +210,12 @@ class MainActivity : AppCompatActivity() {
         settingsButton.setOnClickListener {
             startActivity(Intent(this, SettingsActivity::class.java))
             compatOverridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left)
+        }
+
+        dateGroupingButton.setOnClickListener {
+            val newMode = !wordAdapter.isDateGroupingMode()
+            wordAdapter.setDateGroupingMode(newMode)
+            updateDateGroupingButtonIcon(newMode)
         }
     }
 
@@ -457,6 +470,14 @@ class MainActivity : AppCompatActivity() {
 
     private fun dpToPx(dp: Int): Int {
         return (dp * resources.displayMetrics.density).toInt()
+    }
+
+    private fun updateDateGroupingButtonIcon(isGrouped: Boolean) {
+        if (isGrouped) {
+            dateGroupingButton.alpha = 1.0f
+        } else {
+            dateGroupingButton.alpha = 0.6f
+        }
     }
 
     private fun selectTab(tab: TextView, categoryId: Long?) {
@@ -792,14 +813,23 @@ class MainActivity : AppCompatActivity() {
             emptyView.visibility = if (words.isEmpty()) View.VISIBLE else View.GONE
             wordRecyclerView.visibility = if (words.isEmpty()) View.GONE else View.VISIBLE
 
-            pendingScrollRestore?.let { state ->
-                pendingScrollRestore = null
+            // Restore scroll state after dark mode switch
+            if (isRestoringScrollState) {
+                isRestoringScrollState = false
                 wordRecyclerView.post {
                     val lm = wordRecyclerView.layoutManager as? LinearLayoutManager ?: return@post
-                    if (state.position > 0) {
-                        lm.scrollToPositionWithOffset(state.position, state.offset)
-                    } else {
-                        lm.scrollToPositionWithOffset(0, 0)
+                    lm.scrollToPositionWithOffset(savedScrollPosition, savedScrollOffset)
+                }
+            } else {
+                pendingScrollRestore?.let { state ->
+                    pendingScrollRestore = null
+                    wordRecyclerView.post {
+                        val lm = wordRecyclerView.layoutManager as? LinearLayoutManager ?: return@post
+                        if (state.position > 0) {
+                            lm.scrollToPositionWithOffset(state.position, state.offset)
+                        } else {
+                            lm.scrollToPositionWithOffset(0, 0)
+                        }
                     }
                 }
             }
@@ -831,5 +861,45 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         viewModel.selectCategory(selectedCategoryId)
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        // Save scroll position
+        val lm = wordRecyclerView.layoutManager as? LinearLayoutManager
+        if (lm != null) {
+            val pos = lm.findFirstVisibleItemPosition()
+            if (pos != RecyclerView.NO_POSITION) {
+                val view = lm.findViewByPosition(pos)
+                val offset = view?.top ?: 0
+                outState.putInt("scroll_position", pos)
+                outState.putInt("scroll_offset", offset)
+            }
+        }
+        // Save selected category
+        outState.putLong("selected_category_id", selectedCategoryId ?: -1L)
+        // Save date grouping mode
+        outState.putBoolean("date_grouping_mode", wordAdapter.isDateGroupingMode())
+    }
+
+    override fun onRestoreInstanceState(savedInstanceState: Bundle) {
+        super.onRestoreInstanceState(savedInstanceState)
+        // Restore scroll position
+        savedScrollPosition = savedInstanceState.getInt("scroll_position", 0)
+        savedScrollOffset = savedInstanceState.getInt("scroll_offset", 0)
+        isRestoringScrollState = true
+
+        // Restore selected category
+        val catId = savedInstanceState.getLong("selected_category_id", -1L)
+        if (catId != -1L) {
+            selectedCategoryId = catId
+        }
+
+        // Restore date grouping mode
+        val dateGroupingMode = savedInstanceState.getBoolean("date_grouping_mode", false)
+        if (dateGroupingMode) {
+            wordAdapter.setDateGroupingMode(true)
+            updateDateGroupingButtonIcon(true)
+        }
     }
 }

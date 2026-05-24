@@ -241,6 +241,25 @@ tags / word_tag (标签系统，目前未在 UI 使用)
 
 ## 开发日志
 
+### 2026-05-24 (v2.9.0)
+
+- 首页日期折叠分组
+  - 新增日期分组按钮：点击切换日期折叠模式
+  - 支持按月-周-日层级分组显示单词
+  - 月份和周支持点击折叠/展开
+  - 月份头显示年月和单词数量
+  - 周头显示第几周和单词数量
+  - 日头显示日期和星期
+- 测验闪退修复
+  - 修复QuizActivity中使用LiveData.value获取数据可能为null的问题
+  - 改用同步方法getAllActiveWordsSync()获取单词数据
+  - 在WordDao/Repository/ViewModel中添加同步获取方法
+- 深色模式滚动位置修复
+  - 使用onSaveInstanceState/onRestoreInstanceState保存和恢复滚动状态
+  - 保存当前滚动位置、偏移量、选中分类和日期分组模式
+- 更新更新日志
+  - 在ChangelogActivity中添加v2.8.0、v2.8.1、v2.8.2的更新记录
+
 ### 2026-05-24 (v2.8.2)
 
 - 滚动条修复

@@ -91,6 +91,9 @@ interface WordDao {
     @Query("SELECT * FROM words WHERE isDeleted = 0 ORDER BY createdAt ASC")
     fun getAllActiveWords(): LiveData<List<Word>>
 
+    @Query("SELECT * FROM words WHERE isDeleted = 0 ORDER BY createdAt ASC")
+    suspend fun getAllActiveWordsSync(): List<Word>
+
     @Query("SELECT * FROM words WHERE isDeleted = 0 AND categoryId = :categoryId ORDER BY createdAt ASC")
     fun getActiveWordsByCategory(categoryId: Long): LiveData<List<Word>>
 }

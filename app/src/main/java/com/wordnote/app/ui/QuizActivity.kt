@@ -105,7 +105,7 @@ class QuizActivity : AppCompatActivity() {
     private fun loadWords() {
         lifecycleScope.launch {
             val allWords = withContext(Dispatchers.IO) {
-                val words = viewModel.allWords.value ?: emptyList()
+                val words = viewModel.getAllActiveWordsSync()
                 if (categoryIds.isNullOrEmpty()) {
                     words
                 } else {

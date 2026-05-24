@@ -14,6 +14,8 @@ class WordViewModel(application: Application) : AndroidViewModel(application) {
 
     val allWords: LiveData<List<Word>> = repository.allWords
     val allCategories: LiveData<List<Category>> = repository.allCategories
+
+    suspend fun getAllActiveWordsSync(): List<Word> = repository.getAllActiveWordsSync()
     val allTags: LiveData<List<Tag>> = repository.allTags
     val highlightedMeanings: LiveData<List<HighlightedMeaning>> = repository.getHighlightedMeanings()
 
