@@ -272,6 +272,18 @@
 
                 </com.google.android.material.card.MaterialCardView>
 
+                <TextView
+                    android:id="@+id/viewAllHistoryButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:padding="10dp"
+                    android:gravity="center"
+                    android:text="查看全部记录"
+                    android:textColor="@color/primary"
+                    android:textSize="14sp"
+                    android:background="?attr/selectableItemBackground" />
+
             </LinearLayout>
 
         </LinearLayout>

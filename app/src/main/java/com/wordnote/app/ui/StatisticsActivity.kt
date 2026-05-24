@@ -39,6 +39,14 @@ class StatisticsActivity : AppCompatActivity() {
         observeData()
     }
 
+    override fun onResume() {
+        super.onResume()
+        // Force redraw heatmap when returning to this screen
+        if (::heatmapView.isInitialized) {
+            heatmapView.invalidate()
+        }
+    }
+
     private fun initViews() {
         findViewById<ImageView>(R.id.backButton).setOnClickListener {
             finish()
@@ -115,6 +123,8 @@ class StatisticsActivity : AppCompatActivity() {
             wordsByDay[dayKey] = (wordsByDay[dayKey] ?: 0) + 1
         }
         heatmapView.setData(wordsByDay)
+        // Ensure redraw after layout is complete
+        heatmapView.post { heatmapView.invalidate() }
     }
 
     private fun updateCategoryDistribution() {

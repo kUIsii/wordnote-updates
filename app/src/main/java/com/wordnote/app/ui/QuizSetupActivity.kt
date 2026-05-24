@@ -1,6 +1,7 @@
 package com.wordnote.app.ui
 
 import android.animation.ValueAnimator
+import android.content.Intent
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
@@ -81,6 +82,11 @@ class QuizSetupActivity : AppCompatActivity() {
 
         findViewById<MaterialButton>(R.id.startQuizButton).setOnClickListener {
             startQuiz()
+        }
+
+        findViewById<TextView>(R.id.viewAllHistoryButton).setOnClickListener {
+            startActivity(Intent(this, QuizHistoryActivity::class.java))
+            compatOverridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left)
         }
     }
 

@@ -29,6 +29,7 @@ sealed class ListItem {
     data class DateHeader(val date: String, val dateLabel: String) : ListItem()
     data class WordItem(val word: Word, val index: Int, val isFirstInBatch: Boolean = false, val isLastInBatch: Boolean = false) : ListItem()
     data class MonthHeader(val yearMonth: String, val label: String, val wordCount: Int) : ListItem()
+    data class WeekHeader(val weekKey: String, val label: String, val wordCount: Int) : ListItem()
     data class DayHeader(val date: String, val label: String) : ListItem()
 }
 
@@ -48,6 +49,7 @@ class WordAdapter(
     // Date grouping mode
     private var isDateGroupingMode = false
     private val collapsedMonths = mutableSetOf<String>()
+    private val collapsedWeeks = mutableSetOf<String>()
     private var allWords: List<Word> = emptyList()
 
     fun setCategories(categoryList: List<Category>) {
@@ -100,6 +102,7 @@ class WordAdapter(
         if (isDateGroupingMode != enabled) {
             isDateGroupingMode = enabled
             collapsedMonths.clear()
+            collapsedWeeks.clear()
             submitWordList(allWords)
         }
     }
@@ -110,7 +113,8 @@ class WordAdapter(
         private const val TYPE_DATE_HEADER = 0
         private const val TYPE_WORD = 1
         private const val TYPE_MONTH_HEADER = 2
-        private const val TYPE_DAY_HEADER = 3
+        private const val TYPE_WEEK_HEADER = 3
+        private const val TYPE_DAY_HEADER = 4
     }
 
     override fun getItemViewType(position: Int): Int {
@@ -118,6 +122,7 @@ class WordAdapter(
             is ListItem.DateHeader -> TYPE_DATE_HEADER
             is ListItem.WordItem -> TYPE_WORD
             is ListItem.MonthHeader -> TYPE_MONTH_HEADER
+            is ListItem.WeekHeader -> TYPE_WEEK_HEADER
             is ListItem.DayHeader -> TYPE_DAY_HEADER
         }
     }
@@ -131,6 +136,10 @@ class WordAdapter(
             TYPE_MONTH_HEADER -> {
                 val view = LayoutInflater.from(parent.context).inflate(R.layout.item_month_header, parent, false)
                 MonthHeaderViewHolder(view)
+            }
+            TYPE_WEEK_HEADER -> {
+                val view = LayoutInflater.from(parent.context).inflate(R.layout.item_week_header, parent, false)
+                WeekHeaderViewHolder(view)
             }
             TYPE_DAY_HEADER -> {
                 val view = LayoutInflater.from(parent.context).inflate(R.layout.item_day_header, parent, false)
@@ -148,6 +157,7 @@ class WordAdapter(
             is ListItem.DateHeader -> (holder as DateHeaderViewHolder).bind(item.dateLabel)
             is ListItem.WordItem -> (holder as WordViewHolder).bind(item.word, item.index, item.isFirstInBatch, item.isLastInBatch)
             is ListItem.MonthHeader -> (holder as MonthHeaderViewHolder).bind(item)
+            is ListItem.WeekHeader -> (holder as WeekHeaderViewHolder).bind(item)
             is ListItem.DayHeader -> (holder as DayHeaderViewHolder).bind(item.label)
         }
     }
@@ -204,57 +214,80 @@ class WordAdapter(
     private fun submitGroupedList(words: List<Word>, items: MutableList<ListItem>) {
         val cal = Calendar.getInstance()
 
-        // Group by month -> day (simplified, no week level)
-        val monthMap = linkedMapOf<String, LinkedHashMap<String, MutableList<Word>>>()
+        // Group by month -> week -> day
+        // Structure: monthMap[monthKey][weekKey][dayKey] = mutableListOf<Word>()
+        val monthMap = linkedMapOf<String, LinkedHashMap<String, LinkedHashMap<String, MutableList<Word>>>>()
 
         words.forEach { word ->
             cal.timeInMillis = word.createdAt
 
-            // Month key: "2026-05"
             val monthKey = "${cal.get(Calendar.YEAR)}-${String.format("%02d", cal.get(Calendar.MONTH) + 1)}"
-
-            // Day key: "2026-05-24"
+            val weekKey = getWeekKey(cal)
             val dayKey = DateUtils.formatDate(word.createdAt)
 
             monthMap.getOrPut(monthKey) { linkedMapOf() }
+                .getOrPut(weekKey) { linkedMapOf() }
                 .getOrPut(dayKey) { mutableListOf() }
                 .add(word)
         }
 
         var globalIndex = 1
 
-        // Build items in order: Month -> Day -> Words
-        monthMap.forEach { (monthKey, days) ->
-            val monthWords = days.values.flatten()
+        // Build items in order: Month -> Week -> Day -> Words
+        monthMap.forEach { (monthKey, weeks) ->
+            val monthWords = weeks.values.flatMap { it.values.flatten() }
             val monthLabel = formatMonthLabel(monthKey)
             items.add(ListItem.MonthHeader(monthKey, monthLabel, monthWords.size))
 
             if (!collapsedMonths.contains(monthKey)) {
-                days.forEach { (dayKey, dayWords) ->
-                    val dayLabel = formatDayLabel(dayWords.first().createdAt)
-                    items.add(ListItem.DayHeader(dayKey, dayLabel))
+                weeks.forEach { (weekKey, days) ->
+                    val weekWords = days.values.flatten()
+                    val weekLabel = formatWeekLabel(weekKey)
+                    items.add(ListItem.WeekHeader(weekKey, weekLabel, weekWords.size))
 
-                    var currentBatchId: Long? = null
-                    dayWords.forEach { word ->
-                        if (word.batchId != null) {
-                            if (word.batchId != currentBatchId) {
-                                currentBatchId = word.batchId
-                                items.add(ListItem.WordItem(word, globalIndex, isFirstInBatch = true, isLastInBatch = false))
-                            } else {
-                                val nextIdx = dayWords.indexOf(word) + 1
-                                val isLast = nextIdx >= dayWords.size || dayWords[nextIdx].batchId != currentBatchId
-                                items.add(ListItem.WordItem(word, globalIndex, isFirstInBatch = false, isLastInBatch = isLast))
-                                if (isLast) globalIndex++
+                    if (!collapsedWeeks.contains(weekKey)) {
+                        days.forEach { (dayKey, dayWords) ->
+                            val dayLabel = formatDayLabel(dayWords.first().createdAt)
+                            items.add(ListItem.DayHeader(dayKey, dayLabel))
+
+                            var currentBatchId: Long? = null
+                            dayWords.forEach { word ->
+                                if (word.batchId != null) {
+                                    if (word.batchId != currentBatchId) {
+                                        currentBatchId = word.batchId
+                                        items.add(ListItem.WordItem(word, globalIndex, isFirstInBatch = true, isLastInBatch = false))
+                                    } else {
+                                        val nextIdx = dayWords.indexOf(word) + 1
+                                        val isLast = nextIdx >= dayWords.size || dayWords[nextIdx].batchId != currentBatchId
+                                        items.add(ListItem.WordItem(word, globalIndex, isFirstInBatch = false, isLastInBatch = isLast))
+                                        if (isLast) globalIndex++
+                                    }
+                                } else {
+                                    currentBatchId = null
+                                    items.add(ListItem.WordItem(word, globalIndex))
+                                    globalIndex++
+                                }
                             }
-                        } else {
-                            currentBatchId = null
-                            items.add(ListItem.WordItem(word, globalIndex))
-                            globalIndex++
                         }
                     }
                 }
             }
         }
+    }
+
+    private fun getWeekKey(cal: Calendar): String {
+        val year = cal.get(Calendar.YEAR)
+        val weekOfYear = cal.get(Calendar.WEEK_OF_YEAR)
+        // Handle year boundary: week 1 of next year
+        return "${year}-W${String.format("%02d", weekOfYear)}"
+    }
+
+    private fun formatWeekLabel(weekKey: String): String {
+        // Parse "2026-W21" -> "第21周"
+        val parts = weekKey.split("-W")
+        if (parts.size != 2) return weekKey
+        val weekNum = parts[1].toIntOrNull() ?: return weekKey
+        return "第${weekNum}周"
     }
 
     private fun formatMonthLabel(monthKey: String): String {
@@ -359,6 +392,32 @@ class WordAdapter(
 
         fun bind(label: String) {
             dayTextView.text = label
+        }
+    }
+
+    inner class WeekHeaderViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        private val weekTextView: TextView = itemView.findViewById(R.id.weekTextView)
+        private val weekWordCount: TextView = itemView.findViewById(R.id.weekWordCount)
+        private val weekExpandIcon: ImageView = itemView.findViewById(R.id.weekExpandIcon)
+
+        fun bind(item: ListItem.WeekHeader) {
+            weekTextView.text = item.label
+            weekWordCount.text = "${item.wordCount}个"
+
+            val isCollapsed = collapsedWeeks.contains(item.weekKey)
+            weekExpandIcon.animate()
+                .rotation(if (isCollapsed) -90f else 0f)
+                .setDuration(200)
+                .start()
+
+            itemView.setOnClickListener {
+                if (collapsedWeeks.contains(item.weekKey)) {
+                    collapsedWeeks.remove(item.weekKey)
+                } else {
+                    collapsedWeeks.add(item.weekKey)
+                }
+                submitWordList(allWords)
+            }
         }
     }
 
@@ -541,6 +600,7 @@ class WordAdapter(
                 oldItem is ListItem.DateHeader && newItem is ListItem.DateHeader -> oldItem.date == newItem.date
                 oldItem is ListItem.WordItem && newItem is ListItem.WordItem -> oldItem.word.id == newItem.word.id
                 oldItem is ListItem.MonthHeader && newItem is ListItem.MonthHeader -> oldItem.yearMonth == newItem.yearMonth
+                oldItem is ListItem.WeekHeader && newItem is ListItem.WeekHeader -> oldItem.weekKey == newItem.weekKey
                 oldItem is ListItem.DayHeader && newItem is ListItem.DayHeader -> oldItem.date == newItem.date
                 else -> false
             }

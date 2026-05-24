@@ -3,8 +3,9 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="horizontal"
-    android:paddingVertical="8dp"
-    android:paddingStart="32dp"
+    android:paddingTop="10dp"
+    android:paddingBottom="4dp"
+    android:paddingStart="44dp"
     android:paddingEnd="16dp"
     android:gravity="center_vertical">
 
@@ -21,7 +22,7 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="10dp"
         android:textColor="@color/text_secondary"
-        android:textSize="13sp"
+        android:textSize="12sp"
         android:fontFamily="sans-serif-medium" />
 
     <!-- Subtle line -->
@@ -31,6 +32,6 @@
         android:layout_weight="1"
         android:layout_marginStart="12dp"
         android:background="@color/divider"
-        android:alpha="0.5" />
+        android:alpha="0.4" />
 
 </LinearLayout>

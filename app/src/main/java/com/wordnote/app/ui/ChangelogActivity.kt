@@ -30,6 +30,15 @@ class ChangelogActivity : AppCompatActivity() {
 
         val changelog = listOf(
             VersionLog(
+                "v2.9.3", "2026-05-24",
+                listOf(
+                    "日期折叠增强：新增周级别折叠，支持月->周->日三级层级",
+                    "首页按钮优化：日期分组、分类管理使用独立图标，底部添加文字标签",
+                    "测验记录增强：新增独立测验记录页面，显示统计摘要和完整历史",
+                    "热力图修复：确保切换页面后热力图正确刷新显示最新数据"
+                )
+            ),
+            VersionLog(
                 "v2.9.2", "2026-05-24",
                 listOf(
                     "单词测试闪退修复：数据库添加quiz_history表安全检查，ViewModel加防御性错误处理",

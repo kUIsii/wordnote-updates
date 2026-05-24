@@ -71,6 +71,10 @@
             android:name=".ui.QuizResultActivity"
             android:parentActivityName=".ui.QuizActivity" />
 
+        <activity
+            android:name=".ui.QuizHistoryActivity"
+            android:parentActivityName=".ui.QuizSetupActivity" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
