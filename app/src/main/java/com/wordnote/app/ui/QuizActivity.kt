@@ -248,7 +248,7 @@ class QuizActivity : AppCompatActivity() {
                         forgottenWordIds = forgottenWords.joinToString(",") { it.id.toString() },
                         forgottenWordTexts = forgottenWords.joinToString("||") { "${it.word}=${it.meaning}" }
                     )
-                    viewModel.insertQuizHistory(history)
+                    viewModel.insertQuizHistorySync(history)
                 }
             } catch (e: Exception) {
                 e.printStackTrace()

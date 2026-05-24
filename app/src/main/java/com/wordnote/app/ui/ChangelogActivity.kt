@@ -30,6 +30,12 @@ class ChangelogActivity : AppCompatActivity() {
 
         val changelog = listOf(
             VersionLog(
+                "v2.10.3", "2026-05-24",
+                listOf(
+                    "测验闪退修复：finishQuiz等待数据库写入完成后再跳转结果页，解决竞态条件导致的崩溃"
+                )
+            ),
+            VersionLog(
                 "v2.10.2", "2026-05-24",
                 listOf(
                     "热力图优化：增大格子尺寸提升可读性，点击格子可查看当天学习记录",

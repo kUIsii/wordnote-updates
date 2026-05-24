@@ -245,6 +245,12 @@ tags / word_tag (标签系统，目前未在 UI 使用)
 
 ## 开发日志
 
+### 2026-05-24 (v2.10.3)
+
+- 测验闪退修复
+  - `finishQuiz()` 调用 `viewModel.insertQuizHistory()` 时，内部使用 `viewModelScope.launch` 异步写入数据库，但 Activity 在写入完成前就 `finish()` 了，导致竞态条件
+  - 新增 `insertQuizHistorySync` 挂起函数，直接调用 repository 层，确保数据库写入完成后再跳转结果页
+
 ### 2026-05-24 (v2.10.1)
 
 - 热力图优化

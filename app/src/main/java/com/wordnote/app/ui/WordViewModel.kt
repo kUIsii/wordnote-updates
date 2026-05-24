@@ -286,6 +286,10 @@ class WordViewModel(application: Application) : AndroidViewModel(application) {
         repository.insertQuizHistory(history)
     }
 
+    suspend fun insertQuizHistorySync(history: QuizHistory) {
+        repository.insertQuizHistory(history)
+    }
+
     fun deleteQuizHistory(history: QuizHistory) = viewModelScope.launch {
         repository.deleteQuizHistory(history)
     }
