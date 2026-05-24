@@ -854,7 +854,8 @@ class MainActivity : AppCompatActivity() {
                 word = newWord,
                 meaning = newMeaning,
                 categoryId = lastWord.categoryId,
-                batchId = lastWord.batchId
+                batchId = lastWord.batchId,
+                createdAt = lastWord.createdAt
             )
 
             viewModel.insertWord(wordEntity)

@@ -76,6 +76,8 @@ class QuizActivity : AppCompatActivity() {
         useForgetCount = intent.getBooleanExtra(EXTRA_USE_FORGET_COUNT, false)
 
         initViews()
+        // Observe categories so getCategoryById() works
+        viewModel.allCategories.observe(this) { }
         loadWords()
     }
 
@@ -104,35 +106,41 @@ class QuizActivity : AppCompatActivity() {
 
     private fun loadWords() {
         lifecycleScope.launch {
-            val allWords = withContext(Dispatchers.IO) {
-                val words = viewModel.getAllActiveWordsSync()
-                if (categoryIds.isNullOrEmpty()) {
-                    words
-                } else {
-                    words.filter { word ->
-                        word.categoryId?.let { categoryIds!!.contains(it) } ?: false
+            try {
+                val allWords = withContext(Dispatchers.IO) {
+                    val words = viewModel.getAllActiveWordsSync()
+                    if (categoryIds.isNullOrEmpty()) {
+                        words
+                    } else {
+                        words.filter { word ->
+                            word.categoryId?.let { categoryIds!!.contains(it) } ?: false
+                        }
                     }
                 }
-            }
 
-            if (allWords.isEmpty()) {
-                Toast.makeText(this@QuizActivity, "没有可测验的单词", Toast.LENGTH_SHORT).show()
+                if (allWords.isEmpty()) {
+                    Toast.makeText(this@QuizActivity, "没有可测验的单词", Toast.LENGTH_SHORT).show()
+                    finish()
+                    return@launch
+                }
+
+                quizWords = selectQuizWords(allWords, wordCount, useForgetCount)
+                currentIndex = 0
+                correctCount = 0
+                forgottenWords.clear()
+
+                if (quizWords.isEmpty()) {
+                    Toast.makeText(this@QuizActivity, "没有可测验的单词", Toast.LENGTH_SHORT).show()
+                    finish()
+                    return@launch
+                }
+
+                showWord()
+            } catch (e: Exception) {
+                e.printStackTrace()
+                Toast.makeText(this@QuizActivity, "加载单词失败: ${e.message}", Toast.LENGTH_SHORT).show()
                 finish()
-                return@launch
             }
-
-            quizWords = selectQuizWords(allWords, wordCount, useForgetCount)
-            currentIndex = 0
-            correctCount = 0
-            forgottenWords.clear()
-
-            if (quizWords.isEmpty()) {
-                Toast.makeText(this@QuizActivity, "没有可测验的单词", Toast.LENGTH_SHORT).show()
-                finish()
-                return@launch
-            }
-
-            showWord()
         }
     }
 

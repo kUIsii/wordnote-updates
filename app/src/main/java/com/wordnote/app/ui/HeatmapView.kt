@@ -19,7 +19,7 @@ class HeatmapView @JvmOverloads constructor(
     private var data: Map<Long, Int> = emptyMap()
     private var maxCount = 0
 
-    private val cellSize = 14f * resources.displayMetrics.density
+    private var cellSize = 14f * resources.displayMetrics.density
     private val cellGap = 3f * resources.displayMetrics.density
     private val cornerRadius = 3f * resources.displayMetrics.density
 
@@ -41,6 +41,9 @@ class HeatmapView @JvmOverloads constructor(
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        val parentWidth = MeasureSpec.getSize(widthMeasureSpec)
+        // Dynamically calculate cell size to fit 53 columns within parent width
+        cellSize = ((parentWidth - cellGap) / 53 - cellGap).coerceAtLeast(8f)
         val width = ((cellSize + cellGap) * 53 + cellGap).toInt()
         val height = ((cellSize + cellGap) * 7 + cellGap).toInt()
         setMeasuredDimension(width, height)
