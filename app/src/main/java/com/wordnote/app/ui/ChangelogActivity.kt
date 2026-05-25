@@ -30,6 +30,14 @@ class ChangelogActivity : AppCompatActivity() {
 
         val changelog = listOf(
             VersionLog(
+                "v2.13.0", "2026-05-25",
+                listOf(
+                    "学习趋势重新设计：改为7天分类堆叠柱状图，点击可查看当天各分类添加数量",
+                    "分类分布改为饼图：从水平条形图改为环形饼图，显示各分类占比",
+                    "测验详情重新设计：得分改为圆形色块，统计行更紧凑，不熟悉单词支持滚动"
+                )
+            ),
+            VersionLog(
                 "v2.12.0", "2026-05-25",
                 listOf(
                     "学习统计热力图回归：替换近7天学习量柱状图为GitHub风格热力图，范围缩小至20周",

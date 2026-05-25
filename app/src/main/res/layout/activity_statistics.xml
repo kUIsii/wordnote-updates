@@ -208,7 +208,7 @@
 
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Learning Heatmap Card -->
+            <!-- Learning Trend Card -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -226,16 +226,26 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="学习热力图"
+                        android:text="学习趋势"
                         android:textColor="@color/text_primary"
                         android:textSize="15sp"
                         android:textStyle="bold"
-                        android:layout_marginBottom="12dp" />
+                        android:layout_marginBottom="14dp" />
 
-                    <com.wordnote.app.ui.HeatmapView
-                        android:id="@+id/heatmapView"
+                    <!-- Stats row -->
+                    <LinearLayout
+                        android:id="@+id/trendStatsRow"
                         android:layout_width="match_parent"
-                        android:layout_height="wrap_content" />
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginBottom="16dp" />
+
+                    <!-- Weekly bars -->
+                    <LinearLayout
+                        android:id="@+id/trendChartContainer"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical" />
 
                 </LinearLayout>
 
@@ -299,11 +309,10 @@
                         android:textStyle="bold"
                         android:layout_marginBottom="16dp" />
 
-                    <LinearLayout
-                        android:id="@+id/categoryDistributionContainer"
+                    <com.wordnote.app.ui.PieChartView
+                        android:id="@+id/pieChartView"
                         android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical" />
+                        android:layout_height="wrap_content" />
 
                 </LinearLayout>
 

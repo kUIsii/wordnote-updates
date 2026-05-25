@@ -11,6 +11,7 @@ import android.view.animation.DecelerateInterpolator
 import android.widget.CheckBox
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
@@ -342,26 +343,116 @@ class QuizSetupActivity : AppCompatActivity() {
         val dateStr = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault())
             .format(java.util.Date(record.createdAt))
 
-        val detail = StringBuilder()
-        detail.appendLine("时间: $dateStr")
-        detail.appendLine("总计: ${record.totalWords} 个单词")
-        detail.appendLine("正确: ${record.correctCount} 个 ($percentage%)")
-        detail.appendLine("不熟悉: $forgottenCount 个")
+        val dialogView = layoutInflater.inflate(R.layout.dialog_quiz_detail, null)
 
+        val scoreCircle = dialogView.findViewById<View>(R.id.scoreCircle)
+        val scoreText = dialogView.findViewById<TextView>(R.id.scoreText)
+        val dateText = dialogView.findViewById<TextView>(R.id.dateText)
+        val totalText = dialogView.findViewById<TextView>(R.id.totalText)
+        val correctText = dialogView.findViewById<TextView>(R.id.correctText)
+        val forgottenText = dialogView.findViewById<TextView>(R.id.forgottenText)
+        val forgottenTitle = dialogView.findViewById<TextView>(R.id.forgottenTitle)
+        val forgottenWordsContainer = dialogView.findViewById<LinearLayout>(R.id.forgottenWordsContainer)
+        val scrollContainer = dialogView.findViewById<ScrollView>(R.id.scrollContainer)
+
+        val scoreColor = when {
+            percentage >= 80 -> getColor(R.color.primary)
+            percentage >= 50 -> android.graphics.Color.parseColor("#FB8C00")
+            else -> getColor(R.color.cat_hard)
+        }
+
+        // Set colored circle
+        val density = resources.displayMetrics.density
+        scoreCircle.background = GradientDrawable().apply {
+            shape = GradientDrawable.OVAL
+            setColor(scoreColor)
+        }
+
+        scoreText.text = "$percentage%"
+        dateText.text = dateStr
+        totalText.text = "${record.totalWords}"
+        correctText.text = "${record.correctCount}"
+        forgottenText.text = "$forgottenCount"
+
+        // Parse forgotten words
+        val forgottenWords = mutableListOf<Pair<String, String>>()
         if (record.forgottenWordTexts.isNotBlank()) {
-            detail.appendLine()
-            detail.appendLine("不熟悉的单词:")
             record.forgottenWordTexts.split("||").forEach { item ->
                 val parts = item.split("=", limit = 2)
                 if (parts.size == 2) {
-                    detail.appendLine("  ${parts[0]} - ${parts[1]}")
+                    forgottenWords.add(parts[0] to parts[1])
                 }
             }
         }
 
-        MaterialAlertDialogBuilder(this, R.style.Theme_WordNoteApp_Dialog)
-            .setTitle("测验详情")
-            .setMessage(detail.toString())
+        if (forgottenWords.isEmpty()) {
+            forgottenTitle.visibility = View.GONE
+            scrollContainer.visibility = View.GONE
+        } else {
+            forgottenTitle.text = "不熟悉的单词 (${forgottenWords.size})"
+            forgottenWordsContainer.removeAllViews()
+
+            forgottenWords.forEachIndexed { index, (word, meaning) ->
+                val row = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    setPadding(0, dpToPx(10), 0, dpToPx(10))
+                }
+
+                val wordText = TextView(this).apply {
+                    text = word
+                    setTextColor(getColor(R.color.text_primary))
+                    textSize = 15f
+                    paint.isFakeBoldText = true
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                    )
+                }
+                row.addView(wordText)
+
+                val meaningText = TextView(this).apply {
+                    text = meaning
+                    setTextColor(getColor(R.color.text_hint))
+                    textSize = 13f
+                    maxLines = 2
+                    ellipsize = android.text.TextUtils.TruncateAt.END
+                    layoutParams = LinearLayout.LayoutParams(
+                        0,
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        1f
+                    ).apply {
+                        marginStart = dpToPx(12)
+                    }
+                }
+                row.addView(meaningText)
+
+                forgottenWordsContainer.addView(row)
+
+                if (index < forgottenWords.size - 1) {
+                    val divider = View(this).apply {
+                        layoutParams = LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.MATCH_PARENT, 1
+                        )
+                        setBackgroundColor(getColor(R.color.divider))
+                    }
+                    forgottenWordsContainer.addView(divider)
+                }
+            }
+
+            // Limit scroll height for many words
+            scrollContainer.post {
+                val maxHeight = (280 * density).toInt()
+                if (scrollContainer.height > maxHeight) {
+                    scrollContainer.layoutParams = scrollContainer.layoutParams.apply {
+                        height = maxHeight
+                    }
+                }
+            }
+        }
+
+        val dialog = MaterialAlertDialogBuilder(this, R.style.Theme_WordNoteApp_Dialog)
+            .setView(dialogView)
             .setPositiveButton("确定", null)
             .show()
     }
