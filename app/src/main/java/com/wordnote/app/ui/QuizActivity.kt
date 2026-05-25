@@ -243,6 +243,8 @@ class QuizActivity : AppCompatActivity() {
         val totalWords = quizWords.size
         val correctCountVal = correctCount
         val forgottenIds = forgottenWords.map { it.id }.toLongArray()
+        val forgottenIdSet = forgottenIds.toSet()
+        val correctIds = quizWords.filter { it.id !in forgottenIdSet }.map { it.id }.toLongArray()
 
         Log.d("QuizActivity", "Finishing quiz: total=$totalWords, correct=$correctCountVal, forgotten=${forgottenWords.size}")
 
@@ -254,7 +256,8 @@ class QuizActivity : AppCompatActivity() {
                         correctCount = correctCountVal,
                         categoryIds = categoryIds?.joinToString(",") ?: "",
                         forgottenWordIds = forgottenWords.joinToString(",") { it.id.toString() },
-                        forgottenWordTexts = forgottenWords.joinToString("||") { "${it.word}=${it.meaning}" }
+                        forgottenWordTexts = forgottenWords.joinToString("||") { "${it.word}=${it.meaning}" },
+                        correctWordIds = correctIds.joinToString(",")
                     )
                     viewModel.insertQuizHistorySync(history)
                     Log.d("QuizActivity", "Quiz history saved successfully")
@@ -268,6 +271,7 @@ class QuizActivity : AppCompatActivity() {
                     putExtra(QuizResultActivity.EXTRA_TOTAL, totalWords)
                     putExtra(QuizResultActivity.EXTRA_CORRECT, correctCountVal)
                     putExtra(QuizResultActivity.EXTRA_FORGOTTEN_IDS, forgottenIds)
+                    putExtra(QuizResultActivity.EXTRA_CORRECT_IDS, correctIds)
                 }
                 startActivity(intent)
                 finish()

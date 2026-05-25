@@ -27,7 +27,7 @@ import java.util.Locale
 
 sealed class ListItem {
     data class DateHeader(val date: String, val dateLabel: String) : ListItem()
-    data class WordItem(val word: Word, val index: Int, val isFirstInBatch: Boolean = false, val isLastInBatch: Boolean = false) : ListItem()
+    data class WordItem(val word: Word, val index: Int, val isFirstInBatch: Boolean = false, val isLastInBatch: Boolean = false, val batchForgetCount: Int = 0, val categoryName: String? = null) : ListItem()
     data class MonthHeader(val yearMonth: String, val label: String, val wordCount: Int) : ListItem()
     data class WeekHeader(val weekKey: String, val label: String, val wordCount: Int) : ListItem()
     data class DayHeader(val dayKey: String, val label: String, val wordCount: Int) : ListItem()
@@ -66,6 +66,19 @@ class WordAdapter(
 
     fun setHighlightedMeanings(meanings: List<HighlightedMeaning>) {
         highlightedMeaningsMap = meanings.groupBy { it.wordId }.mapValues { it.value.map { m -> m.meaningText } }
+        notifyDataSetChanged()
+    }
+
+    private var currentCategoryName: String? = null
+
+    fun setCurrentCategoryName(name: String?) {
+        currentCategoryName = name
+    }
+
+    private var isGlobalSearchMode = false
+
+    fun setGlobalSearchMode(enabled: Boolean) {
+        isGlobalSearchMode = enabled
         notifyDataSetChanged()
     }
 
@@ -157,8 +170,8 @@ class WordAdapter(
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         when (val item = getItem(position)) {
-            is ListItem.DateHeader -> (holder as DateHeaderViewHolder).bind(item.dateLabel)
-            is ListItem.WordItem -> (holder as WordViewHolder).bind(item.word, item.index, item.isFirstInBatch, item.isLastInBatch)
+            is ListItem.DateHeader -> (holder as DateHeaderViewHolder).bind(item.dateLabel, !isDateGroupingMode)
+            is ListItem.WordItem -> (holder as WordViewHolder).bind(item.word, item.index, item.isFirstInBatch, item.isLastInBatch, item.batchForgetCount, item.categoryName)
             is ListItem.MonthHeader -> (holder as MonthHeaderViewHolder).bind(item)
             is ListItem.WeekHeader -> (holder as WeekHeaderViewHolder).bind(item)
             is ListItem.DayHeader -> (holder as DayHeaderViewHolder).bind(item)
@@ -184,6 +197,17 @@ class WordAdapter(
         var currentDate = ""
         var index = 1
         var currentBatchId: Long? = null
+        var lastBatchIdInCategory: Long? = null
+
+        val batchForgetCountMap = mutableMapOf<Long, Int>()
+        words.filter { it.batchId != null }
+            .groupBy { it.batchId!! }
+            .forEach { (batchId, batchWords) ->
+                batchForgetCountMap[batchId] = batchWords.sumOf { it.forgetCount }
+            }
+
+        // Check if last word has batchId in current category (for append button on non-batch words)
+        val lastWordInCategory = if (currentCategoryName == "意思相近的单词") words.lastOrNull() else null
 
         words.forEach { word ->
             val date = DateUtils.formatDate(word.createdAt)
@@ -194,21 +218,39 @@ class WordAdapter(
                 currentBatchId = null
             }
 
+            val batchForget = batchForgetCountMap[word.batchId] ?: 0
+            val isGlobalMode = isGlobalSearchMode
+            val catName = if (isGlobalMode) categories[word.categoryId]?.name else null
+            // For batch groups, only show category label on the first word of the batch
+            val isFirstOfBatch = word.batchId != null && word.batchId != currentBatchId
+            val showCatName = if (isGlobalMode) {
+                if (word.batchId != null) {
+                    if (isFirstOfBatch) catName else null
+                } else catName
+            } else null
+
             if (word.batchId != null) {
                 if (word.batchId != currentBatchId) {
                     currentBatchId = word.batchId
-                    items.add(ListItem.WordItem(word, index, isFirstInBatch = true, isLastInBatch = false))
+                    val wordIdx = words.indexOf(word)
+                    val isLast = wordIdx + 1 >= words.size ||
+                            words[wordIdx + 1].batchId != currentBatchId ||
+                            DateUtils.formatDate(words[wordIdx + 1].createdAt) != currentDate
+                    items.add(ListItem.WordItem(word, index, isFirstInBatch = true, isLastInBatch = isLast, batchForgetCount = batchForget, categoryName = showCatName))
+                    if (isLast) index++
                 } else {
                     val nextWordIndex = words.indexOf(word) + 1
                     val isLast = nextWordIndex >= words.size ||
                             words[nextWordIndex].batchId != currentBatchId ||
                             DateUtils.formatDate(words[nextWordIndex].createdAt) != currentDate
-                    items.add(ListItem.WordItem(word, index, isFirstInBatch = false, isLastInBatch = isLast))
+                    items.add(ListItem.WordItem(word, index, isFirstInBatch = false, isLastInBatch = isLast, batchForgetCount = batchForget, categoryName = showCatName))
                     if (isLast) index++
                 }
             } else {
                 currentBatchId = null
-                items.add(ListItem.WordItem(word, index))
+                // For "意思相近的单词" category, mark last non-batch word as appendable
+                val isLastWord = word.id == lastWordInCategory?.id
+                items.add(ListItem.WordItem(word, index, isLastInBatch = isLastWord, categoryName = showCatName))
                 index++
             }
         }
@@ -234,6 +276,13 @@ class WordAdapter(
                 .add(word)
         }
 
+        val batchForgetCountMap = mutableMapOf<Long, Int>()
+        words.filter { it.batchId != null }
+            .groupBy { it.batchId!! }
+            .forEach { (batchId, batchWords) ->
+                batchForgetCountMap[batchId] = batchWords.sumOf { it.forgetCount }
+            }
+
         var globalIndex = 1
 
         // Build items in order: Month -> Week -> Day -> Words
@@ -255,20 +304,35 @@ class WordAdapter(
 
                             if (!collapsedDays.contains(dayKey)) {
                                 var currentBatchId: Long? = null
+                                // Find last word in entire list for "意思相近的单词" append button
+                                val lastWordOverall = if (currentCategoryName == "意思相近的单词") words.lastOrNull() else null
                                 dayWords.forEach { word ->
+                                    val batchForget = batchForgetCountMap[word.batchId] ?: 0
+                                    val isGlobalMode = isGlobalSearchMode
+                                    val catName = if (isGlobalMode) categories[word.categoryId]?.name else null
+                                    val isFirstOfBatch = word.batchId != null && word.batchId != currentBatchId
+                                    val showCatName = if (isGlobalMode) {
+                                        if (word.batchId != null) {
+                                            if (isFirstOfBatch) catName else null
+                                        } else catName
+                                    } else null
                                     if (word.batchId != null) {
                                         if (word.batchId != currentBatchId) {
                                             currentBatchId = word.batchId
-                                            items.add(ListItem.WordItem(word, globalIndex, isFirstInBatch = true, isLastInBatch = false))
+                                            val wordIdx = dayWords.indexOf(word)
+                                            val isLast = wordIdx + 1 >= dayWords.size || dayWords[wordIdx + 1].batchId != currentBatchId
+                                            items.add(ListItem.WordItem(word, globalIndex, isFirstInBatch = true, isLastInBatch = isLast, batchForgetCount = batchForget, categoryName = showCatName))
+                                            if (isLast) globalIndex++
                                         } else {
                                             val nextIdx = dayWords.indexOf(word) + 1
                                             val isLast = nextIdx >= dayWords.size || dayWords[nextIdx].batchId != currentBatchId
-                                            items.add(ListItem.WordItem(word, globalIndex, isFirstInBatch = false, isLastInBatch = isLast))
+                                            items.add(ListItem.WordItem(word, globalIndex, isFirstInBatch = false, isLastInBatch = isLast, batchForgetCount = batchForget, categoryName = showCatName))
                                             if (isLast) globalIndex++
                                         }
                                     } else {
                                         currentBatchId = null
-                                        items.add(ListItem.WordItem(word, globalIndex))
+                                        val isLastWord = word.id == lastWordOverall?.id
+                                        items.add(ListItem.WordItem(word, globalIndex, isLastInBatch = isLastWord, categoryName = showCatName))
                                         globalIndex++
                                     }
                                 }
@@ -363,7 +427,7 @@ class WordAdapter(
     inner class DateHeaderViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val dateTextView: TextView = itemView.findViewById(R.id.dateTextView)
 
-        fun bind(dateLabel: String) {
+        fun bind(dateLabel: String, decorated: Boolean = false) {
             dateTextView.text = dateLabel
         }
     }
@@ -458,8 +522,10 @@ class WordAdapter(
         private val editButton: ImageView = itemView.findViewById(R.id.editWordButton)
         private val deleteButton: ImageView = itemView.findViewById(R.id.deleteWordButton)
         private val batchAppendButton: TextView = itemView.findViewById(R.id.batchAppendButton)
+        private val batchForgetBadge: TextView = itemView.findViewById(R.id.batchForgetBadge)
+        private val categoryNameLabel: TextView = itemView.findViewById(R.id.categoryNameLabel)
 
-        fun bind(word: Word, index: Int, isFirstInBatch: Boolean = false, isLastInBatch: Boolean = false) {
+        fun bind(word: Word, index: Int, isFirstInBatch: Boolean = false, isLastInBatch: Boolean = false, batchForgetCount: Int = 0, categoryName: String? = null) {
             val density = itemView.resources.displayMetrics.density
 
             // Only show index on first word of batch, or on non-batch words
@@ -494,6 +560,14 @@ class WordAdapter(
                 contentTextView.layoutParams = contentLp
             }
             wordTextView.text = word.word
+
+            // Category name label (global search mode)
+            if (categoryName != null) {
+                categoryNameLabel.text = categoryName
+                categoryNameLabel.visibility = View.VISIBLE
+            } else {
+                categoryNameLabel.visibility = View.GONE
+            }
 
             // Apply color to highlighted meanings
             val highlighted = highlightedMeaningsMap[word.id]
@@ -593,12 +667,25 @@ class WordAdapter(
                 editButton.visibility = View.VISIBLE
                 deleteButton.visibility = View.VISIBLE
 
-                // Show batch append button only at end of batch
-                if (word.batchId != null && isLastInBatch) {
+                // Show batch append button at end of batch, or for any last word in "意思相近的单词" category
+                val showAppend = when {
+                    word.batchId != null && isLastInBatch -> true
+                    currentCategoryName == "意思相近的单词" && isLastInBatch -> true
+                    else -> false
+                }
+                if (showAppend) {
                     batchAppendButton.visibility = View.VISIBLE
                     batchAppendButton.setOnClickListener { onBatchAppend(word) }
                 } else {
                     batchAppendButton.visibility = View.GONE
+                }
+
+                // Show batch forget count badge on first item of batch
+                if (word.batchId != null && isFirstInBatch && batchForgetCount > 0) {
+                    batchForgetBadge.text = "$batchForgetCount"
+                    batchForgetBadge.visibility = View.VISIBLE
+                } else {
+                    batchForgetBadge.visibility = View.GONE
                 }
             }
 

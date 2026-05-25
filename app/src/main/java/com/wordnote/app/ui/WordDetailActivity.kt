@@ -2,9 +2,6 @@ package com.wordnote.app.ui
 
 import android.content.Intent
 import android.graphics.Color
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.view.View
@@ -14,6 +11,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -28,6 +26,7 @@ import com.wordnote.app.data.WordMeaning
 import com.wordnote.app.ui.adapter.MeaningAdapter
 import com.wordnote.app.util.compatOverridePendingTransition
 import com.wordnote.app.util.compatOverridePendingTransitionClose
+import kotlinx.coroutines.launch
 
 class WordDetailActivity : AppCompatActivity() {
 
@@ -57,6 +56,7 @@ class WordDetailActivity : AppCompatActivity() {
 
     private var wordId: Long = -1
     private var currentWord: Word? = null
+    private var categoriesMap: Map<Long, Category> = emptyMap()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -72,6 +72,11 @@ class WordDetailActivity : AppCompatActivity() {
 
         initViews()
         setupListeners()
+
+        viewModel.allCategories.observe(this) { categories ->
+            categoriesMap = categories.associateBy { it.id }
+        }
+
         loadWord()
         loadMeanings()
     }
@@ -176,7 +181,7 @@ class WordDetailActivity : AppCompatActivity() {
     }
 
     private fun loadSimilarWords(word: Word) {
-        CoroutineScope(Dispatchers.Main).launch {
+        lifecycleScope.launch {
             try {
                 val similarWords = viewModel.findSimilarWordsExcluding(word.word, word.id)
                 displaySimilarWords(similarWords)
@@ -195,87 +200,84 @@ class WordDetailActivity : AppCompatActivity() {
         similarWordsCard.visibility = View.VISIBLE
         similarWordsContainer.removeAllViews()
 
-        // Get categories to display category names
-        viewModel.allCategories.observe(this) { categories ->
-            val categoryMap = categories.associateBy { it.id }
+        similarWords.forEach { similarWord ->
+            val category = categoriesMap[similarWord.categoryId]
+            val categoryName = category?.name ?: "未分类"
+            val categoryColor = try {
+                Color.parseColor(category?.color ?: "#757575")
+            } catch (e: Exception) {
+                Color.parseColor("#757575")
+            }
 
-            similarWords.forEach { similarWord ->
-                val category = categoryMap[similarWord.categoryId]
-                val categoryName = category?.name ?: "未分类"
-                val categoryColor = try {
-                    Color.parseColor(category?.color ?: "#757575")
-                } catch (e: Exception) {
-                    Color.parseColor("#757575")
+            val row = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = android.view.Gravity.CENTER_VERTICAL
+                setPadding(0, dpToPx(8), 0, dpToPx(8))
+                isClickable = true
+                isFocusable = true
+                val tv = android.util.TypedValue()
+                context.theme.resolveAttribute(android.R.attr.selectableItemBackground, tv, true)
+                setBackgroundResource(tv.resourceId)
+            }
+
+            // Category color dot
+            val colorDot = View(this).apply {
+                val dotSize = dpToPx(8)
+                layoutParams = LinearLayout.LayoutParams(dotSize, dotSize)
+                background = GradientDrawable().apply {
+                    shape = GradientDrawable.OVAL
+                    setColor(categoryColor)
                 }
+            }
+            row.addView(colorDot)
 
-                val row = LinearLayout(this).apply {
-                    orientation = LinearLayout.HORIZONTAL
-                    gravity = android.view.Gravity.CENTER_VERTICAL
-                    setPadding(0, dpToPx(8), 0, dpToPx(8))
-                    isClickable = true
-                    isFocusable = true
-                    setBackgroundResource(android.R.attr.selectableItemBackground)
+            // Category name
+            val nameText = TextView(this).apply {
+                text = categoryName
+                setTextColor(getColor(R.color.text_primary))
+                textSize = 14f
+                layoutParams = LinearLayout.LayoutParams(
+                    0,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    1f
+                ).apply {
+                    marginStart = dpToPx(8)
                 }
+            }
+            row.addView(nameText)
 
-                // Category color dot
-                val colorDot = View(this).apply {
-                    val dotSize = dpToPx(8)
-                    layoutParams = LinearLayout.LayoutParams(dotSize, dotSize)
-                    background = GradientDrawable().apply {
-                        shape = GradientDrawable.OVAL
-                        setColor(categoryColor)
-                    }
+            // Meaning preview
+            val meaningText = TextView(this).apply {
+                text = similarWord.meaning
+                setTextColor(getColor(R.color.text_hint))
+                textSize = 12f
+                maxLines = 1
+                maxWidth = dpToPx(120)
+            }
+            row.addView(meaningText)
+
+            // Click to navigate to MainActivity with this category
+            row.setOnClickListener {
+                val intent = Intent(this, MainActivity::class.java).apply {
+                    putExtra("navigate_to_category", similarWord.categoryId)
+                    flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
                 }
-                row.addView(colorDot)
+                startActivity(intent)
+                finish()
+            }
 
-                // Category name
-                val nameText = TextView(this).apply {
-                    text = categoryName
-                    setTextColor(getColor(R.color.text_primary))
-                    textSize = 14f
+            similarWordsContainer.addView(row)
+
+            // Add divider
+            if (similarWord != similarWords.last()) {
+                val divider = View(this).apply {
                     layoutParams = LinearLayout.LayoutParams(
-                        0,
-                        LinearLayout.LayoutParams.WRAP_CONTENT,
-                        1f
-                    ).apply {
-                        marginStart = dpToPx(8)
-                    }
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        1
+                    )
+                    setBackgroundColor(getColor(R.color.divider))
                 }
-                row.addView(nameText)
-
-                // Meaning preview
-                val meaningText = TextView(this).apply {
-                    text = similarWord.meaning
-                    setTextColor(getColor(R.color.text_hint))
-                    textSize = 12f
-                    maxLines = 1
-                    maxWidth = dpToPx(120)
-                }
-                row.addView(meaningText)
-
-                // Click to navigate to MainActivity with this category
-                row.setOnClickListener {
-                    val intent = Intent(this, MainActivity::class.java).apply {
-                        putExtra("navigate_to_category", similarWord.categoryId)
-                        flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
-                    }
-                    startActivity(intent)
-                    finish()
-                }
-
-                similarWordsContainer.addView(row)
-
-                // Add divider
-                if (similarWord != similarWords.last()) {
-                    val divider = View(this).apply {
-                        layoutParams = LinearLayout.LayoutParams(
-                            LinearLayout.LayoutParams.MATCH_PARENT,
-                            1
-                        )
-                        setBackgroundColor(getColor(R.color.divider))
-                    }
-                    similarWordsContainer.addView(divider)
-                }
+                similarWordsContainer.addView(divider)
             }
         }
     }
@@ -400,7 +402,5 @@ class WordDetailActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        loadWord()
-        loadMeanings()
     }
 }

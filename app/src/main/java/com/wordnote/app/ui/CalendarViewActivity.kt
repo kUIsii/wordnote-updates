@@ -7,6 +7,7 @@ import android.text.Spanned
 import android.text.style.ForegroundColorSpan
 import android.text.style.StyleSpan
 import android.view.View
+import java.util.concurrent.ConcurrentHashMap
 import android.widget.EditText
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -16,10 +17,11 @@ import androidx.lifecycle.ViewModelProvider
 import com.google.android.material.datepicker.MaterialDatePicker
 import com.wordnote.app.R
 import com.wordnote.app.data.Category
+import com.wordnote.app.data.SentenceWithWords
 import com.wordnote.app.data.Word
 import com.wordnote.app.data.WordMeaning
 import com.wordnote.app.util.compatOverridePendingTransitionClose
-import kotlinx.coroutines.CoroutineScope
+import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -29,25 +31,40 @@ import java.util.*
 class CalendarViewActivity : AppCompatActivity() {
 
     private lateinit var viewModel: WordViewModel
+    private var sentenceViewModel: SentenceViewModel? = null
     private lateinit var backButton: ImageView
     private lateinit var datePickerButton: TextView
     private lateinit var selectedDateText: TextView
     private lateinit var searchEditText: EditText
     private lateinit var categoryContainer: LinearLayout
     private lateinit var emptyView: LinearLayout
+    private lateinit var sentencesSection: LinearLayout
+    private lateinit var sentencesContainer: LinearLayout
 
     private var selectedDate: Long = System.currentTimeMillis()
     private var allWords: List<Word> = emptyList()
     private var categoriesList: List<Category> = emptyList()
     private val collapsedCategories = mutableSetOf<Long>()
-    private val highlightedMeaningsMap = mutableMapOf<Long, List<String>>()
-    private val wordMeaningsMap = mutableMapOf<Long, List<WordMeaning>>()
+    private val highlightedMeaningsMap = ConcurrentHashMap<Long, List<String>>()
+    private val wordMeaningsMap = ConcurrentHashMap<Long, List<WordMeaning>>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_calendar_view)
 
-        viewModel = ViewModelProvider(this)[WordViewModel::class.java]
+        try {
+            viewModel = ViewModelProvider(this)[WordViewModel::class.java]
+        } catch (e: Exception) {
+            android.util.Log.e("CalendarView", "Failed to init WordViewModel", e)
+            finish()
+            return
+        }
+        try {
+            sentenceViewModel = ViewModelProvider(this)[SentenceViewModel::class.java]
+        } catch (e: Exception) {
+            android.util.Log.e("CalendarView", "Failed to init SentenceViewModel, continuing without sentences", e)
+            sentenceViewModel = null
+        }
 
         initViews()
         setupDatePicker()
@@ -62,6 +79,8 @@ class CalendarViewActivity : AppCompatActivity() {
         searchEditText = findViewById(R.id.searchEditText)
         categoryContainer = findViewById(R.id.categoryContainer)
         emptyView = findViewById(R.id.emptyView)
+        sentencesSection = findViewById(R.id.sentencesSection)
+        sentencesContainer = findViewById(R.id.sentencesContainer)
 
         backButton.setOnClickListener {
             finish()
@@ -125,85 +144,231 @@ class CalendarViewActivity : AppCompatActivity() {
     }
 
     private fun observeData() {
-        viewModel.allWords.observe(this) { words ->
-            allWords = words
-            filterWordsByDate()
-            fetchHighlightedMeanings(words)
+        try {
+            viewModel.allWords.observe(this) { words ->
+                try {
+                    allWords = words
+                    filterWordsByDate()
+                    fetchHighlightedMeanings(words)
+                } catch (e: Exception) {
+                    android.util.Log.e("CalendarView", "Error in allWords observer", e)
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("CalendarView", "Failed to observe allWords", e)
         }
 
-        viewModel.allCategories.observe(this) { categories ->
-            categoriesList = categories
-            filterWordsByDate()
+        try {
+            viewModel.allCategories.observe(this) { categories ->
+                try {
+                    categoriesList = categories
+                    filterWordsByDate()
+                } catch (e: Exception) {
+                    android.util.Log.e("CalendarView", "Error in allCategories observer", e)
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("CalendarView", "Failed to observe allCategories", e)
+        }
+
+        try {
+            sentenceViewModel?.allSentencesWithWords?.observe(this) { sentences ->
+                try {
+                    filterSentencesByDate(sentences)
+                } catch (e: Exception) {
+                    android.util.Log.e("CalendarView", "Error in allSentences observer", e)
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("CalendarView", "Failed to observe allSentences", e)
         }
     }
 
     private fun fetchHighlightedMeanings(words: List<Word>) {
-        CoroutineScope(Dispatchers.IO).launch {
-            words.forEach { word ->
-                val meanings = viewModel.getMeaningsForWordSync(word.id)
-                if (meanings.isNotEmpty()) {
-                    wordMeaningsMap[word.id] = meanings
-                    val highlighted = meanings.filter { it.isHighlighted }.map { it.meaningText }
-                    if (highlighted.isNotEmpty()) {
-                        highlightedMeaningsMap[word.id] = highlighted
+        lifecycleScope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    highlightedMeaningsMap.clear()
+                    wordMeaningsMap.clear()
+                    words.forEach { word ->
+                        val meanings = viewModel.getMeaningsForWordSync(word.id)
+                        if (meanings.isNotEmpty()) {
+                            wordMeaningsMap[word.id] = meanings
+                            val highlighted = meanings.filter { it.isHighlighted }.map { it.meaningText }
+                            if (highlighted.isNotEmpty()) {
+                                highlightedMeaningsMap[word.id] = highlighted
+                            }
+                        }
                     }
                 }
-            }
-            withContext(Dispatchers.Main) {
+                filterWordsByDate()
+            } catch (e: Exception) {
+                e.printStackTrace()
                 filterWordsByDate()
             }
         }
     }
 
     private fun filterWordsByDate() {
-        val cal = Calendar.getInstance().apply { timeInMillis = selectedDate }
-        val targetYear = cal.get(Calendar.YEAR)
-        val targetMonth = cal.get(Calendar.MONTH)
-        val targetDay = cal.get(Calendar.DAY_OF_MONTH)
+        try {
+            val cal = Calendar.getInstance().apply { timeInMillis = selectedDate }
+            val targetYear = cal.get(Calendar.YEAR)
+            val targetMonth = cal.get(Calendar.MONTH)
+            val targetDay = cal.get(Calendar.DAY_OF_MONTH)
 
-        val searchQuery = searchEditText.text.toString().trim()
+            val searchQuery = searchEditText.text.toString().trim()
 
-        val filteredWords = allWords.filter { word ->
-            val wordCal = Calendar.getInstance().apply { timeInMillis = word.createdAt }
-            val isSameDate = wordCal.get(Calendar.YEAR) == targetYear &&
-                    wordCal.get(Calendar.MONTH) == targetMonth &&
-                    wordCal.get(Calendar.DAY_OF_MONTH) == targetDay
+            val filteredWords = allWords.filter { word ->
+                val wordCal = Calendar.getInstance().apply { timeInMillis = word.createdAt }
+                val isSameDate = wordCal.get(Calendar.YEAR) == targetYear &&
+                        wordCal.get(Calendar.MONTH) == targetMonth &&
+                        wordCal.get(Calendar.DAY_OF_MONTH) == targetDay
 
-            if (searchQuery.isEmpty()) {
-                isSameDate
-            } else {
-                isSameDate && (word.word.contains(searchQuery, ignoreCase = true) ||
-                        word.meaning.contains(searchQuery, ignoreCase = true))
+                if (searchQuery.isEmpty()) {
+                    isSameDate
+                } else {
+                    isSameDate && (word.word.contains(searchQuery, ignoreCase = true) ||
+                            word.meaning.contains(searchQuery, ignoreCase = true))
+                }
             }
-        }
 
-        displayWordsByCategory(filteredWords)
+            displayWordsByCategory(filteredWords)
+
+            // Also filter sentences
+            try {
+                sentenceViewModel?.allSentencesWithWords?.value?.let { filterSentencesByDate(it) }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    private fun filterSentencesByDate(sentences: List<SentenceWithWords>) {
+        try {
+            val cal = Calendar.getInstance().apply { timeInMillis = selectedDate }
+            val targetYear = cal.get(Calendar.YEAR)
+            val targetMonth = cal.get(Calendar.MONTH)
+            val targetDay = cal.get(Calendar.DAY_OF_MONTH)
+
+            val filteredSentences = sentences.filter { item ->
+                val sentenceCal = Calendar.getInstance().apply { timeInMillis = item.sentence.createdAt }
+                sentenceCal.get(Calendar.YEAR) == targetYear &&
+                        sentenceCal.get(Calendar.MONTH) == targetMonth &&
+                        sentenceCal.get(Calendar.DAY_OF_MONTH) == targetDay
+            }
+
+            displaySentences(filteredSentences)
+        } catch (e: Exception) {
+            android.util.Log.e("CalendarView", "Error filtering sentences", e)
+        }
+    }
+
+    private fun displaySentences(sentences: List<SentenceWithWords>) {
+        try {
+            sentencesContainer.removeAllViews()
+
+            if (sentences.isEmpty()) {
+                sentencesSection.visibility = View.GONE
+                // Check if words are also empty
+                if (categoryContainer.childCount == 0) {
+                    emptyView.visibility = View.VISIBLE
+                }
+                return
+            }
+
+            sentencesSection.visibility = View.VISIBLE
+            emptyView.visibility = View.GONE
+            val density = resources.displayMetrics.density
+
+            sentences.forEach { item ->
+                val card = com.google.android.material.card.MaterialCardView(this).apply {
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                    ).apply {
+                        bottomMargin = (8 * density).toInt()
+                    }
+                    setCardBackgroundColor(getColor(R.color.card_background))
+                    radius = 12f * density
+                    cardElevation = 0f
+                }
+
+                val content = LinearLayout(this).apply {
+                    orientation = LinearLayout.VERTICAL
+                    setPadding((14 * density).toInt(), (12 * density).toInt(), (14 * density).toInt(), (12 * density).toInt())
+                }
+
+                val sentenceText = TextView(this).apply {
+                    text = item.sentence.originalText
+                    textSize = 15f
+                    setTextColor(getColor(R.color.text_primary))
+                    maxLines = 3
+                    ellipsize = android.text.TextUtils.TruncateAt.END
+                }
+                content.addView(sentenceText)
+
+                if (!item.sentence.translation.isNullOrBlank()) {
+                    val translationText = TextView(this).apply {
+                        text = item.sentence.translation
+                        textSize = 13f
+                        setTextColor(getColor(R.color.text_secondary))
+                        maxLines = 2
+                        setPadding(0, (4 * density).toInt(), 0, 0)
+                        ellipsize = android.text.TextUtils.TruncateAt.END
+                    }
+                    content.addView(translationText)
+                }
+
+                if (item.words.isNotEmpty()) {
+                    val wordCount = TextView(this).apply {
+                        text = "${item.words.size}个生词"
+                        textSize = 11f
+                        setTextColor(getColor(R.color.primary))
+                        setPadding(0, (6 * density).toInt(), 0, 0)
+                    }
+                    content.addView(wordCount)
+                }
+
+                card.addView(content)
+                sentencesContainer.addView(card)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     private fun displayWordsByCategory(words: List<Word>) {
-        categoryContainer.removeAllViews()
+        try {
+            categoryContainer.removeAllViews()
 
-        if (words.isEmpty()) {
-            emptyView.visibility = View.VISIBLE
-            categoryContainer.visibility = View.GONE
-            return
-        }
+            val hasSentences = sentencesSection.visibility == View.VISIBLE
 
-        emptyView.visibility = View.GONE
-        categoryContainer.visibility = View.VISIBLE
-
-        // Group words by category
-        val wordsByCategory = words.groupBy { it.categoryId }
-
-        // Create a map of category id to category for quick lookup
-        val categoryMap = categoriesList.associateBy { it.id }
-
-        // Display each category
-        wordsByCategory.forEach { (categoryId, categoryWords) ->
-            val category = categoryMap[categoryId]
-            if (category != null) {
-                createCategorySection(category, categoryWords)
+            if (words.isEmpty() && !hasSentences) {
+                emptyView.visibility = View.VISIBLE
+                categoryContainer.visibility = View.GONE
+                return
             }
+
+            emptyView.visibility = View.GONE
+            categoryContainer.visibility = if (words.isEmpty()) View.GONE else View.VISIBLE
+
+            // Group words by category
+            val wordsByCategory = words.groupBy { it.categoryId }
+
+            // Create a map of category id to category for quick lookup
+            val categoryMap = categoriesList.associateBy { it.id }
+
+            // Display each category
+            wordsByCategory.forEach { (categoryId, categoryWords) ->
+                val category = categoryMap[categoryId]
+                if (category != null) {
+                    createCategorySection(category, categoryWords)
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 

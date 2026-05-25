@@ -4,41 +4,23 @@
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
-    <!-- Book shape -->
+    <!-- Single book with bookmark -->
     <path
-        android:pathData="M4,4C4,2.9 4.9,2 6,2L18,2C19.1,2 20,2.9 20,4V20C20,21.1 19.1,22 18,22H6C4.9,22 4,21.1 4,20V4Z"
+        android:pathData="M6,2C4.9,2 4,2.9 4,4V20C4,21.1 4.9,22 6,22H18C19.1,22 20,21.1 20,20V4C20,2.9 19.1,2 18,2H6Z"
+        android:fillColor="#00000000"
+        android:strokeWidth="1.8"
+        android:strokeColor="?attr/colorOnSurface" />
+    <!-- Book spine -->
+    <path
+        android:pathData="M6,2V22"
+        android:strokeWidth="1.8"
+        android:strokeColor="?attr/colorOnSurface" />
+    <!-- Bookmark -->
+    <path
+        android:pathData="M14,2V8L16,6.5L18,8V2"
         android:fillColor="#00000000"
         android:strokeWidth="1.5"
-        android:strokeColor="?attr/colorOnSurface" />
-    <!-- Center line (spine) -->
-    <path
-        android:pathData="M12,4V22"
-        android:strokeWidth="1.5"
-        android:strokeColor="?attr/colorOnSurface" />
-    <!-- Left page lines -->
-    <path
-        android:pathData="M7,8L10,8"
-        android:strokeWidth="1.2"
-        android:strokeColor="?attr/colorOnSurface" />
-    <path
-        android:pathData="M7,11L10,11"
-        android:strokeWidth="1.2"
-        android:strokeColor="?attr/colorOnSurface" />
-    <path
-        android:pathData="M7,14L9,14"
-        android:strokeWidth="1.2"
-        android:strokeColor="?attr/colorOnSurface" />
-    <!-- Right page lines -->
-    <path
-        android:pathData="M14,8L17,8"
-        android:strokeWidth="1.2"
-        android:strokeColor="?attr/colorOnSurface" />
-    <path
-        android:pathData="M14,11L17,11"
-        android:strokeWidth="1.2"
-        android:strokeColor="?attr/colorOnSurface" />
-    <path
-        android:pathData="M14,14L16,14"
-        android:strokeWidth="1.2"
-        android:strokeColor="?attr/colorOnSurface" />
+        android:strokeColor="?attr/colorOnSurface"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
 </vector>

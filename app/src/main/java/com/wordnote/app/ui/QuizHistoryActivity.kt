@@ -1,5 +1,6 @@
 package com.wordnote.app.ui
 
+import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
 import android.view.Gravity
@@ -107,33 +108,26 @@ class QuizHistoryActivity : AppCompatActivity() {
     }
 
     private fun showQuizDetail(record: QuizHistory) {
-        val percentage = if (record.totalWords > 0) (record.correctCount * 100 / record.totalWords) else 0
-        val forgottenCount = record.totalWords - record.correctCount
-        val dateStr = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
-            .format(Date(record.createdAt))
+        val forgottenIds = record.forgottenWordIds
+            .split(",")
+            .filter { it.isNotBlank() }
+            .map { it.trim().toLong() }
+            .toLongArray()
 
-        val detail = StringBuilder()
-        detail.appendLine("时间: $dateStr")
-        detail.appendLine("总计: ${record.totalWords} 个单词")
-        detail.appendLine("正确: ${record.correctCount} 个 ($percentage%)")
-        detail.appendLine("不熟悉: $forgottenCount 个")
+        val correctIds = record.correctWordIds
+            .split(",")
+            .filter { it.isNotBlank() }
+            .map { it.trim().toLong() }
+            .toLongArray()
 
-        if (record.forgottenWordTexts.isNotBlank()) {
-            detail.appendLine()
-            detail.appendLine("不熟悉的单词:")
-            record.forgottenWordTexts.split("||").forEach { item ->
-                val parts = item.split("=", limit = 2)
-                if (parts.size == 2) {
-                    detail.appendLine("  ${parts[0]} - ${parts[1]}")
-                }
-            }
+        val intent = Intent(this, QuizResultActivity::class.java).apply {
+            putExtra(QuizResultActivity.EXTRA_TOTAL, record.totalWords)
+            putExtra(QuizResultActivity.EXTRA_CORRECT, record.correctCount)
+            putExtra(QuizResultActivity.EXTRA_FORGOTTEN_IDS, forgottenIds)
+            putExtra(QuizResultActivity.EXTRA_CORRECT_IDS, correctIds)
         }
-
-        MaterialAlertDialogBuilder(this, R.style.Theme_WordNoteApp_Dialog)
-            .setTitle("测验详情")
-            .setMessage(detail.toString())
-            .setPositiveButton("确定", null)
-            .show()
+        startActivity(intent)
+        compatOverridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left)
     }
 
     private fun dpToPx(dp: Int): Int {

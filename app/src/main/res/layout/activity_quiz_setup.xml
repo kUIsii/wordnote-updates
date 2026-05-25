@@ -185,44 +185,105 @@
                 android:layout_marginTop="20dp"
                 android:layout_marginBottom="8dp" />
 
-            <com.google.android.material.card.MaterialCardView
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="0dp"
-                app:cardBackgroundColor="@color/card_background">
+                android:orientation="horizontal">
 
-                <LinearLayout
-                    android:layout_width="match_parent"
+                <!-- Random card -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/randomCard"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="12dp">
+                    android:layout_weight="1"
+                    android:layout_marginEnd="6dp"
+                    app:cardCornerRadius="12dp"
+                    app:cardElevation="0dp"
+                    app:cardBackgroundColor="@color/primary"
+                    app:strokeWidth="0dp">
 
-                    <CheckBox
-                        android:id="@+id/randomCheckBox"
+                    <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="完全随机"
-                        android:textColor="@color/text_primary"
-                        android:textSize="15sp"
-                        android:checked="true"
-                        android:paddingStart="4dp"
-                        android:paddingEnd="8dp"
-                        android:layout_marginBottom="4dp" />
+                        android:orientation="vertical"
+                        android:padding="14dp"
+                        android:gravity="center">
 
-                    <CheckBox
-                        android:id="@+id/forgetCountCheckBox"
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="完全随机"
+                            android:textColor="@android:color/white"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:text="随机抽取"
+                            android:textColor="#B0FFFFFF"
+                            android:textSize="11sp" />
+
+                    </LinearLayout>
+
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Forget count card -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/forgetCountCard"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="6dp"
+                    app:cardCornerRadius="12dp"
+                    app:cardElevation="0dp"
+                    app:cardBackgroundColor="@color/card_background"
+                    app:strokeWidth="1dp"
+                    app:strokeColor="@color/divider">
+
+                    <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="优先抽取忘记次数多的词"
-                        android:textColor="@color/text_primary"
-                        android:textSize="15sp"
-                        android:paddingStart="4dp"
-                        android:paddingEnd="8dp" />
+                        android:orientation="vertical"
+                        android:padding="14dp"
+                        android:gravity="center">
 
-                </LinearLayout>
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="优先易忘词"
+                            android:textColor="@color/text_primary"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
 
-            </com.google.android.material.card.MaterialCardView>
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:text="忘记次数多的优先"
+                            android:textColor="@color/text_hint"
+                            android:textSize="11sp" />
+
+                    </LinearLayout>
+
+                </com.google.android.material.card.MaterialCardView>
+
+            </LinearLayout>
+
+            <!-- Hidden checkboxes for state -->
+            <CheckBox
+                android:id="@+id/randomCheckBox"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:visibility="gone"
+                android:checked="true" />
+
+            <CheckBox
+                android:id="@+id/forgetCountCheckBox"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:visibility="gone" />
 
             <!-- Start Button -->
             <com.google.android.material.button.MaterialButton

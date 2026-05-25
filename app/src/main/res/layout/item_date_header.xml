@@ -2,10 +2,10 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:gravity="center_vertical"
     android:orientation="horizontal"
-    android:paddingVertical="14dp"
-    android:paddingHorizontal="16dp"
-    android:gravity="center_vertical">
+    android:paddingVertical="8dp"
+    android:paddingHorizontal="12dp">
 
     <View
         android:layout_width="0dp"
@@ -17,11 +17,11 @@
         android:id="@+id/dateTextView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginHorizontal="14dp"
+        android:paddingHorizontal="12dp"
         android:textColor="@color/primary"
         android:textSize="13sp"
         android:textStyle="bold"
-        android:letterSpacing="0.06" />
+        android:fontFamily="sans-serif-medium" />
 
     <View
         android:layout_width="0dp"

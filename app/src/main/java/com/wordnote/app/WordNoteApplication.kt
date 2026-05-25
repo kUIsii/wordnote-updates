@@ -20,7 +20,7 @@ class WordNoteApplication : Application() {
     }
     val repository by lazy {
         try {
-            WordRepository(database.wordDao(), database.categoryDao(), database.tagDao(), database.wordMeaningDao(), database.wordGroupDao(), database.quizHistoryDao())
+            WordRepository(database.wordDao(), database.categoryDao(), database.tagDao(), database.wordMeaningDao(), database.wordGroupDao(), database.quizHistoryDao(), database.sentenceDao())
         } catch (e: Exception) {
             android.util.Log.e("WordNoteApp", "Repository construction failed: ${e.message}")
             throw e

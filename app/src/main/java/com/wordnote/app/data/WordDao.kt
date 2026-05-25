@@ -65,6 +65,9 @@ interface WordDao {
     @Query("UPDATE words SET groupId = :groupId WHERE id = :wordId")
     suspend fun setWordGroup(wordId: Long, groupId: Long?)
 
+    @Query("UPDATE words SET batchId = :batchId WHERE id = :wordId")
+    suspend fun setWordBatchId(wordId: Long, batchId: Long?)
+
     @Query("SELECT * FROM words WHERE groupId IS NOT NULL ORDER BY groupId, createdAt ASC")
     fun getGroupedWords(): LiveData<List<Word>>
 

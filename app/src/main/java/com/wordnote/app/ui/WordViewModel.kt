@@ -25,6 +25,13 @@ class WordViewModel(application: Application) : AndroidViewModel(application) {
     private val _searchQuery = MutableLiveData<String>("")
     val searchQuery: LiveData<String> = _searchQuery
 
+    private val _isGlobalSearch = MutableLiveData(false)
+    val isGlobalSearch: LiveData<Boolean> = _isGlobalSearch
+
+    fun toggleGlobalSearch() {
+        _isGlobalSearch.value = !(_isGlobalSearch.value ?: false)
+    }
+
     val wordsByCategory: LiveData<List<Word>> = _selectedCategoryId.switchMap { categoryId ->
         if (categoryId == null) {
             repository.allWords
@@ -34,29 +41,51 @@ class WordViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     val filteredWords: LiveData<List<Word>> = MediatorLiveData<List<Word>>().apply {
-        var currentWords: List<Word> = emptyList()
+        var currentCategoryWords: List<Word> = emptyList()
+        var currentAllWords: List<Word> = emptyList()
         var currentQuery: String = ""
+        var isGlobal: Boolean = false
 
         fun update() {
+            // Empty query: always show current category (global toggle has no effect without search)
+            // Non-empty query: use allWords when global, category words when not
+            val sourceWords = if (currentQuery.isNotEmpty() && isGlobal) currentAllWords else currentCategoryWords
             value = if (currentQuery.isEmpty()) {
-                currentWords
+                sourceWords
             } else {
-                currentWords.filter { word ->
+                val matchedBatchIds = sourceWords.filter { word ->
                     word.word.contains(currentQuery, ignoreCase = true) ||
                             word.meaning.contains(currentQuery, ignoreCase = true) ||
                             (word.note?.contains(currentQuery, ignoreCase = true) == true)
+                }.mapNotNull { it.batchId }.toSet()
+
+                sourceWords.filter { word ->
+                    word.batchId in matchedBatchIds ||
+                    word.word.contains(currentQuery, ignoreCase = true) ||
+                    word.meaning.contains(currentQuery, ignoreCase = true) ||
+                    (word.note?.contains(currentQuery, ignoreCase = true) == true)
                 }
             }
         }
 
         addSource(wordsByCategory) { words ->
-            currentWords = words
+            currentCategoryWords = words
+            update()
+        }
+
+        addSource(allWords) { words ->
+            currentAllWords = words
             update()
         }
 
         addSource(_searchQuery) { query ->
             currentQuery = query
             update()
+        }
+
+        addSource(_isGlobalSearch) { global ->
+            isGlobal = global
+            if (currentQuery.isNotEmpty()) update()
         }
     }
 
@@ -280,6 +309,10 @@ class WordViewModel(application: Application) : AndroidViewModel(application) {
     // Similar word detection
     suspend fun findSimilarWordsExcluding(wordText: String, excludeWordId: Long): List<Word> {
         return repository.findSimilarWordsExcluding(wordText, excludeWordId)
+    }
+
+    fun setWordBatchId(wordId: Long, batchId: Long?) = viewModelScope.launch {
+        repository.setWordBatchId(wordId, batchId)
     }
 
     fun insertQuizHistory(history: QuizHistory) = viewModelScope.launch {

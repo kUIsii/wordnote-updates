@@ -1,6 +1,5 @@
 package com.wordnote.app.ui
 
-import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
@@ -12,12 +11,11 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import com.google.android.material.button.MaterialButton
-import com.google.android.material.card.MaterialCardView
 import com.wordnote.app.R
 import com.wordnote.app.data.Word
 import com.wordnote.app.util.compatOverridePendingTransition
-import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -27,18 +25,21 @@ class QuizResultActivity : AppCompatActivity() {
     private lateinit var viewModel: WordViewModel
     private lateinit var scoreText: TextView
     private lateinit var scoreDetailText: TextView
-    private lateinit var forgottenTitleText: TextView
-    private lateinit var forgottenWordsContainer: LinearLayout
+    private lateinit var correctTitleText: TextView
+    private lateinit var incorrectTitleText: TextView
+    private lateinit var correctWordsContainer: LinearLayout
+    private lateinit var incorrectWordsContainer: LinearLayout
 
     private var total = 0
     private var correct = 0
     private var forgottenIds = longArrayOf()
-    private var forgottenWords = emptyList<Word>()
+    private var correctIds = longArrayOf()
 
     companion object {
         const val EXTRA_TOTAL = "total"
         const val EXTRA_CORRECT = "correct"
         const val EXTRA_FORGOTTEN_IDS = "forgotten_ids"
+        const val EXTRA_CORRECT_IDS = "correct_ids"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -50,9 +51,10 @@ class QuizResultActivity : AppCompatActivity() {
         total = intent.getIntExtra(EXTRA_TOTAL, 0)
         correct = intent.getIntExtra(EXTRA_CORRECT, 0)
         forgottenIds = intent.getLongArrayExtra(EXTRA_FORGOTTEN_IDS) ?: longArrayOf()
+        correctIds = intent.getLongArrayExtra(EXTRA_CORRECT_IDS) ?: longArrayOf()
 
         initViews()
-        loadForgottenWords()
+        loadWords()
     }
 
     private fun initViews() {
@@ -63,14 +65,18 @@ class QuizResultActivity : AppCompatActivity() {
 
         scoreText = findViewById(R.id.scoreText)
         scoreDetailText = findViewById(R.id.scoreDetailText)
-        forgottenTitleText = findViewById(R.id.forgottenTitleText)
-        forgottenWordsContainer = findViewById(R.id.forgottenWordsContainer)
+        correctTitleText = findViewById(R.id.correctTitleText)
+        incorrectTitleText = findViewById(R.id.incorrectTitleText)
+        correctWordsContainer = findViewById(R.id.correctWordsContainer)
+        incorrectWordsContainer = findViewById(R.id.incorrectWordsContainer)
 
         val percentage = if (total > 0) (correct * 100 / total) else 0
         scoreText.text = "$percentage%"
         scoreDetailText.text = "$correct / $total 正确"
 
-        forgottenTitleText.text = "不熟悉的单词 (${forgottenIds.size})"
+        val isOldRecord = correctIds.isEmpty() && forgottenIds.isNotEmpty()
+        correctTitleText.text = if (isOldRecord) "正确" else "正确 (${correctIds.size})"
+        incorrectTitleText.text = "不熟悉 (${forgottenIds.size})"
 
         findViewById<MaterialButton>(R.id.retakeButton).setOnClickListener {
             startActivity(Intent(this, QuizSetupActivity::class.java))
@@ -82,75 +88,108 @@ class QuizResultActivity : AppCompatActivity() {
         }
     }
 
-    private fun loadForgottenWords() {
-        if (forgottenIds.isEmpty()) {
-            forgottenWordsContainer.visibility = View.GONE
-            return
-        }
-
+    private fun loadWords() {
         lifecycleScope.launch {
-            val words = withContext(Dispatchers.IO) {
-                val result = mutableListOf<Word>()
-                forgottenIds.forEach { id ->
-                    try {
-                        viewModel.getWordByIdSync(id)?.let { result.add(it) }
-                    } catch (e: Exception) {
-                        // Skip words that can't be loaded
+            val isOldRecord = correctIds.isEmpty() && forgottenIds.isNotEmpty()
+
+            val correctWords = if (isOldRecord) {
+                emptyList()
+            } else {
+                withContext(Dispatchers.IO) {
+                    correctIds.toList().mapNotNull { id ->
+                        try { viewModel.getWordByIdSync(id) } catch (e: Exception) { null }
                     }
                 }
-                result
             }
-            forgottenWords = words
+            val incorrectWords = withContext(Dispatchers.IO) {
+                forgottenIds.toList().mapNotNull { id ->
+                    try { viewModel.getWordByIdSync(id) } catch (e: Exception) { null }
+                }
+            }
 
             withContext(Dispatchers.Main) {
-                displayForgottenWords()
+                if (isOldRecord) {
+                    correctWordsContainer.removeAllViews()
+                    val hint = TextView(this@QuizResultActivity).apply {
+                        text = "旧记录无法显示正确单词"
+                        setTextColor(getColor(R.color.text_hint))
+                        textSize = 13f
+                        gravity = Gravity.CENTER
+                        setPadding(0, dpToPx(12), 0, dpToPx(12))
+                    }
+                    correctWordsContainer.addView(hint)
+                } else {
+                    displayWords(correctWords, correctWordsContainer, isCorrect = true)
+                }
+                displayWords(incorrectWords, incorrectWordsContainer, isCorrect = false)
             }
         }
     }
 
-    private fun displayForgottenWords() {
-        forgottenWordsContainer.removeAllViews()
+    private fun displayWords(words: List<Word>, container: LinearLayout, isCorrect: Boolean) {
+        container.removeAllViews()
 
-        forgottenWords.forEach { word ->
+        if (words.isEmpty()) {
+            val emptyText = TextView(this).apply {
+                text = "无"
+                setTextColor(getColor(R.color.text_hint))
+                textSize = 13f
+                gravity = Gravity.CENTER
+                setPadding(0, dpToPx(8), 0, dpToPx(8))
+            }
+            container.addView(emptyText)
+            return
+        }
+
+        val density = resources.displayMetrics.density
+        val dotColor = if (isCorrect) getColor(R.color.primary) else Color.parseColor("#E07A5F")
+
+        words.forEachIndexed { index, word ->
             val row = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
-                setPadding(0, dpToPx(12), 0, dpToPx(12))
+                setPadding(0, dpToPx(6), 0, dpToPx(6))
             }
+
+            // Colored dot
+            val dot = View(this).apply {
+                val size = (6 * density).toInt()
+                layoutParams = LinearLayout.LayoutParams(size, size).apply {
+                    marginEnd = dpToPx(6)
+                }
+                background = GradientDrawable().apply {
+                    shape = GradientDrawable.OVAL
+                    setColor(dotColor)
+                }
+            }
+            row.addView(dot)
 
             // Word
             val wordText = TextView(this).apply {
                 text = word.word
                 setTextColor(getColor(R.color.text_primary))
-                textSize = 16f
+                textSize = 14f
                 paint.isFakeBoldText = true
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT
-                ).apply {
-                    marginEnd = dpToPx(12)
-                }
+                maxLines = 1
             }
             row.addView(wordText)
 
             // Meaning
             val meaningText = TextView(this).apply {
                 text = word.meaning
-                setTextColor(getColor(R.color.text_secondary))
-                textSize = 14f
-                layoutParams = LinearLayout.LayoutParams(
-                    0,
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                    1f
-                )
-                maxLines = 2
+                setTextColor(getColor(R.color.text_hint))
+                textSize = 12f
+                maxLines = 1
+                ellipsize = android.text.TextUtils.TruncateAt.END
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+                    marginStart = dpToPx(8)
+                }
             }
             row.addView(meaningText)
 
-            forgottenWordsContainer.addView(row)
+            container.addView(row)
 
-            // Divider
-            if (word != forgottenWords.last()) {
+            if (index < words.size - 1) {
                 val divider = View(this).apply {
                     layoutParams = LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.MATCH_PARENT,
@@ -158,7 +197,7 @@ class QuizResultActivity : AppCompatActivity() {
                     )
                     setBackgroundColor(getColor(R.color.divider))
                 }
-                forgottenWordsContainer.addView(divider)
+                container.addView(divider)
             }
         }
     }

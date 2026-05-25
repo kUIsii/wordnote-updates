@@ -3,9 +3,9 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="horizontal"
-    android:paddingTop="10dp"
+    android:paddingTop="8dp"
     android:paddingBottom="4dp"
-    android:paddingStart="44dp"
+    android:paddingStart="48dp"
     android:paddingEnd="16dp"
     android:gravity="center_vertical"
     android:background="?attr/selectableItemBackground">
@@ -14,6 +14,7 @@
     <View
         android:layout_width="5dp"
         android:layout_height="5dp"
+        android:layout_marginStart="8dp"
         android:background="@drawable/dot_indicator" />
 
     <!-- Day label -->

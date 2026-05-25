@@ -3,17 +3,20 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="horizontal"
-    android:paddingVertical="6dp"
-    android:paddingStart="44dp"
+    android:paddingTop="10dp"
+    android:paddingBottom="4dp"
+    android:paddingStart="32dp"
     android:paddingEnd="16dp"
     android:gravity="center_vertical"
     android:background="?attr/selectableItemBackground">
 
-    <!-- Small square indicator -->
+    <!-- Thin blue accent line -->
     <View
-        android:layout_width="6dp"
-        android:layout_height="6dp"
-        android:background="@drawable/square_indicator" />
+        android:layout_width="1.5dp"
+        android:layout_height="14dp"
+        android:layout_marginStart="12dp"
+        android:background="@color/primary"
+        android:alpha="0.6" />
 
     <!-- Week label -->
     <TextView
@@ -22,8 +25,8 @@
         android:layout_height="wrap_content"
         android:layout_weight="1"
         android:layout_marginStart="10dp"
-        android:textColor="@color/text_hint"
-        android:textSize="12sp"
+        android:textColor="@color/text_secondary"
+        android:textSize="13sp"
         android:fontFamily="sans-serif-medium" />
 
     <!-- Word count -->
@@ -37,11 +40,11 @@
     <!-- Expand/collapse chevron -->
     <ImageView
         android:id="@+id/weekExpandIcon"
-        android:layout_width="20dp"
-        android:layout_height="20dp"
+        android:layout_width="18dp"
+        android:layout_height="18dp"
         android:layout_marginStart="4dp"
         android:src="@drawable/ic_expand_more"
         android:contentDescription="展开/折叠"
-        android:alpha="0.35" />
+        android:alpha="0.4" />
 
 </LinearLayout>

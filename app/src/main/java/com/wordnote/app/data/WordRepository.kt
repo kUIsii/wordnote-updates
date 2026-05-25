@@ -8,7 +8,8 @@ class WordRepository(
     private val tagDao: TagDao,
     private val wordMeaningDao: WordMeaningDao,
     private val wordGroupDao: WordGroupDao,
-    private val quizHistoryDao: QuizHistoryDao
+    private val quizHistoryDao: QuizHistoryDao,
+    private val sentenceDao: SentenceDao
 ) {
 
     // Word operations
@@ -109,6 +110,7 @@ class WordRepository(
     // Word with group operations
     suspend fun getWordsByGroup(groupId: Long): List<Word> = wordDao.getWordsByGroupSync(groupId)
     suspend fun setWordGroup(wordId: Long, groupId: Long?) = wordDao.setWordGroup(wordId, groupId)
+    suspend fun setWordBatchId(wordId: Long, batchId: Long?) = wordDao.setWordBatchId(wordId, batchId)
 
     // Similar word detection
     suspend fun findSimilarWordsExcluding(wordText: String, excludeWordId: Long): List<Word> {
@@ -137,4 +139,14 @@ class WordRepository(
     suspend fun insertQuizHistory(history: QuizHistory): Long = quizHistoryDao.insert(history)
     suspend fun deleteQuizHistory(history: QuizHistory) = quizHistoryDao.delete(history)
     suspend fun deleteAllQuizHistory() = quizHistoryDao.deleteAll()
+
+    // Sentence operations
+    val allSentencesWithWords: LiveData<List<SentenceWithWords>> = sentenceDao.getSentencesWithWords()
+    suspend fun getSentenceWithWords(sentenceId: Long): SentenceWithWords? = sentenceDao.getSentenceWithWords(sentenceId)
+    suspend fun insertSentence(sentence: Sentence): Long = sentenceDao.insertSentence(sentence)
+    suspend fun updateSentence(sentence: Sentence) = sentenceDao.updateSentence(sentence)
+    suspend fun deleteSentence(sentence: Sentence) = sentenceDao.deleteSentence(sentence)
+    suspend fun deleteSentenceById(sentenceId: Long) = sentenceDao.deleteSentenceById(sentenceId)
+    suspend fun insertSentenceWords(words: List<SentenceWord>): List<Long> = sentenceDao.insertSentenceWords(words)
+    suspend fun deleteSentenceWords(sentenceId: Long) = sentenceDao.deleteSentenceWords(sentenceId)
 }

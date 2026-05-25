@@ -12,5 +12,6 @@ data class QuizHistory(
     val correctCount: Int,
     val categoryIds: String,
     val forgottenWordIds: String,
-    val forgottenWordTexts: String
+    val forgottenWordTexts: String,
+    val correctWordIds: String = ""
 )

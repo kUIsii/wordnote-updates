@@ -51,7 +51,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var addButton: FloatingActionButton
     private lateinit var statsTextView: TextView
     private lateinit var searchEditText: EditText
-    private lateinit var manageCategoriesButton: ImageView
+    private lateinit var globalSearchToggle: ImageView
+    private lateinit var moreButton: ImageView
     private lateinit var settingsButton: ImageView
     private lateinit var dateGroupingButton: ImageView
 
@@ -221,8 +222,9 @@ class MainActivity : AppCompatActivity() {
         addButton = findViewById(R.id.addButton)
         statsTextView = findViewById(R.id.statsTextView)
         searchEditText = findViewById(R.id.searchEditText)
+        globalSearchToggle = findViewById(R.id.globalSearchToggle)
         tabContainer = findViewById(R.id.tabContainer)
-        manageCategoriesButton = findViewById(R.id.manageCategoriesButton)
+        moreButton = findViewById(R.id.moreButton)
         settingsButton = findViewById(R.id.settingsButton)
         dateGroupingButton = findViewById(R.id.dateGroupingButton)
 
@@ -231,8 +233,8 @@ class MainActivity : AppCompatActivity() {
             compatOverridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left)
         }
 
-        manageCategoriesButton.setOnClickListener {
-            startActivity(Intent(this, CategoryActivity::class.java))
+        moreButton.setOnClickListener {
+            startActivity(Intent(this, MoreActivity::class.java))
             compatOverridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left)
         }
 
@@ -553,6 +555,7 @@ class MainActivity : AppCompatActivity() {
         selectedCategoryId = categoryId
         selectedCategoryName = categoriesList.find { it.id == categoryId }?.name
         viewModel.selectCategory(categoryId)
+        wordAdapter.setCurrentCategoryName(selectedCategoryName)
 
         updateInputMode()
 
@@ -850,11 +853,15 @@ class MainActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
+            val effectiveBatchId = lastWord.batchId ?: System.currentTimeMillis()
+            if (lastWord.batchId == null) {
+                viewModel.setWordBatchId(lastWord.id, effectiveBatchId)
+            }
             val wordEntity = Word(
                 word = newWord,
                 meaning = newMeaning,
                 categoryId = lastWord.categoryId,
-                batchId = lastWord.batchId,
+                batchId = effectiveBatchId,
                 createdAt = lastWord.createdAt
             )
 
@@ -900,6 +907,10 @@ class MainActivity : AppCompatActivity() {
                 viewModel.setSearchQuery(s?.toString() ?: "")
             }
         })
+
+        globalSearchToggle.setOnClickListener {
+            viewModel.toggleGlobalSearch()
+        }
     }
 
     private fun observeData() {
@@ -912,6 +923,27 @@ class MainActivity : AppCompatActivity() {
 
         viewModel.highlightedMeanings.observe(this) { meanings ->
             wordAdapter.setHighlightedMeanings(meanings)
+        }
+
+        viewModel.isGlobalSearch.observe(this) { isGlobal ->
+            wordAdapter.setGlobalSearchMode(isGlobal)
+            if (isGlobal) {
+                globalSearchToggle.alpha = 1.0f
+                globalSearchToggle.setColorFilter(Color.WHITE)
+                globalSearchToggle.background = android.graphics.drawable.GradientDrawable().apply {
+                    shape = android.graphics.drawable.GradientDrawable.OVAL
+                    setColor(getColor(R.color.primary))
+                }
+                globalSearchToggle.setPadding(dpToPx(6), dpToPx(6), dpToPx(6), dpToPx(6))
+            } else {
+                globalSearchToggle.alpha = 0.4f
+                globalSearchToggle.clearColorFilter()
+                // Restore ripple background via TypedValue
+                val typedValue = android.util.TypedValue()
+                theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, typedValue, true)
+                globalSearchToggle.setBackgroundResource(typedValue.resourceId)
+                globalSearchToggle.setPadding(dpToPx(6), dpToPx(6), dpToPx(6), dpToPx(6))
+            }
         }
 
         viewModel.allGroups.observe(this) { groups ->

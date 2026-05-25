@@ -34,6 +34,8 @@ class QuizSetupActivity : AppCompatActivity() {
     private lateinit var allCheckBox: CheckBox
     private lateinit var randomCheckBox: CheckBox
     private lateinit var forgetCountCheckBox: CheckBox
+    private lateinit var randomCard: View
+    private lateinit var forgetCountCard: View
     private lateinit var historyContainer: LinearLayout
     private lateinit var historySection: View
 
@@ -63,6 +65,8 @@ class QuizSetupActivity : AppCompatActivity() {
         allCheckBox = findViewById(R.id.allCheckBox)
         randomCheckBox = findViewById(R.id.randomCheckBox)
         forgetCountCheckBox = findViewById(R.id.forgetCountCheckBox)
+        randomCard = findViewById(R.id.randomCard)
+        forgetCountCard = findViewById(R.id.forgetCountCard)
         historyContainer = findViewById(R.id.historyContainer)
         historySection = findViewById(R.id.historySection)
 
@@ -76,10 +80,16 @@ class QuizSetupActivity : AppCompatActivity() {
 
         randomCheckBox.setOnCheckedChangeListener { _, isChecked ->
             if (isChecked) forgetCountCheckBox.isChecked = false
+            updateMethodCards()
         }
         forgetCountCheckBox.setOnCheckedChangeListener { _, isChecked ->
             if (isChecked) randomCheckBox.isChecked = false
+            updateMethodCards()
         }
+
+        randomCard.setOnClickListener { randomCheckBox.isChecked = true }
+        forgetCountCard.setOnClickListener { forgetCountCheckBox.isChecked = true }
+        updateMethodCards()
 
         findViewById<MaterialButton>(R.id.startQuizButton).setOnClickListener {
             startQuiz()
@@ -103,6 +113,58 @@ class QuizSetupActivity : AppCompatActivity() {
             } else {
                 historySection.visibility = View.VISIBLE
                 displayHistory(history)
+            }
+        }
+    }
+
+    private fun updateMethodCards() {
+        val density = resources.displayMetrics.density
+        val primaryColor = getColor(R.color.primary)
+        val cardBgColor = getColor(R.color.card_background)
+        val dividerColor = getColor(R.color.divider)
+
+        if (randomCheckBox.isChecked) {
+            (randomCard as? com.google.android.material.card.MaterialCardView)?.apply {
+                setCardBackgroundColor(primaryColor)
+                setStrokeColor(android.content.res.ColorStateList.valueOf(primaryColor))
+            }
+            updateCardTextColors(randomCard, isLight = true)
+
+            (forgetCountCard as? com.google.android.material.card.MaterialCardView)?.apply {
+                setCardBackgroundColor(cardBgColor)
+                setStrokeColor(android.content.res.ColorStateList.valueOf(dividerColor))
+            }
+            updateCardTextColors(forgetCountCard, isLight = false)
+        } else {
+            (forgetCountCard as? com.google.android.material.card.MaterialCardView)?.apply {
+                setCardBackgroundColor(primaryColor)
+                setStrokeColor(android.content.res.ColorStateList.valueOf(primaryColor))
+            }
+            updateCardTextColors(forgetCountCard, isLight = true)
+
+            (randomCard as? com.google.android.material.card.MaterialCardView)?.apply {
+                setCardBackgroundColor(cardBgColor)
+                setStrokeColor(android.content.res.ColorStateList.valueOf(dividerColor))
+            }
+            updateCardTextColors(randomCard, isLight = false)
+        }
+    }
+
+    private fun updateCardTextColors(card: View, isLight: Boolean) {
+        val innerLayout = (card as? android.view.ViewGroup)?.let { vg ->
+            for (i in 0 until vg.childCount) {
+                val child = vg.getChildAt(i)
+                if (child is LinearLayout) return@let child
+            }
+            null
+        } ?: return
+
+        for (j in 0 until innerLayout.childCount) {
+            val tv = innerLayout.getChildAt(j) as? TextView ?: continue
+            if (tv.textSize > 13f) {
+                tv.setTextColor(if (isLight) android.graphics.Color.WHITE else getColor(com.wordnote.app.R.color.text_primary))
+            } else {
+                tv.setTextColor(if (isLight) android.graphics.Color.argb(179, 255, 255, 255) else getColor(com.wordnote.app.R.color.text_hint))
             }
         }
     }
@@ -290,7 +352,7 @@ class QuizSetupActivity : AppCompatActivity() {
             val scoreColor = when {
                 percentage >= 80 -> getColor(R.color.primary)
                 percentage >= 50 -> Color.parseColor("#FB8C00")
-                else -> getColor(R.color.cat_hard)
+                else -> Color.parseColor("#E07A5F")
             }
             val scoreText = TextView(this).apply {
                 text = "$percentage%"
@@ -338,123 +400,26 @@ class QuizSetupActivity : AppCompatActivity() {
     }
 
     private fun showQuizDetail(record: QuizHistory) {
-        val percentage = if (record.totalWords > 0) (record.correctCount * 100 / record.totalWords) else 0
-        val forgottenCount = record.totalWords - record.correctCount
-        val dateStr = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault())
-            .format(java.util.Date(record.createdAt))
+        val forgottenIds = record.forgottenWordIds
+            .split(",")
+            .filter { it.isNotBlank() }
+            .map { it.trim().toLong() }
+            .toLongArray()
 
-        val dialogView = layoutInflater.inflate(R.layout.dialog_quiz_detail, null)
+        val correctIds = record.correctWordIds
+            .split(",")
+            .filter { it.isNotBlank() }
+            .map { it.trim().toLong() }
+            .toLongArray()
 
-        val scoreCircle = dialogView.findViewById<View>(R.id.scoreCircle)
-        val scoreText = dialogView.findViewById<TextView>(R.id.scoreText)
-        val dateText = dialogView.findViewById<TextView>(R.id.dateText)
-        val totalText = dialogView.findViewById<TextView>(R.id.totalText)
-        val correctText = dialogView.findViewById<TextView>(R.id.correctText)
-        val forgottenText = dialogView.findViewById<TextView>(R.id.forgottenText)
-        val forgottenTitle = dialogView.findViewById<TextView>(R.id.forgottenTitle)
-        val forgottenWordsContainer = dialogView.findViewById<LinearLayout>(R.id.forgottenWordsContainer)
-        val scrollContainer = dialogView.findViewById<ScrollView>(R.id.scrollContainer)
-
-        val scoreColor = when {
-            percentage >= 80 -> getColor(R.color.primary)
-            percentage >= 50 -> android.graphics.Color.parseColor("#FB8C00")
-            else -> getColor(R.color.cat_hard)
+        val intent = Intent(this, QuizResultActivity::class.java).apply {
+            putExtra(QuizResultActivity.EXTRA_TOTAL, record.totalWords)
+            putExtra(QuizResultActivity.EXTRA_CORRECT, record.correctCount)
+            putExtra(QuizResultActivity.EXTRA_FORGOTTEN_IDS, forgottenIds)
+            putExtra(QuizResultActivity.EXTRA_CORRECT_IDS, correctIds)
         }
-
-        // Set colored circle
-        val density = resources.displayMetrics.density
-        scoreCircle.background = GradientDrawable().apply {
-            shape = GradientDrawable.OVAL
-            setColor(scoreColor)
-        }
-
-        scoreText.text = "$percentage%"
-        dateText.text = dateStr
-        totalText.text = "${record.totalWords}"
-        correctText.text = "${record.correctCount}"
-        forgottenText.text = "$forgottenCount"
-
-        // Parse forgotten words
-        val forgottenWords = mutableListOf<Pair<String, String>>()
-        if (record.forgottenWordTexts.isNotBlank()) {
-            record.forgottenWordTexts.split("||").forEach { item ->
-                val parts = item.split("=", limit = 2)
-                if (parts.size == 2) {
-                    forgottenWords.add(parts[0] to parts[1])
-                }
-            }
-        }
-
-        if (forgottenWords.isEmpty()) {
-            forgottenTitle.visibility = View.GONE
-            scrollContainer.visibility = View.GONE
-        } else {
-            forgottenTitle.text = "不熟悉的单词 (${forgottenWords.size})"
-            forgottenWordsContainer.removeAllViews()
-
-            forgottenWords.forEachIndexed { index, (word, meaning) ->
-                val row = LinearLayout(this).apply {
-                    orientation = LinearLayout.HORIZONTAL
-                    gravity = Gravity.CENTER_VERTICAL
-                    setPadding(0, dpToPx(10), 0, dpToPx(10))
-                }
-
-                val wordText = TextView(this).apply {
-                    text = word
-                    setTextColor(getColor(R.color.text_primary))
-                    textSize = 15f
-                    paint.isFakeBoldText = true
-                    layoutParams = LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.WRAP_CONTENT,
-                        LinearLayout.LayoutParams.WRAP_CONTENT
-                    )
-                }
-                row.addView(wordText)
-
-                val meaningText = TextView(this).apply {
-                    text = meaning
-                    setTextColor(getColor(R.color.text_hint))
-                    textSize = 13f
-                    maxLines = 2
-                    ellipsize = android.text.TextUtils.TruncateAt.END
-                    layoutParams = LinearLayout.LayoutParams(
-                        0,
-                        LinearLayout.LayoutParams.WRAP_CONTENT,
-                        1f
-                    ).apply {
-                        marginStart = dpToPx(12)
-                    }
-                }
-                row.addView(meaningText)
-
-                forgottenWordsContainer.addView(row)
-
-                if (index < forgottenWords.size - 1) {
-                    val divider = View(this).apply {
-                        layoutParams = LinearLayout.LayoutParams(
-                            LinearLayout.LayoutParams.MATCH_PARENT, 1
-                        )
-                        setBackgroundColor(getColor(R.color.divider))
-                    }
-                    forgottenWordsContainer.addView(divider)
-                }
-            }
-
-            // Limit scroll height for many words
-            scrollContainer.post {
-                val maxHeight = (280 * density).toInt()
-                if (scrollContainer.height > maxHeight) {
-                    scrollContainer.layoutParams = scrollContainer.layoutParams.apply {
-                        height = maxHeight
-                    }
-                }
-            }
-        }
-
-        val dialog = MaterialAlertDialogBuilder(this, R.style.Theme_WordNoteApp_Dialog)
-            .setView(dialogView)
-            .setPositiveButton("确定", null)
-            .show()
+        startActivity(intent)
+        compatOverridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left)
     }
 
     private fun startQuiz() {

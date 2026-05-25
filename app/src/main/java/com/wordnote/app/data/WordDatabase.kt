@@ -11,8 +11,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @Database(
-    entities = [Word::class, Category::class, Tag::class, WordTag::class, WordMeaning::class, WordGroup::class, QuizHistory::class],
-    version = 12,
+    entities = [Word::class, Category::class, Tag::class, WordTag::class, WordMeaning::class, WordGroup::class, QuizHistory::class, Sentence::class, SentenceWord::class],
+    version = 14,
     exportSchema = false
 )
 abstract class WordDatabase : RoomDatabase() {
@@ -22,6 +22,7 @@ abstract class WordDatabase : RoomDatabase() {
     abstract fun wordMeaningDao(): WordMeaningDao
     abstract fun wordGroupDao(): WordGroupDao
     abstract fun quizHistoryDao(): QuizHistoryDao
+    abstract fun sentenceDao(): SentenceDao
 
     companion object {
         @Volatile
@@ -170,6 +171,37 @@ abstract class WordDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_12_13 = object : Migration(12, 13) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS sentences (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        originalText TEXT NOT NULL,
+                        translation TEXT,
+                        note TEXT,
+                        createdAt INTEGER NOT NULL DEFAULT 0
+                    )
+                """)
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS sentence_words (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        sentenceId INTEGER NOT NULL,
+                        wordText TEXT NOT NULL,
+                        meaning TEXT NOT NULL,
+                        sortOrder INTEGER NOT NULL DEFAULT 0,
+                        FOREIGN KEY (sentenceId) REFERENCES sentences(id) ON DELETE CASCADE
+                    )
+                """)
+                database.execSQL("CREATE INDEX IF NOT EXISTS index_sentence_words_sentenceId ON sentence_words(sentenceId)")
+            }
+        }
+
+        val MIGRATION_13_14 = object : Migration(13, 14) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE quiz_history ADD COLUMN correctWordIds TEXT NOT NULL DEFAULT ''")
+            }
+        }
+
         fun getDatabase(context: Context): WordDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -177,13 +209,13 @@ abstract class WordDatabase : RoomDatabase() {
                     WordDatabase::class.java,
                     "word_database"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14)
                     .fallbackToDestructiveMigration()
                     .addCallback(object : Callback() {
                         override fun onOpen(db: SupportSQLiteDatabase) {
                             super.onOpen(db)
                             // Safety net: ensure quiz_history table exists
-                            db.execSQL("CREATE TABLE IF NOT EXISTS quiz_history (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, createdAt INTEGER NOT NULL DEFAULT 0, totalWords INTEGER NOT NULL DEFAULT 0, correctCount INTEGER NOT NULL DEFAULT 0, categoryIds TEXT NOT NULL DEFAULT '', forgottenWordIds TEXT NOT NULL DEFAULT '', forgottenWordTexts TEXT NOT NULL DEFAULT '')")
+                            db.execSQL("CREATE TABLE IF NOT EXISTS quiz_history (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, createdAt INTEGER NOT NULL DEFAULT 0, totalWords INTEGER NOT NULL DEFAULT 0, correctCount INTEGER NOT NULL DEFAULT 0, categoryIds TEXT NOT NULL DEFAULT '', forgottenWordIds TEXT NOT NULL DEFAULT '', forgottenWordTexts TEXT NOT NULL DEFAULT '', correctWordIds TEXT NOT NULL DEFAULT '')")
                         }
                     })
                     .addCallback(DatabaseCallback())

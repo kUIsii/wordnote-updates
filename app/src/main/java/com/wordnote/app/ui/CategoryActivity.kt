@@ -3,6 +3,7 @@ package com.wordnote.app.ui
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
+import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
 import android.widget.EditText
@@ -10,6 +11,7 @@ import android.widget.FrameLayout
 import android.widget.GridLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -100,9 +102,13 @@ class CategoryActivity : AppCompatActivity() {
 
         (colorPreview.background as? GradientDrawable)?.setColor(selectedColor)
         changeColorBtn.setOnClickListener {
-            showColorPickerDialog { color ->
-                selectedColor = color
-                (colorPreview.background as? GradientDrawable)?.setColor(color)
+            try {
+                showColorPickerDialog { color ->
+                    selectedColor = color
+                    (colorPreview.background as? GradientDrawable)?.setColor(color)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
         }
 
@@ -123,26 +129,27 @@ class CategoryActivity : AppCompatActivity() {
             .show()
     }
 
-    private fun showColorPickerDialog(onColorSelected: (Int) -> Unit) {
-        var currentColor = selectedColor
+    private fun showColorPickerDialog(initialColor: Int = selectedColor, onColorSelected: (Int) -> Unit) {
+        var currentColor = initialColor
+        val density = resources.displayMetrics.density
 
         val container = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            val pad = (24 * resources.displayMetrics.density).toInt()
-            setPadding(pad, pad, pad, (12 * resources.displayMetrics.density).toInt())
+            val pad = (24 * density).toInt()
+            setPadding(pad, pad, pad, (12 * density).toInt())
         }
 
         // Preview bar
         val preview = View(this).apply {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                (56 * resources.displayMetrics.density).toInt()
+                (56 * density).toInt()
             ).apply {
-                bottomMargin = (20 * resources.displayMetrics.density).toInt()
+                bottomMargin = (20 * density).toInt()
             }
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
-                cornerRadius = 16f * resources.displayMetrics.density
+                cornerRadius = 16f * density
                 setColor(currentColor)
             }
         }
@@ -153,18 +160,33 @@ class CategoryActivity : AppCompatActivity() {
             text = "选择分类颜色"
             setTextColor(getColor(R.color.text_primary))
             textSize = 15f
-            setPadding(0, 0, 0, (12 * resources.displayMetrics.density).toInt())
+            setPadding(0, 0, 0, (12 * density).toInt())
         }
         container.addView(label)
 
-        // Grid
+        // Preset color grid
         val grid = GridLayout(this).apply {
             columnCount = 4
             rowCount = 3
             useDefaultMargins = true
         }
-        val cellSize = (64 * resources.displayMetrics.density).toInt()
-        val checkSize = (20 * resources.displayMetrics.density).toInt()
+        val cellSize = (64 * density).toInt()
+        val checkSize = (20 * density).toInt()
+
+        fun refreshGrid() {
+            for (i in 0 until grid.childCount) {
+                val cell = grid.getChildAt(i) as FrameLayout
+                val bg = cell.background as? GradientDrawable
+                val cellColor = presetColors[i]
+                if (cellColor == currentColor) {
+                    bg?.setStroke((3 * density).toInt(), Color.WHITE)
+                    cell.getChildAt(1)?.visibility = View.VISIBLE
+                } else {
+                    bg?.setStroke(0, Color.WHITE)
+                    cell.getChildAt(1)?.visibility = View.GONE
+                }
+            }
+        }
 
         presetColors.forEach { color ->
             val cellContainer = FrameLayout(this).apply {
@@ -177,15 +199,14 @@ class CategoryActivity : AppCompatActivity() {
 
             val colorBg = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
-                cornerRadius = 14f * resources.displayMetrics.density
+                cornerRadius = 14f * density
                 setColor(color)
                 if (color == currentColor) {
-                    setStroke((3 * resources.displayMetrics.density).toInt(), Color.WHITE)
+                    setStroke((3 * density).toInt(), Color.WHITE)
                 }
             }
             cellContainer.background = colorBg
 
-            // Check icon for selected
             val checkIcon = ImageView(this).apply {
                 setImageResource(android.R.drawable.ic_menu_add)
                 setColorFilter(Color.WHITE)
@@ -201,28 +222,167 @@ class CategoryActivity : AppCompatActivity() {
                 currentColor = color
                 preview.background = GradientDrawable().apply {
                     shape = GradientDrawable.RECTANGLE
-                    cornerRadius = 16f * resources.displayMetrics.density
+                    cornerRadius = 16f * density
                     setColor(color)
                 }
-                // Refresh all cells
-                for (i in 0 until grid.childCount) {
-                    val cell = grid.getChildAt(i) as FrameLayout
-                    val bg = cell.background as? GradientDrawable
-                    bg?.setStroke(0, Color.WHITE)
-                    cell.getChildAt(1)?.visibility = View.GONE
-                }
-                colorBg.setStroke((3 * resources.displayMetrics.density).toInt(), Color.WHITE)
-                checkIcon.visibility = View.VISIBLE
+                refreshGrid()
             }
 
             grid.addView(cellContainer)
         }
         container.addView(grid)
 
+        // Custom color button
+        val customBtn = TextView(this).apply {
+            text = "自定义颜色"
+            setTextColor(getColor(R.color.primary))
+            textSize = 14f
+            gravity = Gravity.CENTER
+            setPadding(0, (12 * density).toInt(), 0, (8 * density).toInt())
+            val tv = TypedValue()
+            context.theme.resolveAttribute(android.R.attr.selectableItemBackground, tv, true)
+            setBackgroundResource(tv.resourceId)
+        }
+        container.addView(customBtn)
+
+        customBtn.setOnClickListener {
+            try {
+                showHslColorPicker(currentColor) { color ->
+                    currentColor = color
+                    preview.background = GradientDrawable().apply {
+                        shape = GradientDrawable.RECTANGLE
+                        cornerRadius = 16f * density
+                        setColor(color)
+                    }
+                    refreshGrid()
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+
         MaterialAlertDialogBuilder(this)
             .setTitle(null)
             .setView(container)
             .setPositiveButton("确定") { _, _ -> onColorSelected(currentColor) }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+
+    private fun showHslColorPicker(initialColor: Int, onColorSelected: (Int) -> Unit) {
+        val hsv = FloatArray(3)
+        Color.colorToHSV(initialColor, hsv)
+        var hue = hsv[0]
+        var saturation = hsv[1] * 100f
+        var lightness = hsv[2] * 100f
+        val density = resources.displayMetrics.density
+
+        val container = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            val pad = (24 * density).toInt()
+            setPadding(pad, pad, pad, (12 * density).toInt())
+        }
+
+        // Color preview circle
+        val previewSize = (48 * density).toInt()
+        val preview = View(this).apply {
+            layoutParams = LinearLayout.LayoutParams(previewSize, previewSize).apply {
+                gravity = Gravity.CENTER_HORIZONTAL
+                bottomMargin = (16 * density).toInt()
+            }
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(initialColor)
+            }
+        }
+        container.addView(preview)
+
+        // Helper to create a seek bar row
+        fun createSeekBarRow(labelText: String, value: Int, maxValue: Int, onProgressChanged: (Int) -> Unit): LinearLayout {
+            val row = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(0, (6 * density).toInt(), 0, (6 * density).toInt())
+            }
+
+            val header = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+            }
+
+            val label = TextView(this).apply {
+                text = labelText
+                setTextColor(getColor(R.color.text_secondary))
+                textSize = 13f
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            }
+            header.addView(label)
+
+            val valueText = TextView(this).apply {
+                text = "$value"
+                setTextColor(getColor(R.color.text_primary))
+                textSize = 13f
+                paint.isFakeBoldText = true
+            }
+            header.addView(valueText)
+
+            row.addView(header)
+
+            val seekBar = SeekBar(this).apply {
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+                max = maxValue
+                progress = value
+            }
+            seekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                    if (fromUser) {
+                        valueText.text = "$progress"
+                        onProgressChanged(progress)
+                        // Update preview
+                        val color = Color.HSVToColor(floatArrayOf(hue, saturation / 100f, lightness / 100f))
+                        preview.background = GradientDrawable().apply {
+                            shape = GradientDrawable.OVAL
+                            setColor(color)
+                        }
+                    }
+                }
+                override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+                override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+            })
+            row.addView(seekBar)
+
+            return row
+        }
+
+        // Hue (0-360)
+        container.addView(createSeekBarRow("色相", hue.toInt(), 360) { hue = it.toFloat() })
+
+        // Saturation (0-100)
+        container.addView(createSeekBarRow("饱和度", saturation.toInt(), 100) { saturation = it.toFloat() })
+
+        // Lightness (0-100)
+        container.addView(createSeekBarRow("明度", lightness.toInt(), 100) { lightness = it.toFloat() })
+
+        // Hex value display
+        val hexText = TextView(this).apply {
+            val color = Color.HSVToColor(floatArrayOf(hue, saturation / 100f, lightness / 100f))
+            text = String.format("#%06X", 0xFFFFFF and color)
+            setTextColor(getColor(R.color.text_hint))
+            textSize = 12f
+            gravity = Gravity.CENTER
+            setPadding(0, (8 * density).toInt(), 0, 0)
+        }
+        container.addView(hexText)
+
+        MaterialAlertDialogBuilder(this)
+            .setTitle("自定义颜色")
+            .setView(container)
+            .setPositiveButton("确定") { _, _ ->
+                val color = Color.HSVToColor(floatArrayOf(hue, saturation / 100f, lightness / 100f))
+                onColorSelected(color)
+            }
             .setNegativeButton("取消", null)
             .show()
     }
@@ -238,9 +398,14 @@ class CategoryActivity : AppCompatActivity() {
         (colorPreview.background as? GradientDrawable)?.setColor(editColor)
 
         changeColorBtn.setOnClickListener {
-            showColorPickerDialog { color ->
-                editColor = color
-                (colorPreview.background as? GradientDrawable)?.setColor(color)
+            try {
+                showColorPickerDialog(editColor) { color ->
+                    editColor = color
+                    (colorPreview.background as? GradientDrawable)?.setColor(color)
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("CategoryActivity", "Error showing color picker", e)
+                Toast.makeText(this, "颜色选择器打开失败: ${e.message}", Toast.LENGTH_SHORT).show()
             }
         }
 

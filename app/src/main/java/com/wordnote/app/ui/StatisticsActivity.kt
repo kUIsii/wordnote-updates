@@ -27,7 +27,6 @@ class StatisticsActivity : AppCompatActivity() {
     private lateinit var streakContainer: LinearLayout
     private lateinit var trendStatsRow: LinearLayout
     private lateinit var trendChartContainer: LinearLayout
-    private lateinit var reviewScheduleContainer: LinearLayout
     private lateinit var pieChartView: PieChartView
     private lateinit var quizStatsContainer: LinearLayout
     private lateinit var forgottenWordsContainer: LinearLayout
@@ -54,7 +53,6 @@ class StatisticsActivity : AppCompatActivity() {
         streakContainer = findViewById(R.id.streakContainer)
         trendStatsRow = findViewById(R.id.trendStatsRow)
         trendChartContainer = findViewById(R.id.trendChartContainer)
-        reviewScheduleContainer = findViewById(R.id.reviewScheduleContainer)
         pieChartView = findViewById(R.id.pieChartView)
         quizStatsContainer = findViewById(R.id.quizStatsContainer)
         forgottenWordsContainer = findViewById(R.id.forgottenWordsContainer)
@@ -66,13 +64,13 @@ class StatisticsActivity : AppCompatActivity() {
             updateStats()
             updateStreak()
             updateLearningTrend()
-            updateReviewSchedule()
             updateForgottenWords()
         }
 
         viewModel.allCategories.observe(this) { categories ->
             categoriesList = categories
             updateCategoryDistribution()
+            updateLearningTrend()
         }
 
         viewModel.allQuizHistory.observe(this) { history ->
@@ -491,187 +489,6 @@ class StatisticsActivity : AppCompatActivity() {
     private data class DayData(val label: String, val dayKey: Long, val categoryCounts: Map<Long, Int>)
 
 
-
-    private fun updateReviewSchedule() {
-        reviewScheduleContainer.removeAllViews()
-
-        val now = System.currentTimeMillis()
-        val wordsToReview = allWords.filter { it.nextReviewAt > 0 && it.nextReviewAt <= now }
-        val neverReviewed = allWords.filter { it.nextReviewAt == 0L && it.forgetCount == 0 }
-        val wellKnown = allWords.filter { it.forgetCount == 0 && it.nextReviewAt > 0 }
-
-        val density = resources.displayMetrics.density
-
-        if (allWords.isEmpty()) {
-            val emptyText = TextView(this).apply {
-                text = "暂无数据"
-                setTextColor(resources.getColor(R.color.text_hint, null))
-                textSize = 14f
-                gravity = Gravity.CENTER
-                setPadding(0, dpToPx(12), 0, dpToPx(12))
-            }
-            reviewScheduleContainer.addView(emptyText)
-            return
-        }
-
-        // Progress bar showing review status
-        val total = allWords.size.toFloat()
-
-        val segments = listOf(
-            Triple("待复习", wordsToReview.size, getColor(R.color.cat_hard)),
-            Triple("已掌握", wellKnown.size, getColor(R.color.primary)),
-            Triple("未复习", neverReviewed.size, resources.getColor(R.color.divider, null))
-        )
-
-        // Stacked progress bar
-        val barBg = GradientDrawable().apply {
-            setColor(resources.getColor(R.color.divider, null))
-            cornerRadius = 6f * density
-        }
-        val barContainer = FrameLayout(this).apply {
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                (14 * density).toInt()
-            )
-            background = barBg
-        }
-
-        var offsetX = 0
-        segments.filter { it.second > 0 }.forEach { (label, count, color) ->
-            val segmentWidth = ((count / total) * 100).toInt()
-            if (segmentWidth > 0) {
-                val segment = View(this).apply {
-                    layoutParams = FrameLayout.LayoutParams(
-                        0,
-                        FrameLayout.LayoutParams.MATCH_PARENT
-                    ).apply {
-                        width = (segmentWidth * density).toInt()
-                        marginStart = offsetX
-                    }
-                    background = GradientDrawable().apply {
-                        setColor(color)
-                        cornerRadius = 6f * density
-                    }
-                }
-                barContainer.addView(segment)
-                offsetX += (segmentWidth * density).toInt()
-            }
-        }
-
-        reviewScheduleContainer.addView(barContainer)
-
-        // Legend
-        val legendRow = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            setPadding(0, dpToPx(12), 0, dpToPx(4))
-        }
-
-        segments.forEach { (label, count, color) ->
-            val legendItem = LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER_VERTICAL
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT
-                ).apply {
-                    marginEnd = dpToPx(16)
-                }
-            }
-
-            val dot = View(this).apply {
-                val size = (8 * density).toInt()
-                layoutParams = LinearLayout.LayoutParams(size, size)
-                background = GradientDrawable().apply {
-                    shape = GradientDrawable.OVAL
-                    setColor(color)
-                }
-            }
-            legendItem.addView(dot)
-
-            val text = TextView(this).apply {
-                text = "$label $count"
-                setTextColor(resources.getColor(R.color.text_secondary, null))
-                textSize = 12f
-                setPadding(dpToPx(6), 0, 0, 0)
-            }
-            legendItem.addView(text)
-
-            legendRow.addView(legendItem)
-        }
-
-        reviewScheduleContainer.addView(legendRow)
-
-        // Upcoming reviews
-        if (wordsToReview.isNotEmpty()) {
-            val upcomingTitle = TextView(this).apply {
-                text = "需要复习的单词"
-                setTextColor(resources.getColor(R.color.text_primary, null))
-                textSize = 13f
-                paint.isFakeBoldText = true
-                setPadding(0, dpToPx(8), 0, dpToPx(4))
-            }
-            reviewScheduleContainer.addView(upcomingTitle)
-
-            wordsToReview.sortedBy { it.nextReviewAt }.take(10).forEachIndexed { index, word ->
-                val row = LinearLayout(this).apply {
-                    orientation = LinearLayout.HORIZONTAL
-                    gravity = Gravity.CENTER_VERTICAL
-                    setPadding(0, dpToPx(6), 0, dpToPx(6))
-                }
-
-                val wordText = TextView(this).apply {
-                    text = word.word
-                    setTextColor(resources.getColor(R.color.text_primary, null))
-                    textSize = 14f
-                    paint.isFakeBoldText = true
-                    layoutParams = LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.WRAP_CONTENT,
-                        LinearLayout.LayoutParams.WRAP_CONTENT
-                    )
-                }
-                row.addView(wordText)
-
-                val meaningText = TextView(this).apply {
-                    text = word.meaning
-                    setTextColor(resources.getColor(R.color.text_hint, null))
-                    textSize = 12f
-                    maxLines = 1
-                    layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
-                        marginStart = dpToPx(8)
-                    }
-                }
-                row.addView(meaningText)
-
-                val timeLeft = word.nextReviewAt - now
-                val timeText = when {
-                    timeLeft < 3600000 -> "${timeLeft / 60000}分钟后"
-                    timeLeft < 86400000 -> "${timeLeft / 3600000}小时后"
-                    else -> "${timeLeft / 86400000}天后"
-                }
-                val badge = TextView(this).apply {
-                    text = timeText
-                    setTextColor(resources.getColor(R.color.text_hint, null))
-                    textSize = 11f
-                    setPadding(dpToPx(8), dpToPx(2), dpToPx(8), dpToPx(2))
-                    background = GradientDrawable().apply {
-                        setColor(resources.getColor(R.color.divider, null))
-                        cornerRadius = 10f * density
-                    }
-                }
-                row.addView(badge)
-
-                reviewScheduleContainer.addView(row)
-
-                if (index < minOf(wordsToReview.size, 10) - 1) {
-                    val divider = View(this).apply {
-                        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 1)
-                        setBackgroundColor(resources.getColor(R.color.divider, null))
-                    }
-                    reviewScheduleContainer.addView(divider)
-                }
-            }
-        }
-    }
 
     private fun updateCategoryDistribution() {
         if (allWords.isEmpty() || categoriesList.isEmpty()) {

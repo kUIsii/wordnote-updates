@@ -33,15 +33,19 @@
 
         <activity
             android:name=".ui.CategoryActivity"
-            android:parentActivityName=".ui.MainActivity" />
+            android:parentActivityName=".ui.MoreActivity" />
 
         <activity
             android:name=".ui.SettingsActivity"
             android:parentActivityName=".ui.MainActivity" />
 
         <activity
+            android:name=".ui.MoreActivity"
+            android:parentActivityName=".ui.MainActivity" />
+
+        <activity
             android:name=".ui.CalendarViewActivity"
-            android:parentActivityName=".ui.SettingsActivity" />
+            android:parentActivityName=".ui.MoreActivity" />
 
         <activity
             android:name=".ui.DictionaryActivity"
@@ -57,11 +61,11 @@
 
         <activity
             android:name=".ui.StatisticsActivity"
-            android:parentActivityName=".ui.SettingsActivity" />
+            android:parentActivityName=".ui.MoreActivity" />
 
         <activity
             android:name=".ui.QuizSetupActivity"
-            android:parentActivityName=".ui.SettingsActivity" />
+            android:parentActivityName=".ui.MoreActivity" />
 
         <activity
             android:name=".ui.QuizActivity"
@@ -74,6 +78,18 @@
         <activity
             android:name=".ui.QuizHistoryActivity"
             android:parentActivityName=".ui.QuizSetupActivity" />
+
+        <activity
+            android:name=".ui.SentenceListActivity"
+            android:parentActivityName=".ui.MoreActivity" />
+
+        <activity
+            android:name=".ui.SentenceEditActivity"
+            android:parentActivityName=".ui.SentenceListActivity" />
+
+        <activity
+            android:name=".ui.SentenceDetailActivity"
+            android:parentActivityName=".ui.SentenceListActivity" />
 
         <provider
             android:name="androidx.core.content.FileProvider"

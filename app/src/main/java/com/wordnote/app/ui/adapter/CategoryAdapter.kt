@@ -1,6 +1,7 @@
 package com.wordnote.app.ui.adapter
 
 import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -46,13 +47,18 @@ class CategoryAdapter(
             val count = wordCounts[category.id] ?: 0
             wordCountTextView.text = "${count}个单词"
 
-            // Set indicator color from category.color
+            // Set indicator color as rounded rectangle
             val color = try {
                 Color.parseColor(category.color)
             } catch (e: Exception) {
                 Color.parseColor("#8E24AA")
             }
-            categoryIndicator.setBackgroundColor(color)
+            val density = itemView.resources.displayMetrics.density
+            categoryIndicator.background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = 12f * density
+                setColor(color)
+            }
 
             // Hide delete button for default categories
             if (category.isDefault) {

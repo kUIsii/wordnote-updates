@@ -137,27 +137,12 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun setupBackupRestore() {
-        findViewById<LinearLayout>(R.id.calendarButton).setOnClickListener {
-            startActivity(Intent(this, CalendarViewActivity::class.java))
-            compatOverridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left)
-        }
-
         findViewById<LinearLayout>(R.id.backupButton).setOnClickListener {
             showBackupManager()
         }
 
         findViewById<LinearLayout>(R.id.recycleBinButton).setOnClickListener {
             startActivity(Intent(this, RecycleBinActivity::class.java))
-            compatOverridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left)
-        }
-
-        findViewById<LinearLayout>(R.id.statisticsButton).setOnClickListener {
-            startActivity(Intent(this, StatisticsActivity::class.java))
-            compatOverridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left)
-        }
-
-        findViewById<LinearLayout>(R.id.quizButton).setOnClickListener {
-            startActivity(Intent(this, QuizSetupActivity::class.java))
             compatOverridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left)
         }
 

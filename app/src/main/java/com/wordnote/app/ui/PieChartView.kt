@@ -25,7 +25,11 @@ class PieChartView @JvmOverloads constructor(
         isFakeBoldText = true
     }
     private val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        textSize = 12f * resources.displayMetrics.density
+    }
+    private val percentPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         textSize = 11f * resources.displayMetrics.density
+        textAlign = Paint.Align.RIGHT
     }
 
     private var chartSize = 0f
@@ -35,17 +39,21 @@ class PieChartView @JvmOverloads constructor(
 
     fun setData(data: List<Slice>) {
         slices = data
+        requestLayout()
         invalidate()
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val w = MeasureSpec.getSize(widthMeasureSpec)
-        val desiredHeight = (180 * resources.displayMetrics.density).toInt()
+        val density = resources.displayMetrics.density
+        val chartHeight = (140 * density).toInt()
+        val legendHeight = slices.size * (20 * density).toInt()
+        val desiredHeight = chartHeight + legendHeight + (16 * density).toInt()
         val h = resolveSize(desiredHeight, heightMeasureSpec)
-        chartSize = minOf(w, h).toFloat()
+        chartSize = minOf(w, chartHeight).toFloat()
         centerX = w / 2f
-        centerY = h / 2f
-        radius = chartSize * 0.32f
+        centerY = chartHeight / 2f
+        radius = chartSize * 0.42f
         setMeasuredDimension(w, h)
     }
 
@@ -76,34 +84,34 @@ class PieChartView @JvmOverloads constructor(
 
         // Draw total in center
         textPaint.textSize = 22f * density
+        textPaint.color = Color.WHITE
         canvas.drawText("${total.toInt()}", centerX, centerY - 2 * density, textPaint)
         textPaint.textSize = 10f * density
         textPaint.color = resources.getColor(com.wordnote.app.R.color.text_hint, null)
         canvas.drawText("个单词", centerX, centerY + 14 * density, textPaint)
         textPaint.color = Color.WHITE
 
-        // Draw legend below chart
-        val legendY = centerY + radius + 20 * density
-        val legendItemWidth = 90 * density
-        val cols = minOf(slices.size, 3)
-        val rows = (slices.size + cols - 1) / cols
-        val totalLegendWidth = cols * legendItemWidth
-        val legendStartX = centerX - totalLegendWidth / 2
+        // Draw legend as vertical list below chart
+        val legendStartY = centerY + radius + 24 * density
+        val legendLeft = 24 * density
+        val rowHeight = 22 * density
 
         slices.forEachIndexed { index, slice ->
-            val col = index % cols
-            val row = index / cols
-            val x = legendStartX + col * legendItemWidth
-            val y = legendY + row * 18 * density
+            val y = legendStartY + index * rowHeight
 
             // Color dot
             paint.color = slice.color
-            canvas.drawCircle(x + 6 * density, y, 4 * density, paint)
+            canvas.drawCircle(legendLeft + 5 * density, y, 5 * density, paint)
 
-            // Label + count
+            // Label
             labelPaint.color = resources.getColor(com.wordnote.app.R.color.text_secondary, null)
-            val label = if (slice.label.length > 5) slice.label.substring(0, 5) + ".." else slice.label
-            canvas.drawText("$label ${slice.value}", x + 14 * density, y + 4 * density, labelPaint)
+            canvas.drawText(slice.label, legendLeft + 16 * density, y + 4 * density, labelPaint)
+
+            // Count + percentage
+            val percentage = (slice.value / total * 100).toInt()
+            percentPaint.color = resources.getColor(com.wordnote.app.R.color.text_hint, null)
+            val rightX = width - 24 * density
+            canvas.drawText("${slice.value}  (${percentage}%)", rightX, y + 4 * density, percentPaint)
         }
     }
 }

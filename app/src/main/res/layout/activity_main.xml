@@ -95,18 +95,18 @@
             android:gravity="center_horizontal"
             android:layout_marginEnd="8dp">
             <ImageView
-                android:id="@+id/manageCategoriesButton"
+                android:id="@+id/moreButton"
                 android:layout_width="36dp"
                 android:layout_height="36dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:padding="6dp"
-                android:src="@drawable/ic_category"
-                android:contentDescription="管理分类"
+                android:src="@drawable/ic_more"
+                android:contentDescription="更多"
                 android:alpha="0.6" />
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="分类"
+                android:text="更多"
                 android:textColor="@color/text_hint"
                 android:textSize="9sp" />
         </LinearLayout>
@@ -141,12 +141,14 @@
         android:layout_height="wrap_content"
         android:paddingHorizontal="16dp"
         android:paddingTop="12dp"
-        android:paddingBottom="8dp">
+        android:paddingBottom="8dp"
+        android:gravity="center_vertical">
 
         <EditText
             android:id="@+id/searchEditText"
-            android:layout_width="match_parent"
+            android:layout_width="0dp"
             android:layout_height="40dp"
+            android:layout_weight="1"
             android:hint="搜索单词、释义..."
             android:inputType="textNoSuggestions"
             android:maxLines="1"
@@ -158,6 +160,17 @@
             android:textColorHint="@color/text_secondary"
             android:textSize="14sp"
             android:background="@drawable/search_box_background" />
+
+        <ImageView
+            android:id="@+id/globalSearchToggle"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_marginStart="6dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:padding="6dp"
+            android:src="@drawable/ic_search"
+            android:alpha="0.4"
+            android:contentDescription="全局搜索" />
 
     </LinearLayout>
 
@@ -294,7 +307,7 @@
         android:orientation="horizontal"
         android:background="@color/surface"
         android:paddingHorizontal="14dp"
-        android:paddingVertical="10dp"
+        android:paddingVertical="6dp"
         android:gravity="center_vertical"
         android:elevation="8dp">
 
@@ -303,11 +316,11 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:minHeight="46dp"
-            app:boxCornerRadiusTopStart="23dp"
-            app:boxCornerRadiusTopEnd="23dp"
-            app:boxCornerRadiusBottomStart="23dp"
-            app:boxCornerRadiusBottomEnd="23dp"
+            android:minHeight="40dp"
+            app:boxCornerRadiusTopStart="20dp"
+            app:boxCornerRadiusTopEnd="20dp"
+            app:boxCornerRadiusBottomStart="20dp"
+            app:boxCornerRadiusBottomEnd="20dp"
             app:boxBackgroundColor="@color/surface_input"
             app:boxStrokeColor="@android:color/transparent"
             app:hintEnabled="false"
@@ -333,10 +346,10 @@
             android:id="@+id/addButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="10dp"
+            android:layout_marginStart="8dp"
             android:src="@android:drawable/ic_input_add"
             android:contentDescription="添加"
-            app:fabSize="normal"
+            app:fabSize="mini"
             app:backgroundTint="@color/primary"
             app:tint="@color/text_on_primary"
             app:elevation="4dp"

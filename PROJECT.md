@@ -51,6 +51,12 @@ Android 英语单词记忆工具，支持分类管理、一词多义标注、分
 | 测验记录 | 独立测验历史页面，显示统计摘要和完整历史，支持查看详情和删除 |
 | 批量追加 | 在batch组末尾点击"+"追加新单词到同一分组 |
 | 跨分类重复检测 | 详情页显示该单词在其他分类中的出现，支持快速跳转；插入时提示重复 |
+| 句子记录 | 输入英文句子，手动标注不认识的单词/短语并提供翻译，独立页面管理，支持添加/编辑/删除 |
+| 句子详情页 | 独立句子详情页面，展示原文、翻译、生词分析 |
+| 导航重构 | 新增「更多」页面整合日历、统计、测验、句子、分类入口；设置页精简为深色模式/备份/回收站/版本 |
+| 句子搜索 | 句子列表支持按原文和翻译内容搜索 |
+| 自定义分类颜色 | 颜色选择器支持12预设色+自定义HSL调色 |
+| 测验双列结果 | 测验结果正确/不熟悉单词分两列显示，柔和配色 |
 
 ### 开发中 / 待做
 
@@ -76,16 +82,16 @@ app/src/main/java/com/wordnote/app/
 │   ├── WordTag.kt                  # 多对多关联
 │   ├── WordMeaning.kt              # 释义实体 (一词多义)
 │   ├── WordGroup.kt                # 词语分组
-│   ├── DiaryEntry.kt               # 日记条目实体
-│   ├── DiaryTodo.kt                # 日记待办实体
-│   ├── DiaryWordRef.kt             # 日记-单词关联实体
+│   ├── Sentence.kt                 # 句子实体
+│   ├── SentenceWord.kt             # 句子生词实体
+│   ├── SentenceWithWords.kt        # 句子+生词关联
 │   ├── WordDao.kt                  # 单词 DAO
 │   ├── CategoryDao.kt              # 分类 DAO
 │   ├── TagDao.kt                   # 标签 DAO
 │   ├── WordMeaningDao.kt           # 释义 DAO
 │   ├── WordGroupDao.kt             # 分组 DAO
-│   ├── DiaryDao.kt                 # 日记 DAO
-│   ├── WordDatabase.kt             # Room 数据库 (v7)
+│   ├── SentenceDao.kt              # 句子 DAO
+│   ├── WordDatabase.kt             # Room 数据库 (v13)
 │   ├── WordRepository.kt           # 数据仓库层
 │   └── DictionaryDatabase.kt       # 离线词典数据库 (ECDict)
 ├── ui/
@@ -93,18 +99,24 @@ app/src/main/java/com/wordnote/app/
 │   ├── WordDetailActivity.kt       # 单词详情：复习、释义标注
 │   ├── AddWordActivity.kt          # 添加/编辑单词
 │   ├── CategoryActivity.kt         # 分类管理 + 颜色选择器
-│   ├── SettingsActivity.kt         # 设置：备份/恢复/深色模式/日历查看
-│   ├── CalendarViewActivity.kt     # 日历查看：按日期查看单词
+│   ├── SettingsActivity.kt         # 设置：备份/恢复/深色模式/版本信息
+│   ├── MoreActivity.kt             # 更多功能入口：日历/统计/测验/句子/分类
+│   ├── CalendarViewActivity.kt     # 日历查看：按日期查看单词和句子
 │   ├── DictionaryActivity.kt       # 离线词典搜索页面
 │   ├── DiaryActivity.kt            # 日记列表页面
 │   ├── DiaryDetailActivity.kt      # 日记详情/编辑页面
 │   ├── DiaryViewModel.kt           # 日记 ViewModel
+│   ├── SentenceListActivity.kt     # 句子列表页面
+│   ├── SentenceDetailActivity.kt   # 句子详情页面
+│   ├── SentenceEditActivity.kt     # 句子编辑页面
+│   ├── SentenceViewModel.kt        # 句子 ViewModel
 │   ├── RecycleBinActivity.kt       # 回收站页面
 │   ├── StatisticsActivity.kt       # 学习统计页面
 │   ├── HeatmapView.kt              # 热力图自定义View
 │   └── adapter/
 │       ├── WordAdapter.kt          # 单词列表适配器 (紧凑单行布局，支持批量选择)
 │       ├── CategoryAdapter.kt      # 分类列表适配器
+│       ├── SentenceAdapter.kt      # 句子列表适配器
 │       ├── DiaryAdapter.kt         # 日记列表适配器
 │       └── DiaryTodoAdapter.kt     # 日记待办适配器
 └── util/
@@ -244,6 +256,57 @@ tags / word_tag (标签系统，目前未在 UI 使用)
 ---
 
 ## 开发日志
+
+### 2026-05-26 (v2.17.1)
+
+- Bug修复
+  - 修复日历查看页崩溃：ScrollView 有两个子节点导致崩溃，添加父 LinearLayout 包裹
+  - 修复测验历史记录旧数据不显示正确单词：旧记录 correctWordIds 为空时显示提示文字
+  - 修复分类颜色选择器崩溃：setBackgroundResource 传入 attr ID 改为 resolveAttribute 方式
+  - 首页日期分割线优化：非折叠模式下日期显示为蓝色横线居中样式
+
+### 2026-05-25 (v2.17.0)
+
+- UI优化
+  - 饼图图例排版优化：改为垂直列表，分类名完整显示
+  - 分类管理美化：色块改为36dp圆角矩形，新增自定义HSL颜色选择器
+  - 测验界面美化：柔和配色（橙色替代刺眼红色），正确/不熟悉单词分两列显示
+  - 测验设置页抽取方式改为卡片样式（Radio效果）
+  - 句子日期移到卡片顶部右侧
+  - 首页图标重设计：词典、分组、更多图标风格统一更简洁
+- 功能增强
+  - 句子列表新增搜索功能
+  - 分类颜色选择器支持自定义调色（色相/饱和度/明度三滑块）
+- Bug修复
+  - 修复日历点击崩溃问题（SentenceViewModel异常处理）
+  - 修复学习趋势点击显示已删除分类的「未分类」问题
+  - 移除复习进度卡片（统计数据模块精简）
+
+### 2026-05-25 (v2.16.0)
+
+- 导航重构
+  - 新增「更多」页面 (MoreActivity)，整合日历查看、学习统计、单词测验、句子记录、分类管理5个入口
+  - 设置页精简：仅保留深色模式、备份管理、回收站、版本信息
+  - 首页header从5个按钮减为4个（词典、分组、更多、设置）
+- 句子功能增强
+  - 新增句子详情页 (SentenceDetailActivity)，展示原文、翻译、生词分析
+  - 句子列表重新设计：更大卡片、更好排版、显示日期
+  - 日历查看页同时显示当天的句子记录
+
+### 2026-05-25 (v2.14.0)
+
+- 搜索增强
+  - 搜索匹配单个词时自动显示完整批次，方便整体复习
+  - 新增全局搜索切换按钮，支持跨分类搜索并显示分类名
+  - 搜索结果在全局模式下显示所属分类标签
+- 批次追加优化
+  - 「意思相近的单词」分类下单个词也可通过+号追加新词
+  - 追加时自动创建批次，将原词和新词归入同一批次
+- 批次遗忘标记
+  - 批次卡片显示累计忘记次数徽章（红色数字）
+- 跨分类显示修复
+  - 修复详情页「该单词还出现在以下分类」显示空白的bug
+  - 修复观察者累积、协程作用域、onResume重复加载等问题
 
 ### 2026-05-25 (v2.13.0)
 
