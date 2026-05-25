@@ -22,7 +22,7 @@ class StatisticsActivity : AppCompatActivity() {
 
     private lateinit var viewModel: WordViewModel
     private lateinit var streakContainer: LinearLayout
-    private lateinit var weeklyActivityContainer: LinearLayout
+    private lateinit var heatmapView: HeatmapView
     private lateinit var reviewScheduleContainer: LinearLayout
     private lateinit var categoryContainer: LinearLayout
     private lateinit var quizStatsContainer: LinearLayout
@@ -48,7 +48,7 @@ class StatisticsActivity : AppCompatActivity() {
         }
 
         streakContainer = findViewById(R.id.streakContainer)
-        weeklyActivityContainer = findViewById(R.id.weeklyActivityContainer)
+        heatmapView = findViewById(R.id.heatmapView)
         reviewScheduleContainer = findViewById(R.id.reviewScheduleContainer)
         categoryContainer = findViewById(R.id.categoryDistributionContainer)
         quizStatsContainer = findViewById(R.id.quizStatsContainer)
@@ -60,7 +60,7 @@ class StatisticsActivity : AppCompatActivity() {
             allWords = words
             updateStats()
             updateStreak()
-            updateWeeklyActivity()
+            updateHeatmap()
             updateReviewSchedule()
             updateForgottenWords()
         }
@@ -199,97 +199,13 @@ class StatisticsActivity : AppCompatActivity() {
         streakContainer.addView(statsRow)
     }
 
-    private fun updateWeeklyActivity() {
-        weeklyActivityContainer.removeAllViews()
-
-        val density = resources.displayMetrics.density
-        val cal = Calendar.getInstance()
-        val today = cal.timeInMillis
-
-        // Get last 7 days
-        data class DayData(val label: String, val count: Int)
-
-        val days = mutableListOf<DayData>()
-        val dayNames = arrayOf("日", "一", "二", "三", "四", "五", "六")
-
-        for (i in 6 downTo 0) {
-            cal.timeInMillis = today
-            cal.add(Calendar.DAY_OF_YEAR, -i)
-            val dayKey = getDayKey(cal.timeInMillis)
-            val count = allWords.count { getDayKey(it.createdAt) == dayKey }
-            val dayOfWeek = cal.get(Calendar.DAY_OF_WEEK)
-            val label = if (i == 0) "今" else dayNames[dayOfWeek - 1]
-            days.add(DayData(label, count))
+    private fun updateHeatmap() {
+        val wordCounts = mutableMapOf<Long, Int>()
+        allWords.forEach { word ->
+            val dayKey = getDayKey(word.createdAt)
+            wordCounts[dayKey] = (wordCounts[dayKey] ?: 0) + 1
         }
-
-        val maxCount = days.maxOfOrNull { it.count }?.coerceAtLeast(1) ?: 1
-
-        // Bar chart
-        val chartRow = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.BOTTOM
-            setPadding(0, dpToPx(8), 0, dpToPx(4))
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                (100 * density).toInt()
-            )
-        }
-
-        days.forEach { day ->
-            val barCol = LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL
-                gravity = Gravity.CENTER_HORIZONTAL
-                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f)
-            }
-
-            // Count text above bar
-            val countText = TextView(this).apply {
-                text = if (day.count > 0) "${day.count}" else ""
-                setTextColor(resources.getColor(R.color.text_hint, null))
-                textSize = 11f
-                gravity = Gravity.CENTER
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT
-                )
-            }
-            barCol.addView(countText)
-
-            // Bar
-            val barHeight = if (day.count > 0) {
-                ((day.count.toFloat() / maxCount) * 60 * density).toInt().coerceAtLeast((4 * density).toInt())
-            } else {
-                (4 * density).toInt()
-            }
-
-            val bar = View(this).apply {
-                layoutParams = LinearLayout.LayoutParams(
-                    (16 * density).toInt(),
-                    barHeight
-                ).apply {
-                    topMargin = dpToPx(4)
-                }
-                background = GradientDrawable().apply {
-                    setColor(if (day.count > 0) getColor(R.color.primary) else resources.getColor(R.color.divider, null))
-                    cornerRadius = 4f * density
-                }
-            }
-            barCol.addView(bar)
-
-            // Day label
-            val dayLabel = TextView(this).apply {
-                text = day.label
-                setTextColor(resources.getColor(R.color.text_hint, null))
-                textSize = 11f
-                gravity = Gravity.CENTER
-                setPadding(0, dpToPx(6), 0, 0)
-            }
-            barCol.addView(dayLabel)
-
-            chartRow.addView(barCol)
-        }
-
-        weeklyActivityContainer.addView(chartRow)
+        heatmapView.setData(wordCounts, weeks = 20)
     }
 
     private fun updateReviewSchedule() {

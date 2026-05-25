@@ -30,6 +30,14 @@ class ChangelogActivity : AppCompatActivity() {
 
         val changelog = listOf(
             VersionLog(
+                "v2.12.0", "2026-05-25",
+                listOf(
+                    "学习统计热力图回归：替换近7天学习量柱状图为GitHub风格热力图，范围缩小至20周",
+                    "单词测验闪退修复：修复displayHistory中setBackgroundResource使用attr导致的资源找不到崩溃",
+                    "测验选词逻辑修复：修复优先抽取忘记次数多的词功能失效的bug"
+                )
+            ),
+            VersionLog(
                 "v2.11.0", "2026-05-24",
                 listOf(
                     "学习统计重做：移除热力图，新增学习连续天数、近7天学习量柱状图、复习进度",

@@ -208,7 +208,7 @@
 
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Weekly Activity Card -->
+            <!-- Learning Heatmap Card -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -226,17 +226,16 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="近7天学习量"
+                        android:text="学习热力图"
                         android:textColor="@color/text_primary"
                         android:textSize="15sp"
                         android:textStyle="bold"
                         android:layout_marginBottom="12dp" />
 
-                    <LinearLayout
-                        android:id="@+id/weeklyActivityContainer"
+                    <com.wordnote.app.ui.HeatmapView
+                        android:id="@+id/heatmapView"
                         android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical" />
+                        android:layout_height="wrap_content" />
 
                 </LinearLayout>
 

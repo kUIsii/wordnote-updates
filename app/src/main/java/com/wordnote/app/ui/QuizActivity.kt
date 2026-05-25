@@ -5,6 +5,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import android.view.View
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -109,6 +110,7 @@ class QuizActivity : AppCompatActivity() {
             try {
                 val allWords = withContext(Dispatchers.IO) {
                     val words = viewModel.getAllActiveWordsSync()
+                    Log.d("QuizActivity", "Loaded ${words.size} active words, categoryIds=$categoryIds")
                     if (categoryIds.isNullOrEmpty()) {
                         words
                     } else {
@@ -117,6 +119,8 @@ class QuizActivity : AppCompatActivity() {
                         }
                     }
                 }
+
+                Log.d("QuizActivity", "Filtered to ${allWords.size} words")
 
                 if (allWords.isEmpty()) {
                     Toast.makeText(this@QuizActivity, "没有可测验的单词", Toast.LENGTH_SHORT).show()
@@ -129,6 +133,8 @@ class QuizActivity : AppCompatActivity() {
                 correctCount = 0
                 forgottenWords.clear()
 
+                Log.d("QuizActivity", "Selected ${quizWords.size} words for quiz")
+
                 if (quizWords.isEmpty()) {
                     Toast.makeText(this@QuizActivity, "没有可测验的单词", Toast.LENGTH_SHORT).show()
                     finish()
@@ -137,7 +143,7 @@ class QuizActivity : AppCompatActivity() {
 
                 showWord()
             } catch (e: Exception) {
-                e.printStackTrace()
+                Log.e("QuizActivity", "Failed to load words", e)
                 Toast.makeText(this@QuizActivity, "加载单词失败: ${e.message}", Toast.LENGTH_SHORT).show()
                 finish()
             }
@@ -149,7 +155,7 @@ class QuizActivity : AppCompatActivity() {
 
         return if (useForgetCount) {
             val sorted = words.sortedByDescending { it.forgetCount }
-            val topCount = (count * 0.7).toInt().coerceAtLeast(count)
+            val topCount = (count * 0.7).toInt().coerceAtMost(count)
             val topWords = sorted.take(topCount).shuffled()
             val remaining = sorted.drop(topCount).shuffled().take(count - topCount)
             (topWords + remaining).shuffled()
@@ -238,6 +244,8 @@ class QuizActivity : AppCompatActivity() {
         val correctCountVal = correctCount
         val forgottenIds = forgottenWords.map { it.id }.toLongArray()
 
+        Log.d("QuizActivity", "Finishing quiz: total=$totalWords, correct=$correctCountVal, forgotten=${forgottenWords.size}")
+
         lifecycleScope.launch {
             try {
                 withContext(Dispatchers.IO) {
@@ -249,9 +257,10 @@ class QuizActivity : AppCompatActivity() {
                         forgottenWordTexts = forgottenWords.joinToString("||") { "${it.word}=${it.meaning}" }
                     )
                     viewModel.insertQuizHistorySync(history)
+                    Log.d("QuizActivity", "Quiz history saved successfully")
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
+                Log.e("QuizActivity", "Failed to save quiz history", e)
             }
 
             if (!isFinishing && !isDestroyed) {

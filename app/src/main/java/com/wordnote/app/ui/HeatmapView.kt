@@ -18,6 +18,7 @@ class HeatmapView @JvmOverloads constructor(
 
     private var data: Map<Long, Int> = emptyMap()
     private var maxCount = 0
+    private var numWeeks = 20
 
     private var cellSize = 16f * resources.displayMetrics.density
     private val cellGap = 4f * resources.displayMetrics.density
@@ -46,18 +47,18 @@ class HeatmapView @JvmOverloads constructor(
         onDayClickListener = listener
     }
 
-    fun setData(wordCounts: Map<Long, Int>) {
+    fun setData(wordCounts: Map<Long, Int>, weeks: Int = 20) {
         data = wordCounts
         maxCount = wordCounts.values.maxOrNull() ?: 0
+        numWeeks = weeks
+        requestLayout()
         invalidate()
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val parentWidth = MeasureSpec.getSize(widthMeasureSpec)
-        // Dynamically calculate cell size to fit 53 columns within parent width
-        // Minimum cell size is 12dp for better readability
-        cellSize = ((parentWidth - cellGap) / 53 - cellGap).coerceAtLeast(12f * resources.displayMetrics.density)
-        val width = ((cellSize + cellGap) * 53 + cellGap).toInt()
+        cellSize = ((parentWidth - cellGap) / numWeeks - cellGap).coerceAtLeast(10f * resources.displayMetrics.density)
+        val width = ((cellSize + cellGap) * numWeeks + cellGap).toInt()
         val height = ((cellSize + cellGap) * 7 + cellGap).toInt()
         setMeasuredDimension(width, height)
     }
@@ -68,8 +69,7 @@ class HeatmapView @JvmOverloads constructor(
         val calendar = Calendar.getInstance()
         val today = calendar.timeInMillis
 
-        // Go back ~52 weeks
-        calendar.add(Calendar.WEEK_OF_YEAR, -52)
+        calendar.add(Calendar.WEEK_OF_YEAR, -numWeeks)
         calendar.set(Calendar.DAY_OF_WEEK, calendar.firstDayOfWeek)
         calendar.set(Calendar.HOUR_OF_DAY, 0)
         calendar.set(Calendar.MINUTE, 0)
@@ -79,7 +79,7 @@ class HeatmapView @JvmOverloads constructor(
         startDate = calendar.timeInMillis
 
         var dayIndex = 0
-        val totalDays = 53 * 7
+        val totalDays = (numWeeks + 1) * 7
 
         for (day in 0 until totalDays) {
             val dayTime = startDate + day * 24L * 60 * 60 * 1000
@@ -116,7 +116,7 @@ class HeatmapView @JvmOverloads constructor(
             val row = (y / (cellSize + cellGap)).toInt()
 
             // Check if click is within valid range
-            if (col in 0 until 53 && row in 0 until 7) {
+            if (col in 0 until numWeeks && row in 0 until 7) {
                 val dayIndex = col * 7 + row
                 val dayTime = startDate + dayIndex * 24L * 60 * 60 * 1000
                 val today = Calendar.getInstance().timeInMillis

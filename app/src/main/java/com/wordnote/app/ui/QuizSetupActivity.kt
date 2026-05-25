@@ -253,7 +253,9 @@ class QuizSetupActivity : AppCompatActivity() {
                 setPadding(dpToPx(4), dpToPx(10), dpToPx(4), dpToPx(10))
                 isClickable = true
                 isFocusable = true
-                setBackgroundResource(android.R.attr.selectableItemBackground)
+                val tv = android.util.TypedValue()
+                context.theme.resolveAttribute(android.R.attr.selectableItemBackground, tv, true)
+                setBackgroundResource(tv.resourceId)
             }
 
             row.setOnClickListener { showQuizDetail(record) }
