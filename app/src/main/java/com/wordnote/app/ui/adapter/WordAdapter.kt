@@ -61,17 +61,17 @@ class WordAdapter(
 
     fun setCategories(categoryList: List<Category>) {
         categories = categoryList.associateBy { it.id }
-        rebuildAndSubmit()
+        notifyDataSetChanged()
     }
 
     fun setGroups(groupList: List<WordGroup>) {
         groups = groupList.associateBy { it.id }
-        rebuildAndSubmit()
+        notifyDataSetChanged()
     }
 
     fun setHighlightedMeanings(meanings: List<HighlightedMeaning>) {
         highlightedMeaningsMap = meanings.groupBy { it.wordId }.mapValues { it.value.map { m -> m.meaningText } }
-        rebuildAndSubmit()
+        notifyDataSetChanged()
     }
 
     private var currentCategoryName: String? = null
@@ -84,19 +84,19 @@ class WordAdapter(
 
     fun setGlobalSearchMode(enabled: Boolean) {
         isGlobalSearchMode = enabled
-        rebuildAndSubmit()
+        notifyDataSetChanged()
     }
 
     fun enterSelectionMode() {
         isSelectionMode = true
         selectedWordIds.clear()
-        rebuildAndSubmit()
+        notifyDataSetChanged()
     }
 
     fun exitSelectionMode() {
         isSelectionMode = false
         selectedWordIds.clear()
-        rebuildAndSubmit()
+        notifyDataSetChanged()
         onSelectionChanged(emptySet())
     }
 
@@ -105,7 +105,7 @@ class WordAdapter(
     fun deleteSelectedWords() {
         selectedWordIds.clear()
         isSelectionMode = false
-        rebuildAndSubmit()
+        notifyDataSetChanged()
     }
 
     private fun toggleSelection(wordId: Long) {
@@ -115,13 +115,7 @@ class WordAdapter(
             selectedWordIds.add(wordId)
         }
         onSelectionChanged(selectedWordIds)
-        rebuildAndSubmit()
-    }
-
-    private fun rebuildAndSubmit() {
-        if (allWords.isNotEmpty()) {
-            submitWordList(allWords)
-        }
+        notifyDataSetChanged()
     }
 
     fun setDateGroupingMode(enabled: Boolean) {
