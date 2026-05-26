@@ -1,7 +1,11 @@
 package com.wordnote.app.ui
 
 import android.content.Intent
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.os.Environment
+import android.provider.Settings
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -139,7 +143,11 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun setupBackupRestore() {
         binding.backupButton.setOnClickListener {
-            showBackupManager()
+            if (hasStoragePermission()) {
+                showBackupManager()
+            } else {
+                requestStoragePermission()
+            }
         }
 
         binding.recycleBinButton.setOnClickListener {
@@ -150,6 +158,42 @@ class SettingsActivity : AppCompatActivity() {
         binding.changelogButton.setOnClickListener {
             startActivity(Intent(this, ChangelogActivity::class.java))
             compatOverridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left)
+        }
+    }
+
+    // ==================== Storage Permission ====================
+
+    private fun hasStoragePermission(): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            Environment.isExternalStorageManager()
+        } else {
+            checkSelfPermission(android.Manifest.permission.READ_EXTERNAL_STORAGE) ==
+                android.content.pm.PackageManager.PERMISSION_GRANTED
+        }
+    }
+
+    private fun requestStoragePermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            MaterialAlertDialogBuilder(this, R.style.Theme_WordNoteApp_Dialog)
+                .setTitle("需要存储权限")
+                .setMessage("备份文件保存在 Downloads/WordNoteBackup/ 目录，请授予「所有文件访问权限」以读取备份。")
+                .setPositiveButton("去设置") { _, _ ->
+                    val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION).apply {
+                        data = Uri.parse("package:$packageName")
+                    }
+                    startActivity(intent)
+                }
+                .setNegativeButton("取消", null)
+                .show()
+        } else {
+            requestPermissions(arrayOf(android.Manifest.permission.READ_EXTERNAL_STORAGE), 1001)
+        }
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == 1001 && grantResults.isNotEmpty() && grantResults[0] == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            showBackupManager()
         }
     }
 

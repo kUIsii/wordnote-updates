@@ -21,8 +21,8 @@ android {
         applicationId "com.wordnote.app"
         minSdk 26
         targetSdk 36
-        versionCode 48
-        versionName "2.19.2"
+        versionCode 49
+        versionName "2.19.3"
 
     }
 

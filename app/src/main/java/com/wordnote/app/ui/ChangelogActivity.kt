@@ -30,6 +30,13 @@ class ChangelogActivity : AppCompatActivity() {
 
         val changelog = listOf(
             VersionLog(
+                "v2.19.3", "2026-05-26",
+                listOf(
+                    "备份文件修复：添加存储权限，解决备份列表为空的问题",
+                    "权限引导：首次点击备份管理时引导用户授权「所有文件访问权限」"
+                )
+            ),
+            VersionLog(
                 "v2.19.2", "2026-05-26",
                 listOf(
                     "更新检测修复：移除过期Token认证，解决旧版本无法检测更新的问题"
