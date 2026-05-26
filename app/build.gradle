@@ -22,7 +22,14 @@ android {
         minSdk 26
         targetSdk 36
         versionCode 45
-        versionName "2.18.0"
+        versionName "2.18.1"
+
+        def properties = new Properties()
+        def localPropertiesFile = rootProject.file("local.properties")
+        if (localPropertiesFile.exists()) {
+            properties.load(localPropertiesFile.newDataInputStream())
+        }
+        buildConfigField "String", "GITHUB_TOKEN", "\"${properties.getProperty('GITHUB_TOKEN', '')}\""
     }
 
     buildTypes {
@@ -47,6 +54,7 @@ android {
 
     buildFeatures {
         viewBinding true
+        buildConfig true
     }
 }
 

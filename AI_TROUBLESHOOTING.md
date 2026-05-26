@@ -63,8 +63,8 @@ C:\Users\陈仕杰\Desktop\文档收集器\手机备忘录\单词笔记.apk
 ### 方式一：使用 curl + GitHub API
 
 ```bash
-# 1. 创建 Release
-TOKEN="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"
+# 1. 创建 Release（Token 从 local.properties 读取，不硬编码）
+TOKEN=$(grep GITHUB_TOKEN local.properties | cut -d'=' -f2)
 echo '{"tag_name":"v2.4.2","name":"v2.4.2","body":"更新内容描述","draft":false,"prerelease":false}' > /tmp/release.json
 
 curl -s -X POST \

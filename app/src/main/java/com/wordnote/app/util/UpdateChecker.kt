@@ -10,6 +10,7 @@ import android.widget.Toast
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
+import com.wordnote.app.BuildConfig
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
@@ -18,7 +19,7 @@ object UpdateChecker {
 
     private const val GITHUB_OWNER = "kUIsii"
     private const val GITHUB_REPO = "wordnote-updates"
-    private const val GITHUB_TOKEN = "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"
+    private val GITHUB_TOKEN = BuildConfig.GITHUB_TOKEN
 
     data class UpdateInfo(
         val versionName: String,
