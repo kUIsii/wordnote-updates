@@ -12,6 +12,7 @@ import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.RecyclerView
 import com.wordnote.app.R
 import com.wordnote.app.data.WordMeaning
+import com.wordnote.app.databinding.ItemMeaningBinding
 
 class MeaningAdapter(
     private val onHighlightToggle: (WordMeaning) -> Unit,
@@ -30,8 +31,8 @@ class MeaningAdapter(
     fun getItems(): List<WordMeaning> = items.toList()
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
-        val view = LayoutInflater.from(parent.context).inflate(R.layout.item_meaning, parent, false)
-        return VH(view)
+        val binding = ItemMeaningBinding.inflate(LayoutInflater.from(parent.context), parent, false)
+        return VH(binding)
     }
 
     override fun onBindViewHolder(holder: VH, position: Int) {
@@ -50,12 +51,12 @@ class MeaningAdapter(
         onOrderChanged(items.toList())
     }
 
-    inner class VH(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        private val dragHandle: ImageView = itemView.findViewById(R.id.dragHandle)
-        private val seqText: TextView = itemView.findViewById(R.id.seqText)
-        private val meaningText: TextView = itemView.findViewById(R.id.meaningText)
-        private val highlightButton: TextView = itemView.findViewById(R.id.highlightButton)
-        private val noteButton: TextView = itemView.findViewById(R.id.noteButton)
+    inner class VH(private val binding: ItemMeaningBinding) : RecyclerView.ViewHolder(binding.root) {
+        private val dragHandle: ImageView = binding.dragHandle
+        private val seqText: TextView = binding.seqText
+        private val meaningText: TextView = binding.meaningText
+        private val highlightButton: TextView = binding.highlightButton
+        private val noteButton: TextView = binding.noteButton
 
         fun bind(meaning: WordMeaning, position: Int) {
             seqText.text = "${position + 1}."

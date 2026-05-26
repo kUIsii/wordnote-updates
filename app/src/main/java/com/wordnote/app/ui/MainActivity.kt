@@ -31,18 +31,20 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.wordnote.app.R
 import com.wordnote.app.data.Category
+import com.wordnote.app.databinding.ActivityMainBinding
 import com.wordnote.app.data.Word
 import com.wordnote.app.data.WordGroup
 import com.wordnote.app.ui.adapter.WordAdapter
 import com.wordnote.app.util.UpdateChecker
 import com.wordnote.app.util.compatOverridePendingTransition
-import kotlinx.coroutines.CoroutineScope
+import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class MainActivity : AppCompatActivity() {
 
+    private lateinit var binding: ActivityMainBinding
     private lateinit var viewModel: WordViewModel
     private lateinit var wordAdapter: WordAdapter
     private lateinit var wordRecyclerView: RecyclerView
@@ -83,7 +85,8 @@ class MainActivity : AppCompatActivity() {
             if (isDarkMode) AppCompatDelegate.MODE_NIGHT_YES else AppCompatDelegate.MODE_NIGHT_NO
         )
 
-        setContentView(R.layout.activity_main)
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
         viewModel = ViewModelProvider(this)[WordViewModel::class.java]
 
@@ -126,7 +129,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun checkForUpdate() {
-        CoroutineScope(Dispatchers.Main).launch {
+        lifecycleScope.launch {
             try {
                 val packageInfo = packageManager.getPackageInfo(packageName, 0)
                 val currentVersionName = packageInfo.versionName ?: "1.0"
@@ -150,7 +153,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun checkForUpdateOnStartup() {
-        CoroutineScope(Dispatchers.Main).launch {
+        lifecycleScope.launch {
             try {
                 val packageInfo = packageManager.getPackageInfo(packageName, 0)
                 val currentVersionName = packageInfo.versionName ?: "1.0"
@@ -198,7 +201,7 @@ class MainActivity : AppCompatActivity() {
             show()
         }
 
-        CoroutineScope(Dispatchers.Main).launch {
+        lifecycleScope.launch {
             try {
                 UpdateChecker.downloadAndInstall(this@MainActivity, updateInfo) { progress ->
                     progressDialog.progress = progress
@@ -216,19 +219,19 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun initViews() {
-        wordRecyclerView = findViewById(R.id.wordRecyclerView)
-        emptyView = findViewById(R.id.emptyView)
-        inputEditText = findViewById(R.id.inputEditText)
-        addButton = findViewById(R.id.addButton)
-        statsTextView = findViewById(R.id.statsTextView)
-        searchEditText = findViewById(R.id.searchEditText)
-        globalSearchToggle = findViewById(R.id.globalSearchToggle)
-        tabContainer = findViewById(R.id.tabContainer)
-        moreButton = findViewById(R.id.moreButton)
-        settingsButton = findViewById(R.id.settingsButton)
-        dateGroupingButton = findViewById(R.id.dateGroupingButton)
+        wordRecyclerView = binding.wordRecyclerView
+        emptyView = binding.emptyView
+        inputEditText = binding.inputEditText
+        addButton = binding.addButton
+        statsTextView = binding.statsTextView
+        searchEditText = binding.searchEditText
+        globalSearchToggle = binding.globalSearchToggle
+        tabContainer = binding.tabContainer
+        moreButton = binding.moreButton
+        settingsButton = binding.settingsButton
+        dateGroupingButton = binding.dateGroupingButton
 
-        findViewById<ImageView>(R.id.dictionaryButton).setOnClickListener {
+        binding.dictionaryButton.setOnClickListener {
             startActivity(Intent(this, DictionaryActivity::class.java))
             compatOverridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left)
         }
@@ -392,11 +395,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateSelectionUI(selectedIds: Set<Long>) {
-        val selectionBar = findViewById<LinearLayout>(R.id.selectionBar)
-        val selectionCountText = findViewById<TextView>(R.id.selectionCountText)
-        val deleteSelectedButton = findViewById<MaterialButton>(R.id.deleteSelectedButton)
-        val copySelectedButton = findViewById<MaterialButton>(R.id.copySelectedButton)
-        val cancelButton = findViewById<MaterialButton>(R.id.cancelSelectionButton)
+        val selectionBar = binding.selectionBar
+        val selectionCountText = binding.selectionCountText
+        val deleteSelectedButton = binding.deleteSelectedButton
+        val copySelectedButton = binding.copySelectedButton
+        val cancelButton = binding.cancelSelectionButton
 
         if (selectedIds.isEmpty()) {
             selectionBar.visibility = View.GONE
@@ -638,7 +641,7 @@ class MainActivity : AppCompatActivity() {
         val meaningTexts = meaning.split("，", ",").map { it.trim() }.filter { it.isNotBlank() }
 
         // Check for similar words in other categories
-        CoroutineScope(Dispatchers.Main).launch {
+        lifecycleScope.launch {
             try {
                 val similarWords = viewModel.findSimilarWordsExcluding(word, -1L)
                 if (similarWords.isNotEmpty()) {

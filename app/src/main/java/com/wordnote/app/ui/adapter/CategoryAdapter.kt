@@ -12,6 +12,7 @@ import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.wordnote.app.R
 import com.wordnote.app.data.Category
+import com.wordnote.app.databinding.ItemCategoryBinding
 
 class CategoryAdapter(
     private val onEditClick: (Category) -> Unit,
@@ -26,8 +27,8 @@ class CategoryAdapter(
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): CategoryViewHolder {
-        val view = LayoutInflater.from(parent.context).inflate(R.layout.item_category, parent, false)
-        return CategoryViewHolder(view)
+        val binding = ItemCategoryBinding.inflate(LayoutInflater.from(parent.context), parent, false)
+        return CategoryViewHolder(binding)
     }
 
     override fun onBindViewHolder(holder: CategoryViewHolder, position: Int) {
@@ -35,11 +36,11 @@ class CategoryAdapter(
         holder.bind(category)
     }
 
-    inner class CategoryViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        private val categoryNameTextView: TextView = itemView.findViewById(R.id.categoryNameTextView)
-        private val wordCountTextView: TextView = itemView.findViewById(R.id.wordCountTextView)
-        private val deleteButton: ImageView = itemView.findViewById(R.id.deleteButton)
-        private val categoryIndicator: View = itemView.findViewById(R.id.categoryIndicator)
+    inner class CategoryViewHolder(private val binding: ItemCategoryBinding) : RecyclerView.ViewHolder(binding.root) {
+        private val categoryNameTextView: TextView = binding.categoryNameTextView
+        private val wordCountTextView: TextView = binding.wordCountTextView
+        private val deleteButton: ImageView = binding.deleteButton
+        private val categoryIndicator: View = binding.categoryIndicator
 
         fun bind(category: Category) {
             categoryNameTextView.text = category.name

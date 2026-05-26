@@ -6,14 +6,14 @@ import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.view.Gravity
 import android.view.View
-import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
-import com.google.android.material.button.MaterialButton
 import com.wordnote.app.R
+import com.wordnote.app.databinding.ActivityQuizResultBinding
+import com.wordnote.app.databinding.ItemQuizResultWordBinding
 import com.wordnote.app.data.Word
 import com.wordnote.app.util.compatOverridePendingTransition
 import kotlinx.coroutines.Dispatchers
@@ -22,13 +22,8 @@ import kotlinx.coroutines.withContext
 
 class QuizResultActivity : AppCompatActivity() {
 
+    private lateinit var binding: ActivityQuizResultBinding
     private lateinit var viewModel: WordViewModel
-    private lateinit var scoreText: TextView
-    private lateinit var scoreDetailText: TextView
-    private lateinit var correctTitleText: TextView
-    private lateinit var incorrectTitleText: TextView
-    private lateinit var correctWordsContainer: LinearLayout
-    private lateinit var incorrectWordsContainer: LinearLayout
 
     private var total = 0
     private var correct = 0
@@ -44,7 +39,8 @@ class QuizResultActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_quiz_result)
+        binding = ActivityQuizResultBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
         viewModel = ViewModelProvider(this)[WordViewModel::class.java]
 
@@ -58,32 +54,25 @@ class QuizResultActivity : AppCompatActivity() {
     }
 
     private fun initViews() {
-        findViewById<ImageView>(R.id.backButton).setOnClickListener {
+        binding.backButton.setOnClickListener {
             finish()
             compatOverridePendingTransition(R.anim.slide_in_left, R.anim.slide_out_right)
         }
 
-        scoreText = findViewById(R.id.scoreText)
-        scoreDetailText = findViewById(R.id.scoreDetailText)
-        correctTitleText = findViewById(R.id.correctTitleText)
-        incorrectTitleText = findViewById(R.id.incorrectTitleText)
-        correctWordsContainer = findViewById(R.id.correctWordsContainer)
-        incorrectWordsContainer = findViewById(R.id.incorrectWordsContainer)
-
         val percentage = if (total > 0) (correct * 100 / total) else 0
-        scoreText.text = "$percentage%"
-        scoreDetailText.text = "$correct / $total 正确"
+        binding.scoreText.text = "$percentage%"
+        binding.scoreDetailText.text = "$correct / $total 正确"
 
         val isOldRecord = correctIds.isEmpty() && forgottenIds.isNotEmpty()
-        correctTitleText.text = if (isOldRecord) "正确" else "正确 (${correctIds.size})"
-        incorrectTitleText.text = "不熟悉 (${forgottenIds.size})"
+        binding.correctTitleText.text = if (isOldRecord) "正确" else "正确 (${correctIds.size})"
+        binding.incorrectTitleText.text = "不熟悉 (${forgottenIds.size})"
 
-        findViewById<MaterialButton>(R.id.retakeButton).setOnClickListener {
+        binding.retakeButton.setOnClickListener {
             startActivity(Intent(this, QuizSetupActivity::class.java))
             finish()
         }
 
-        findViewById<MaterialButton>(R.id.finishButton).setOnClickListener {
+        binding.finishButton.setOnClickListener {
             finish()
         }
     }
@@ -109,7 +98,7 @@ class QuizResultActivity : AppCompatActivity() {
 
             withContext(Dispatchers.Main) {
                 if (isOldRecord) {
-                    correctWordsContainer.removeAllViews()
+                    binding.correctWordsContainer.removeAllViews()
                     val hint = TextView(this@QuizResultActivity).apply {
                         text = "旧记录无法显示正确单词"
                         setTextColor(getColor(R.color.text_hint))
@@ -117,11 +106,11 @@ class QuizResultActivity : AppCompatActivity() {
                         gravity = Gravity.CENTER
                         setPadding(0, dpToPx(12), 0, dpToPx(12))
                     }
-                    correctWordsContainer.addView(hint)
+                    binding.correctWordsContainer.addView(hint)
                 } else {
-                    displayWords(correctWords, correctWordsContainer, isCorrect = true)
+                    displayWords(correctWords, binding.correctWordsContainer, isCorrect = true)
                 }
-                displayWords(incorrectWords, incorrectWordsContainer, isCorrect = false)
+                displayWords(incorrectWords, binding.incorrectWordsContainer, isCorrect = false)
             }
         }
     }
@@ -141,64 +130,25 @@ class QuizResultActivity : AppCompatActivity() {
             return
         }
 
-        val density = resources.displayMetrics.density
         val dotColor = if (isCorrect) getColor(R.color.primary) else Color.parseColor("#E07A5F")
 
         words.forEachIndexed { index, word ->
-            val row = LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER_VERTICAL
-                setPadding(0, dpToPx(6), 0, dpToPx(6))
+            val itemBinding = ItemQuizResultWordBinding.inflate(layoutInflater, container, false)
+
+            itemBinding.colorDot.background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(dotColor)
+            }
+            itemBinding.wordText.text = word.word
+            itemBinding.wordText.paint.isFakeBoldText = true
+            itemBinding.meaningText.text = word.meaning
+
+            // Hide divider after last item
+            if (index >= words.size - 1) {
+                itemBinding.divider.visibility = View.GONE
             }
 
-            // Colored dot
-            val dot = View(this).apply {
-                val size = (6 * density).toInt()
-                layoutParams = LinearLayout.LayoutParams(size, size).apply {
-                    marginEnd = dpToPx(6)
-                }
-                background = GradientDrawable().apply {
-                    shape = GradientDrawable.OVAL
-                    setColor(dotColor)
-                }
-            }
-            row.addView(dot)
-
-            // Word
-            val wordText = TextView(this).apply {
-                text = word.word
-                setTextColor(getColor(R.color.text_primary))
-                textSize = 14f
-                paint.isFakeBoldText = true
-                maxLines = 1
-            }
-            row.addView(wordText)
-
-            // Meaning
-            val meaningText = TextView(this).apply {
-                text = word.meaning
-                setTextColor(getColor(R.color.text_hint))
-                textSize = 12f
-                maxLines = 1
-                ellipsize = android.text.TextUtils.TruncateAt.END
-                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
-                    marginStart = dpToPx(8)
-                }
-            }
-            row.addView(meaningText)
-
-            container.addView(row)
-
-            if (index < words.size - 1) {
-                val divider = View(this).apply {
-                    layoutParams = LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT,
-                        1
-                    )
-                    setBackgroundColor(getColor(R.color.divider))
-                }
-                container.addView(divider)
-            }
+            container.addView(itemBinding.root)
         }
     }
 

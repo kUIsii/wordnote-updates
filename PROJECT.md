@@ -257,6 +257,27 @@ tags / word_tag (标签系统，目前未在 UI 使用)
 
 ## 开发日志
 
+### 2026-05-26 (代码质量重构)
+
+- CoroutineScope 修复
+  - MainActivity: 4 处 `CoroutineScope(Dispatchers.Main)` → `lifecycleScope`
+  - SettingsActivity: 7 处无作用域协程 → `lifecycleScope`（含 IO 调度）
+  - 修复潜在内存泄漏：Activity 销毁后协程不再继续执行
+- DiffUtil 修复
+  - WordAdapter: 8 处 `notifyDataSetChanged()` → `rebuildAndSubmit()` + `submitList()`
+  - 列表刷新现在走 DiffUtil 差量更新，有动画无闪烁
+- ViewBinding 全量迁移
+  - 18 个 Activity + 4 个 Adapter 全部从 `findViewById` 迁移到 ViewBinding
+  - 消除 ~238 处 `findViewById` 调用
+  - Dialog/BottomSheet 的 `findViewById` 保持不变（布局无绑定类）
+- 手写 UI 提取为 XML 布局
+  - ChangelogActivity: 版本条目提取为 `item_changelog_version.xml`
+  - QuizResultActivity: 单词行提取为 `item_quiz_result_word.xml`
+  - WordDetailActivity: 相似词行提取为 `item_similar_word.xml`
+  - StatisticsActivity: 连续天数/遗忘单词/测验统计/趋势统计/分类明细 共 5 个布局
+  - CalendarViewActivity: 句子卡片/分类头部/单词行 共 3 个布局
+  - 堆叠柱状图保持程序化绘制（动态 Canvas）
+
 ### 2026-05-26 (v2.17.1)
 
 - Bug修复

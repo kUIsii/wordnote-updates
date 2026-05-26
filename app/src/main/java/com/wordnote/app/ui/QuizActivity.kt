@@ -7,18 +7,13 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import android.view.View
-import android.widget.ImageView
-import android.widget.LinearLayout
-import android.widget.ProgressBar
-import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
-import com.google.android.material.button.MaterialButton
-import com.google.android.material.card.MaterialCardView
 import com.wordnote.app.R
 import com.wordnote.app.data.Word
+import com.wordnote.app.databinding.ActivityQuizBinding
 import com.wordnote.app.util.compatOverridePendingTransition
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -27,16 +22,7 @@ import kotlinx.coroutines.withContext
 class QuizActivity : AppCompatActivity() {
 
     private lateinit var viewModel: WordViewModel
-    private lateinit var progressText: TextView
-    private lateinit var progressBar: ProgressBar
-    private lateinit var quizWordText: TextView
-    private lateinit var quizCategoryText: TextView
-    private lateinit var meaningCard: MaterialCardView
-    private lateinit var quizMeaningText: TextView
-    private lateinit var forgetButton: MaterialButton
-    private lateinit var rememberButton: MaterialButton
-    private lateinit var nextButton: MaterialButton
-    private lateinit var wordDisplayContainer: LinearLayout
+    private lateinit var binding: ActivityQuizBinding
 
     private var quizWords = emptyList<Word>()
     private var currentIndex = 0
@@ -68,7 +54,8 @@ class QuizActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_quiz)
+        binding = ActivityQuizBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
         viewModel = ViewModelProvider(this)[WordViewModel::class.java]
 
@@ -83,26 +70,15 @@ class QuizActivity : AppCompatActivity() {
     }
 
     private fun initViews() {
-        findViewById<ImageView>(R.id.backButton).setOnClickListener {
+        binding.backButton.setOnClickListener {
             autoAdvanceHandler.removeCallbacksAndMessages(null)
             finish()
             compatOverridePendingTransition(R.anim.slide_in_left, R.anim.slide_out_right)
         }
 
-        progressText = findViewById(R.id.progressText)
-        progressBar = findViewById(R.id.progressBar)
-        quizWordText = findViewById(R.id.quizWordText)
-        quizCategoryText = findViewById(R.id.quizCategoryText)
-        meaningCard = findViewById(R.id.meaningCard)
-        quizMeaningText = findViewById(R.id.quizMeaningText)
-        forgetButton = findViewById(R.id.forgetButton)
-        rememberButton = findViewById(R.id.rememberButton)
-        nextButton = findViewById(R.id.nextButton)
-        wordDisplayContainer = findViewById(R.id.wordDisplayContainer)
-
-        forgetButton.setOnClickListener { onWordForgotten() }
-        rememberButton.setOnClickListener { onWordRemembered() }
-        nextButton.setOnClickListener { advanceToNext() }
+        binding.forgetButton.setOnClickListener { onWordForgotten() }
+        binding.rememberButton.setOnClickListener { onWordRemembered() }
+        binding.nextButton.setOnClickListener { advanceToNext() }
     }
 
     private fun loadWords() {
@@ -173,20 +149,20 @@ class QuizActivity : AppCompatActivity() {
         isShowingMeaning = false
         val word = quizWords[currentIndex]
 
-        progressText.text = "${currentIndex + 1} / ${quizWords.size}"
-        progressBar.max = quizWords.size
-        progressBar.progress = currentIndex + 1
+        binding.progressText.text = "${currentIndex + 1} / ${quizWords.size}"
+        binding.progressBar.max = quizWords.size
+        binding.progressBar.progress = currentIndex + 1
 
-        quizWordText.text = word.word
+        binding.quizWordText.text = word.word
         val category = word.categoryId?.let { viewModel.getCategoryById(it) }
-        quizCategoryText.text = category?.name ?: ""
+        binding.quizCategoryText.text = category?.name ?: ""
 
-        meaningCard.visibility = View.GONE
-        forgetButton.visibility = View.VISIBLE
-        rememberButton.visibility = View.VISIBLE
-        nextButton.visibility = View.GONE
+        binding.meaningCard.visibility = View.GONE
+        binding.forgetButton.visibility = View.VISIBLE
+        binding.rememberButton.visibility = View.VISIBLE
+        binding.nextButton.visibility = View.GONE
 
-        wordDisplayContainer.let {
+        binding.wordDisplayContainer.let {
             it.alpha = 0f
             it.translationY = 20f
             it.animate()
@@ -213,12 +189,12 @@ class QuizActivity : AppCompatActivity() {
             }
         }
 
-        meaningCard.visibility = View.VISIBLE
-        quizMeaningText.text = word.meaning
+        binding.meaningCard.visibility = View.VISIBLE
+        binding.quizMeaningText.text = word.meaning
 
-        forgetButton.visibility = View.GONE
-        rememberButton.visibility = View.GONE
-        nextButton.visibility = View.VISIBLE
+        binding.forgetButton.visibility = View.GONE
+        binding.rememberButton.visibility = View.GONE
+        binding.nextButton.visibility = View.VISIBLE
     }
 
     private fun onWordRemembered() {

@@ -17,17 +17,16 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
-import com.google.android.material.appbar.MaterialToolbar
-import com.google.android.material.button.MaterialButton
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.wordnote.app.R
+import com.wordnote.app.databinding.ActivityCategoryBinding
 import com.wordnote.app.data.Category
 import com.wordnote.app.ui.adapter.CategoryAdapter
 import com.wordnote.app.util.compatOverridePendingTransitionClose
 
 class CategoryActivity : AppCompatActivity() {
 
+    private lateinit var binding: ActivityCategoryBinding
     private lateinit var viewModel: WordViewModel
     private lateinit var categoryAdapter: CategoryAdapter
 
@@ -51,7 +50,8 @@ class CategoryActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_category)
+        binding = ActivityCategoryBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
         viewModel = ViewModelProvider(this)[WordViewModel::class.java]
 
@@ -62,8 +62,7 @@ class CategoryActivity : AppCompatActivity() {
     }
 
     private fun setupToolbar() {
-        val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)
-        toolbar.setNavigationOnClickListener {
+        binding.toolbar.setNavigationOnClickListener {
             finish()
             compatOverridePendingTransitionClose(R.anim.slide_in_left, R.anim.slide_out_right)
         }
@@ -74,15 +73,14 @@ class CategoryActivity : AppCompatActivity() {
             onEditClick = { category -> showEditCategoryDialog(category) },
             onDeleteClick = { category -> showDeleteConfirmation(category) }
         )
-        val recyclerView = findViewById<RecyclerView>(R.id.categoryRecyclerView)
-        recyclerView.apply {
+        binding.categoryRecyclerView.apply {
             layoutManager = LinearLayoutManager(this@CategoryActivity)
             adapter = categoryAdapter
         }
     }
 
     private fun setupAddButton() {
-        findViewById<MaterialButton>(R.id.addCategoryButton).setOnClickListener {
+        binding.addCategoryButton.setOnClickListener {
             selectedColor = Color.parseColor("#8E24AA")
             showAddCategoryDialog()
         }

@@ -1,23 +1,23 @@
 package com.wordnote.app.ui
 
-import android.graphics.Color
-import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
-import android.view.Gravity
-import android.view.View
-import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.wordnote.app.R
+import com.wordnote.app.databinding.ActivityChangelogBinding
+import com.wordnote.app.databinding.ItemChangelogVersionBinding
 
 class ChangelogActivity : AppCompatActivity() {
 
+    private lateinit var binding: ActivityChangelogBinding
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_changelog)
+        binding = ActivityChangelogBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
-        findViewById<ImageView>(R.id.backButton).setOnClickListener {
+        binding.backButton.setOnClickListener {
             finish()
             overridePendingTransition(R.anim.slide_in_left, R.anim.slide_out_right)
         }
@@ -26,9 +26,19 @@ class ChangelogActivity : AppCompatActivity() {
     }
 
     private fun setupChangelog() {
-        val container = findViewById<LinearLayout>(R.id.changelogContainer)
+        val container = binding.changelogContainer
 
         val changelog = listOf(
+            VersionLog(
+                "v2.18.0", "2026-05-26",
+                listOf(
+                    "代码质量重构：全面优化内部代码结构，提升运行流畅度",
+                    "内存泄漏修复：协程与Activity生命周期绑定，防止页面销毁后后台任务泄漏",
+                    "列表动画优化：单词列表切换、搜索、选择操作改用差量更新，过渡更丝滑",
+                    "ViewBinding迁移：全量替换findViewById，提升类型安全和代码可维护性",
+                    "布局提取：手写UI代码提取为XML布局文件，减少约600行冗余代码"
+                )
+            ),
             VersionLog(
                 "v2.17.1", "2026-05-26",
                 listOf(
@@ -339,38 +349,11 @@ class ChangelogActivity : AppCompatActivity() {
     }
 
     private fun addVersionSection(container: LinearLayout, log: VersionLog) {
-        // Version header
-        val headerLayout = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(0, dpToPx(16), 0, dpToPx(8))
-        }
+        val itemBinding = ItemChangelogVersionBinding.inflate(layoutInflater, container, false)
 
-        // Version badge
-        val badge = TextView(this).apply {
-            text = log.version
-            textSize = 14f
-            setTextColor(Color.WHITE)
-            setPadding(dpToPx(10), dpToPx(4), dpToPx(10), dpToPx(4))
-            background = GradientDrawable().apply {
-                setColor(getColor(R.color.primary))
-                cornerRadius = 12f * resources.displayMetrics.density
-            }
-        }
-        headerLayout.addView(badge)
+        itemBinding.versionBadge.text = log.version
+        itemBinding.dateText.text = log.date
 
-        // Date
-        val dateText = TextView(this).apply {
-            text = log.date
-            textSize = 12f
-            setTextColor(getColor(R.color.text_hint))
-            setPadding(dpToPx(12), 0, 0, 0)
-        }
-        headerLayout.addView(dateText)
-
-        container.addView(headerLayout)
-
-        // Changes
         log.changes.forEach { change ->
             val changeText = TextView(this).apply {
                 text = "• $change"
@@ -379,20 +362,10 @@ class ChangelogActivity : AppCompatActivity() {
                 setPadding(dpToPx(8), dpToPx(4), 0, dpToPx(4))
                 lineHeight = (14 * 1.5f * resources.displayMetrics.density).toInt()
             }
-            container.addView(changeText)
+            itemBinding.changesContainer.addView(changeText)
         }
 
-        // Divider
-        val divider = View(this).apply {
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                1
-            ).apply {
-                topMargin = dpToPx(8)
-            }
-            setBackgroundColor(getColor(R.color.divider))
-        }
-        container.addView(divider)
+        container.addView(itemBinding.root)
     }
 
     private fun dpToPx(dp: Int): Int {

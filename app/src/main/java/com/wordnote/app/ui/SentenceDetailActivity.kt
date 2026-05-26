@@ -3,7 +3,6 @@ package com.wordnote.app.ui
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
-import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
@@ -11,6 +10,7 @@ import androidx.lifecycle.ViewModelProvider
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.wordnote.app.R
 import com.wordnote.app.data.SentenceWithWords
+import com.wordnote.app.databinding.ActivitySentenceDetailBinding
 import com.wordnote.app.util.compatOverridePendingTransition
 import com.wordnote.app.util.compatOverridePendingTransitionClose
 import java.text.SimpleDateFormat
@@ -24,11 +24,13 @@ class SentenceDetailActivity : AppCompatActivity() {
     }
 
     private lateinit var viewModel: SentenceViewModel
+    private lateinit var binding: ActivitySentenceDetailBinding
     private var sentenceId: Long = -1L
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_sentence_detail)
+        binding = ActivitySentenceDetailBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
         sentenceId = intent.getLongExtra(EXTRA_SENTENCE_ID, -1L)
         if (sentenceId == -1L) {
@@ -44,14 +46,14 @@ class SentenceDetailActivity : AppCompatActivity() {
     }
 
     private fun setupToolbar() {
-        findViewById<ImageView>(R.id.backButton).setOnClickListener {
+        binding.backButton.setOnClickListener {
             finish()
             compatOverridePendingTransitionClose(R.anim.slide_in_left, R.anim.slide_out_right)
         }
     }
 
     private fun setupButtons() {
-        findViewById<ImageView>(R.id.editButton).setOnClickListener {
+        binding.editButton.setOnClickListener {
             val intent = Intent(this, SentenceEditActivity::class.java).apply {
                 putExtra(SentenceEditActivity.EXTRA_SENTENCE_ID, sentenceId)
             }
@@ -59,7 +61,7 @@ class SentenceDetailActivity : AppCompatActivity() {
             compatOverridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left)
         }
 
-        findViewById<ImageView>(R.id.deleteButton).setOnClickListener {
+        binding.deleteButton.setOnClickListener {
             MaterialAlertDialogBuilder(this)
                 .setTitle("删除句子")
                 .setMessage("确定要删除这个句子吗？")
@@ -89,36 +91,32 @@ class SentenceDetailActivity : AppCompatActivity() {
     private fun displaySentence(item: SentenceWithWords) {
         val sentence = item.sentence
 
-        findViewById<TextView>(R.id.sentenceText).text = sentence.originalText
+        binding.sentenceText.text = sentence.originalText
 
         // Translation
-        val translationCard = findViewById<View>(R.id.translationCard)
         if (!sentence.translation.isNullOrBlank()) {
-            translationCard.visibility = View.VISIBLE
-            findViewById<TextView>(R.id.translationText).text = sentence.translation
+            binding.translationCard.visibility = View.VISIBLE
+            binding.translationText.text = sentence.translation
         } else {
-            translationCard.visibility = View.GONE
+            binding.translationCard.visibility = View.GONE
         }
 
         // Note
-        val noteCard = findViewById<View>(R.id.noteCard)
         if (!sentence.note.isNullOrBlank()) {
-            noteCard.visibility = View.VISIBLE
-            findViewById<TextView>(R.id.noteText).text = sentence.note
+            binding.noteCard.visibility = View.VISIBLE
+            binding.noteText.text = sentence.note
         } else {
-            noteCard.visibility = View.GONE
+            binding.noteCard.visibility = View.GONE
         }
 
         // Words
-        val wordsSection = findViewById<View>(R.id.wordsSection)
-        val wordsContainer = findViewById<LinearLayout>(R.id.wordsContainer)
         if (item.words.isNotEmpty()) {
-            wordsSection.visibility = View.VISIBLE
-            wordsContainer.removeAllViews()
+            binding.wordsSection.visibility = View.VISIBLE
+            binding.wordsContainer.removeAllViews()
 
             item.words.sortedBy { it.sortOrder }.forEachIndexed { index, word ->
                 val wordView = createWordView(word.wordText, word.meaning)
-                wordsContainer.addView(wordView)
+                binding.wordsContainer.addView(wordView)
 
                 if (index < item.words.size - 1) {
                     val divider = View(this).apply {
@@ -130,16 +128,16 @@ class SentenceDetailActivity : AppCompatActivity() {
                         }
                         setBackgroundColor(getColor(R.color.divider))
                     }
-                    wordsContainer.addView(divider)
+                    binding.wordsContainer.addView(divider)
                 }
             }
         } else {
-            wordsSection.visibility = View.GONE
+            binding.wordsSection.visibility = View.GONE
         }
 
         // Date
         val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
-        findViewById<TextView>(R.id.dateText).text = sdf.format(Date(sentence.createdAt))
+        binding.dateText.text = sdf.format(Date(sentence.createdAt))
     }
 
     private fun createWordView(word: String, meaning: String): View {

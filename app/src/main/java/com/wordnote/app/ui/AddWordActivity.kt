@@ -4,14 +4,12 @@ import android.os.Bundle
 import android.widget.ArrayAdapter
 import android.graphics.drawable.GradientDrawable
 import android.widget.EditText
-import android.widget.Spinner
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import androidx.lifecycle.ViewModelProvider
-import com.google.android.material.appbar.MaterialToolbar
-import com.google.android.material.button.MaterialButton
 import com.wordnote.app.R
+import com.wordnote.app.databinding.ActivityAddWordBinding
 import com.wordnote.app.data.Category
 import com.wordnote.app.data.Word
 import com.wordnote.app.data.WordGroup
@@ -24,12 +22,8 @@ class AddWordActivity : AppCompatActivity() {
         const val EXTRA_WORD_ID = "extra_word_id"
     }
 
+    private lateinit var binding: ActivityAddWordBinding
     private lateinit var viewModel: WordViewModel
-    private lateinit var wordEditText: EditText
-    private lateinit var meaningEditText: EditText
-    private lateinit var categorySpinner: Spinner
-    private lateinit var groupSpinner: Spinner
-    private lateinit var saveButton: MaterialButton
 
     private var wordId: Long? = null
     private var categories: List<Category> = emptyList()
@@ -38,11 +32,11 @@ class AddWordActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_add_word)
+        binding = ActivityAddWordBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
         viewModel = ViewModelProvider(this)[WordViewModel::class.java]
 
-        initViews()
         setupToolbar()
         loadWordIfEditing()
         observeCategories()
@@ -50,17 +44,8 @@ class AddWordActivity : AppCompatActivity() {
         setupSaveButton()
     }
 
-    private fun initViews() {
-        wordEditText = findViewById(R.id.wordEditText)
-        meaningEditText = findViewById(R.id.meaningEditText)
-        categorySpinner = findViewById(R.id.categorySpinner)
-        groupSpinner = findViewById(R.id.groupSpinner)
-        saveButton = findViewById(R.id.saveButton)
-    }
-
     private fun setupToolbar() {
-        val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)
-        toolbar.setNavigationOnClickListener {
+        binding.toolbar.setNavigationOnClickListener {
             finish()
             compatOverridePendingTransitionClose(R.anim.slide_in_left, R.anim.slide_out_right)
         }
@@ -74,22 +59,22 @@ class AddWordActivity : AppCompatActivity() {
             }
             viewModel.getMeaningsForWord(wordId!!).observe(this) { meanings ->
                 existingMeanings = meanings
-                if (meanings.isNotEmpty() && meaningEditText.text.isEmpty()) {
+                if (meanings.isNotEmpty() && binding.meaningEditText.text.isNullOrEmpty()) {
                     val meaningText = meanings.joinToString(", ") { it.meaningText }
-                    meaningEditText.setText(meaningText)
+                    binding.meaningEditText.setText(meaningText)
                 }
             }
         }
     }
 
     private fun populateFields(word: Word) {
-        wordEditText.setText(word.word)
-        meaningEditText.setText(word.meaning)
+        binding.wordEditText.setText(word.word)
+        binding.meaningEditText.setText(word.meaning)
 
         word.categoryId?.let { categoryId ->
             val index = categories.indexOfFirst { it.id == categoryId }
             if (index >= 0) {
-                categorySpinner.setSelection(index)
+                binding.categorySpinner.setSelection(index)
             }
         }
 
@@ -97,7 +82,7 @@ class AddWordActivity : AppCompatActivity() {
             // +1 because first item is "无分组"
             val index = groups.indexOfFirst { it.id == groupId } + 1
             if (index >= 0) {
-                groupSpinner.setSelection(index)
+                binding.groupSpinner.setSelection(index)
             }
         }
     }
@@ -108,7 +93,7 @@ class AddWordActivity : AppCompatActivity() {
             val categoryNames = cats.map { it.name }
             val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, categoryNames)
             adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-            categorySpinner.adapter = adapter
+            binding.categorySpinner.adapter = adapter
             wordId?.let { loadWordIfEditing() }
         }
     }
@@ -125,9 +110,9 @@ class AddWordActivity : AppCompatActivity() {
 
             val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, groupNames)
             adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-            groupSpinner.adapter = adapter
+            binding.groupSpinner.adapter = adapter
 
-            groupSpinner.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
+            binding.groupSpinner.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
                 override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: android.view.View?, position: Int, id: Long) {
                     if (position == groupNames.size - 1 && groupNames[position] == "+ 新建分组") {
                         showCreateGroupDialog()
@@ -156,34 +141,34 @@ class AddWordActivity : AppCompatActivity() {
                 }
             }
             .setNegativeButton("取消") { _, _ ->
-                groupSpinner.setSelection(0)
+                binding.groupSpinner.setSelection(0)
             }
             .setOnCancelListener {
-                groupSpinner.setSelection(0)
+                binding.groupSpinner.setSelection(0)
             }
             .show()
     }
 
     private fun setupSaveButton() {
-        saveButton.setOnClickListener {
-            val word = wordEditText.text.toString().trim()
-            val meaning = meaningEditText.text.toString().trim()
+        binding.saveButton.setOnClickListener {
+            val word = binding.wordEditText.text.toString().trim()
+            val meaning = binding.meaningEditText.text.toString().trim()
 
             if (word.isEmpty()) {
-                wordEditText.error = getString(R.string.error_word_empty)
+                binding.wordEditText.error = getString(R.string.error_word_empty)
                 return@setOnClickListener
             }
             if (meaning.isEmpty()) {
-                meaningEditText.error = getString(R.string.error_meaning_empty)
+                binding.meaningEditText.error = getString(R.string.error_meaning_empty)
                 return@setOnClickListener
             }
 
-            val selectedCategory = if (categorySpinner.selectedItemPosition >= 0) {
-                categories[categorySpinner.selectedItemPosition]
+            val selectedCategory = if (binding.categorySpinner.selectedItemPosition >= 0) {
+                categories[binding.categorySpinner.selectedItemPosition]
             } else null
 
-            val selectedGroup = if (groupSpinner.selectedItemPosition > 0 && groupSpinner.selectedItemPosition <= groups.size) {
-                groups[groupSpinner.selectedItemPosition - 1]
+            val selectedGroup = if (binding.groupSpinner.selectedItemPosition > 0 && binding.groupSpinner.selectedItemPosition <= groups.size) {
+                groups[binding.groupSpinner.selectedItemPosition - 1]
             } else null
 
             val wordEntity = Word(

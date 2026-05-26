@@ -9,35 +9,23 @@ import android.view.Gravity
 import android.view.View
 import android.view.animation.DecelerateInterpolator
 import android.widget.CheckBox
-import android.widget.ImageView
 import android.widget.LinearLayout
-import android.widget.ScrollView
 import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
-import com.google.android.material.button.MaterialButton
-import com.google.android.material.card.MaterialCardView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.wordnote.app.R
 import com.wordnote.app.data.Category
 import com.wordnote.app.data.QuizHistory
+import com.wordnote.app.databinding.ActivityQuizSetupBinding
 import com.wordnote.app.util.compatOverridePendingTransition
 
 class QuizSetupActivity : AppCompatActivity() {
 
     private lateinit var viewModel: WordViewModel
-    private lateinit var wordCountText: TextView
-    private lateinit var wordCountSeekBar: SeekBar
-    private lateinit var categorySelectionContainer: LinearLayout
-    private lateinit var allCheckBox: CheckBox
-    private lateinit var randomCheckBox: CheckBox
-    private lateinit var forgetCountCheckBox: CheckBox
-    private lateinit var randomCard: View
-    private lateinit var forgetCountCard: View
-    private lateinit var historyContainer: LinearLayout
-    private lateinit var historySection: View
+    private lateinit var binding: ActivityQuizSetupBinding
 
     private var selectedCategories = mutableSetOf<Long>()
     private var allCategories = emptyList<Category>()
@@ -45,7 +33,8 @@ class QuizSetupActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_quiz_setup)
+        binding = ActivityQuizSetupBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
         viewModel = ViewModelProvider(this)[WordViewModel::class.java]
 
@@ -54,48 +43,37 @@ class QuizSetupActivity : AppCompatActivity() {
     }
 
     private fun initViews() {
-        findViewById<ImageView>(R.id.backButton).setOnClickListener {
+        binding.backButton.setOnClickListener {
             finish()
             compatOverridePendingTransition(R.anim.slide_in_left, R.anim.slide_out_right)
         }
 
-        wordCountText = findViewById(R.id.wordCountText)
-        wordCountSeekBar = findViewById(R.id.wordCountSeekBar)
-        categorySelectionContainer = findViewById(R.id.categorySelectionContainer)
-        allCheckBox = findViewById(R.id.allCheckBox)
-        randomCheckBox = findViewById(R.id.randomCheckBox)
-        forgetCountCheckBox = findViewById(R.id.forgetCountCheckBox)
-        randomCard = findViewById(R.id.randomCard)
-        forgetCountCard = findViewById(R.id.forgetCountCard)
-        historyContainer = findViewById(R.id.historyContainer)
-        historySection = findViewById(R.id.historySection)
-
-        wordCountSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+        binding.wordCountSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                wordCountText.text = "$progress 个单词"
+                binding.wordCountText.text = "$progress 个单词"
             }
             override fun onStartTrackingTouch(seekBar: SeekBar?) {}
             override fun onStopTrackingTouch(seekBar: SeekBar?) {}
         })
 
-        randomCheckBox.setOnCheckedChangeListener { _, isChecked ->
-            if (isChecked) forgetCountCheckBox.isChecked = false
+        binding.randomCheckBox.setOnCheckedChangeListener { _, isChecked ->
+            if (isChecked) binding.forgetCountCheckBox.isChecked = false
             updateMethodCards()
         }
-        forgetCountCheckBox.setOnCheckedChangeListener { _, isChecked ->
-            if (isChecked) randomCheckBox.isChecked = false
+        binding.forgetCountCheckBox.setOnCheckedChangeListener { _, isChecked ->
+            if (isChecked) binding.randomCheckBox.isChecked = false
             updateMethodCards()
         }
 
-        randomCard.setOnClickListener { randomCheckBox.isChecked = true }
-        forgetCountCard.setOnClickListener { forgetCountCheckBox.isChecked = true }
+        binding.randomCard.setOnClickListener { binding.randomCheckBox.isChecked = true }
+        binding.forgetCountCard.setOnClickListener { binding.forgetCountCheckBox.isChecked = true }
         updateMethodCards()
 
-        findViewById<MaterialButton>(R.id.startQuizButton).setOnClickListener {
+        binding.startQuizButton.setOnClickListener {
             startQuiz()
         }
 
-        findViewById<TextView>(R.id.viewAllHistoryButton).setOnClickListener {
+        binding.viewAllHistoryButton.setOnClickListener {
             startActivity(Intent(this, QuizHistoryActivity::class.java))
             compatOverridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left)
         }
@@ -109,44 +87,43 @@ class QuizSetupActivity : AppCompatActivity() {
 
         viewModel.allQuizHistory.observe(this) { history ->
             if (history.isNullOrEmpty()) {
-                historySection.visibility = View.GONE
+                binding.historySection.visibility = View.GONE
             } else {
-                historySection.visibility = View.VISIBLE
+                binding.historySection.visibility = View.VISIBLE
                 displayHistory(history)
             }
         }
     }
 
     private fun updateMethodCards() {
-        val density = resources.displayMetrics.density
         val primaryColor = getColor(R.color.primary)
         val cardBgColor = getColor(R.color.card_background)
         val dividerColor = getColor(R.color.divider)
 
-        if (randomCheckBox.isChecked) {
-            (randomCard as? com.google.android.material.card.MaterialCardView)?.apply {
+        if (binding.randomCheckBox.isChecked) {
+            (binding.randomCard as? com.google.android.material.card.MaterialCardView)?.apply {
                 setCardBackgroundColor(primaryColor)
                 setStrokeColor(android.content.res.ColorStateList.valueOf(primaryColor))
             }
-            updateCardTextColors(randomCard, isLight = true)
+            updateCardTextColors(binding.randomCard, isLight = true)
 
-            (forgetCountCard as? com.google.android.material.card.MaterialCardView)?.apply {
+            (binding.forgetCountCard as? com.google.android.material.card.MaterialCardView)?.apply {
                 setCardBackgroundColor(cardBgColor)
                 setStrokeColor(android.content.res.ColorStateList.valueOf(dividerColor))
             }
-            updateCardTextColors(forgetCountCard, isLight = false)
+            updateCardTextColors(binding.forgetCountCard, isLight = false)
         } else {
-            (forgetCountCard as? com.google.android.material.card.MaterialCardView)?.apply {
+            (binding.forgetCountCard as? com.google.android.material.card.MaterialCardView)?.apply {
                 setCardBackgroundColor(primaryColor)
                 setStrokeColor(android.content.res.ColorStateList.valueOf(primaryColor))
             }
-            updateCardTextColors(forgetCountCard, isLight = true)
+            updateCardTextColors(binding.forgetCountCard, isLight = true)
 
-            (randomCard as? com.google.android.material.card.MaterialCardView)?.apply {
+            (binding.randomCard as? com.google.android.material.card.MaterialCardView)?.apply {
                 setCardBackgroundColor(cardBgColor)
                 setStrokeColor(android.content.res.ColorStateList.valueOf(dividerColor))
             }
-            updateCardTextColors(randomCard, isLight = false)
+            updateCardTextColors(binding.randomCard, isLight = false)
         }
     }
 
@@ -174,9 +151,9 @@ class QuizSetupActivity : AppCompatActivity() {
         selectedCategories.clear()
         categories.forEach { selectedCategories.add(it.id) }
 
-        allCheckBox.isChecked = true
-        styleCheckBox(allCheckBox, getColor(R.color.primary))
-        allCheckBox.setOnCheckedChangeListener { _, isChecked ->
+        binding.allCheckBox.isChecked = true
+        styleCheckBox(binding.allCheckBox, getColor(R.color.primary))
+        binding.allCheckBox.setOnCheckedChangeListener { _, isChecked ->
             toggleAllCategories(isChecked)
         }
 
@@ -208,7 +185,7 @@ class QuizSetupActivity : AppCompatActivity() {
                 onCategoryToggled(category.id, isChecked)
             }
 
-            categorySelectionContainer.addView(checkBox)
+            binding.categorySelectionContainer.addView(checkBox)
         }
     }
 
@@ -260,9 +237,9 @@ class QuizSetupActivity : AppCompatActivity() {
             selectedCategories.remove(categoryId)
         }
         // Sync "全部" checkbox state
-        allCheckBox.setOnCheckedChangeListener(null)
-        allCheckBox.isChecked = selectedCategories.size == allCategories.size && allCategories.isNotEmpty()
-        allCheckBox.setOnCheckedChangeListener { _, isChecked2 -> toggleAllCategories(isChecked2) }
+        binding.allCheckBox.setOnCheckedChangeListener(null)
+        binding.allCheckBox.isChecked = selectedCategories.size == allCategories.size && allCategories.isNotEmpty()
+        binding.allCheckBox.setOnCheckedChangeListener { _, isChecked2 -> toggleAllCategories(isChecked2) }
     }
 
     private fun toggleAllCategories(selectAll: Boolean) {
@@ -303,7 +280,7 @@ class QuizSetupActivity : AppCompatActivity() {
     }
 
     private fun displayHistory(history: List<QuizHistory>) {
-        historyContainer.removeAllViews()
+        binding.historyContainer.removeAllViews()
 
         history.take(10).forEachIndexed { index, record ->
             val percentage = if (record.totalWords > 0) (record.correctCount * 100 / record.totalWords) else 0
@@ -384,7 +361,7 @@ class QuizSetupActivity : AppCompatActivity() {
             }
             row.addView(detailText)
 
-            historyContainer.addView(row)
+            binding.historyContainer.addView(row)
 
             if (index < history.size - 1 && index < 9) {
                 val divider = View(this).apply {
@@ -394,7 +371,7 @@ class QuizSetupActivity : AppCompatActivity() {
                     )
                     setBackgroundColor(getColor(R.color.divider))
                 }
-                historyContainer.addView(divider)
+                binding.historyContainer.addView(divider)
             }
         }
     }
@@ -423,12 +400,12 @@ class QuizSetupActivity : AppCompatActivity() {
     }
 
     private fun startQuiz() {
-        val wordCount = wordCountSeekBar.progress
+        val wordCount = binding.wordCountSeekBar.progress
         if (wordCount <= 0) {
             Toast.makeText(this, "请选择测验数量", Toast.LENGTH_SHORT).show()
             return
         }
-        val useForgetCount = forgetCountCheckBox.isChecked && !randomCheckBox.isChecked
+        val useForgetCount = binding.forgetCountCheckBox.isChecked && !binding.randomCheckBox.isChecked
 
         try {
             if (selectedCategories.size == allCategories.size) {

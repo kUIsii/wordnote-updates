@@ -21,6 +21,8 @@ import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import com.wordnote.app.R
 import com.wordnote.app.data.Category
+import com.wordnote.app.databinding.ActivityWordDetailBinding
+import com.wordnote.app.databinding.ItemSimilarWordBinding
 import com.wordnote.app.data.Word
 import com.wordnote.app.data.WordMeaning
 import com.wordnote.app.ui.adapter.MeaningAdapter
@@ -34,6 +36,7 @@ class WordDetailActivity : AppCompatActivity() {
         const val EXTRA_WORD_ID = "extra_word_id"
     }
 
+    private lateinit var binding: ActivityWordDetailBinding
     private lateinit var viewModel: WordViewModel
     private lateinit var backButton: ImageView
     private lateinit var wordTextView: TextView
@@ -60,7 +63,8 @@ class WordDetailActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_word_detail)
+        binding = ActivityWordDetailBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
         viewModel = ViewModelProvider(this)[WordViewModel::class.java]
 
@@ -82,22 +86,22 @@ class WordDetailActivity : AppCompatActivity() {
     }
 
     private fun initViews() {
-        backButton = findViewById(R.id.backButton)
-        wordTextView = findViewById(R.id.wordTextView)
-        meaningTextView = findViewById(R.id.meaningTextView)
-        forgetCountTextView = findViewById(R.id.forgetCountTextView)
-        nextReviewTextView = findViewById(R.id.nextReviewTextView)
-        forgottenButton = findViewById(R.id.forgottenButton)
-        rememberedButton = findViewById(R.id.rememberedButton)
-        editButton = findViewById(R.id.editButton)
-        deleteButton = findViewById(R.id.deleteButton)
-        meaningsContainer = findViewById(R.id.meaningsContainer)
-        meaningsCard = findViewById(R.id.meaningsCard)
-        meaningsRecyclerView = findViewById(R.id.meaningsRecyclerView)
-        meaningsLabel = findViewById(R.id.meaningsLabel)
-        meaningsHint = findViewById(R.id.meaningsHint)
-        similarWordsCard = findViewById(R.id.similarWordsCard)
-        similarWordsContainer = findViewById(R.id.similarWordsContainer)
+        backButton = binding.backButton
+        wordTextView = binding.wordTextView
+        meaningTextView = binding.meaningTextView
+        forgetCountTextView = binding.forgetCountTextView
+        nextReviewTextView = binding.nextReviewTextView
+        forgottenButton = binding.forgottenButton
+        rememberedButton = binding.rememberedButton
+        editButton = binding.editButton
+        deleteButton = binding.deleteButton
+        meaningsContainer = binding.meaningsContainer
+        meaningsCard = binding.meaningsCard
+        meaningsRecyclerView = binding.meaningsRecyclerView
+        meaningsLabel = binding.meaningsLabel
+        meaningsHint = binding.meaningsHint
+        similarWordsCard = binding.similarWordsCard
+        similarWordsContainer = binding.similarWordsContainer
 
         // Setup adapter
         meaningAdapter = MeaningAdapter(
@@ -200,7 +204,7 @@ class WordDetailActivity : AppCompatActivity() {
         similarWordsCard.visibility = View.VISIBLE
         similarWordsContainer.removeAllViews()
 
-        similarWords.forEach { similarWord ->
+        similarWords.forEachIndexed { index, similarWord ->
             val category = categoriesMap[similarWord.categoryId]
             val categoryName = category?.name ?: "未分类"
             val categoryColor = try {
@@ -209,55 +213,22 @@ class WordDetailActivity : AppCompatActivity() {
                 Color.parseColor("#757575")
             }
 
-            val row = LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = android.view.Gravity.CENTER_VERTICAL
-                setPadding(0, dpToPx(8), 0, dpToPx(8))
-                isClickable = true
-                isFocusable = true
-                val tv = android.util.TypedValue()
-                context.theme.resolveAttribute(android.R.attr.selectableItemBackground, tv, true)
-                setBackgroundResource(tv.resourceId)
-            }
+            val itemBinding = ItemSimilarWordBinding.inflate(layoutInflater, similarWordsContainer, false)
 
-            // Category color dot
-            val colorDot = View(this).apply {
-                val dotSize = dpToPx(8)
-                layoutParams = LinearLayout.LayoutParams(dotSize, dotSize)
-                background = GradientDrawable().apply {
-                    shape = GradientDrawable.OVAL
-                    setColor(categoryColor)
-                }
+            itemBinding.colorDot.background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(categoryColor)
             }
-            row.addView(colorDot)
+            itemBinding.categoryNameText.text = categoryName
+            itemBinding.meaningPreviewText.text = similarWord.meaning
 
-            // Category name
-            val nameText = TextView(this).apply {
-                text = categoryName
-                setTextColor(getColor(R.color.text_primary))
-                textSize = 14f
-                layoutParams = LinearLayout.LayoutParams(
-                    0,
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                    1f
-                ).apply {
-                    marginStart = dpToPx(8)
-                }
+            // Hide divider after last item
+            if (index >= similarWords.size - 1) {
+                itemBinding.divider.visibility = View.GONE
             }
-            row.addView(nameText)
-
-            // Meaning preview
-            val meaningText = TextView(this).apply {
-                text = similarWord.meaning
-                setTextColor(getColor(R.color.text_hint))
-                textSize = 12f
-                maxLines = 1
-                maxWidth = dpToPx(120)
-            }
-            row.addView(meaningText)
 
             // Click to navigate to MainActivity with this category
-            row.setOnClickListener {
+            itemBinding.rowContainer.setOnClickListener {
                 val intent = Intent(this, MainActivity::class.java).apply {
                     putExtra("navigate_to_category", similarWord.categoryId)
                     flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
@@ -266,19 +237,7 @@ class WordDetailActivity : AppCompatActivity() {
                 finish()
             }
 
-            similarWordsContainer.addView(row)
-
-            // Add divider
-            if (similarWord != similarWords.last()) {
-                val divider = View(this).apply {
-                    layoutParams = LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT,
-                        1
-                    )
-                    setBackgroundColor(getColor(R.color.divider))
-                }
-                similarWordsContainer.addView(divider)
-            }
+            similarWordsContainer.addView(itemBinding.root)
         }
     }
 

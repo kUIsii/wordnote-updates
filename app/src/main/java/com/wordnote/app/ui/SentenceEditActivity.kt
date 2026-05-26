@@ -3,18 +3,16 @@ package com.wordnote.app.ui
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
-import android.widget.EditText
 import android.widget.ImageView
-import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
-import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.textfield.TextInputEditText
 import com.wordnote.app.R
 import com.wordnote.app.data.Sentence
 import com.wordnote.app.data.SentenceWord
+import com.wordnote.app.databinding.ActivitySentenceEditBinding
 import com.wordnote.app.util.compatOverridePendingTransitionClose
 import kotlinx.coroutines.launch
 
@@ -25,12 +23,13 @@ class SentenceEditActivity : AppCompatActivity() {
     }
 
     private lateinit var viewModel: SentenceViewModel
-    private lateinit var sentenceWordsContainer: LinearLayout
+    private lateinit var binding: ActivitySentenceEditBinding
     private var editingSentenceId: Long = -1L
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_sentence_edit)
+        binding = ActivitySentenceEditBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
         viewModel = ViewModelProvider(this)[SentenceViewModel::class.java]
 
@@ -45,22 +44,19 @@ class SentenceEditActivity : AppCompatActivity() {
     }
 
     private fun setupToolbar() {
-        val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)
-        toolbar.title = if (editingSentenceId == -1L) "添加句子" else "编辑句子"
-        toolbar.setNavigationOnClickListener {
+        binding.toolbar.title = if (editingSentenceId == -1L) "添加句子" else "编辑句子"
+        binding.toolbar.setNavigationOnClickListener {
             finish()
             compatOverridePendingTransitionClose(R.anim.slide_in_left, R.anim.slide_out_right)
         }
     }
 
     private fun setupViews() {
-        sentenceWordsContainer = findViewById(R.id.sentenceWordsContainer)
-
-        findViewById<View>(R.id.addWordButton).setOnClickListener {
+        binding.addWordButton.setOnClickListener {
             addSentenceWordRow()
         }
 
-        findViewById<View>(R.id.saveButton).setOnClickListener {
+        binding.saveButton.setOnClickListener {
             saveSentence()
         }
     }
@@ -70,11 +66,11 @@ class SentenceEditActivity : AppCompatActivity() {
             val item = viewModel.getSentenceWithWords(editingSentenceId) ?: return@launch
             val sentence = item.sentence
 
-            findViewById<TextInputEditText>(R.id.originalTextEditText).setText(sentence.originalText)
-            findViewById<TextInputEditText>(R.id.translationEditText).setText(sentence.translation ?: "")
-            findViewById<TextInputEditText>(R.id.noteEditText).setText(sentence.note ?: "")
+            binding.originalTextEditText.setText(sentence.originalText)
+            binding.translationEditText.setText(sentence.translation ?: "")
+            binding.noteEditText.setText(sentence.note ?: "")
 
-            sentenceWordsContainer.removeAllViews()
+            binding.sentenceWordsContainer.removeAllViews()
             item.words.sortedBy { it.sortOrder }.forEach { sw ->
                 addSentenceWordRow(sw.wordText, sw.meaning)
             }
@@ -82,7 +78,7 @@ class SentenceEditActivity : AppCompatActivity() {
     }
 
     private fun addSentenceWordRow(wordText: String = "", meaning: String = "") {
-        val row = LayoutInflater.from(this).inflate(R.layout.item_sentence_word, sentenceWordsContainer, false)
+        val row = LayoutInflater.from(this).inflate(R.layout.item_sentence_word, binding.sentenceWordsContainer, false)
 
         val wordEditText = row.findViewById<TextInputEditText>(R.id.wordEditText)
         val meaningEditText = row.findViewById<TextInputEditText>(R.id.meaningEditText)
@@ -92,25 +88,25 @@ class SentenceEditActivity : AppCompatActivity() {
         meaningEditText.setText(meaning)
 
         removeButton.setOnClickListener {
-            sentenceWordsContainer.removeView(row)
+            binding.sentenceWordsContainer.removeView(row)
         }
 
-        sentenceWordsContainer.addView(row)
+        binding.sentenceWordsContainer.addView(row)
     }
 
     private fun saveSentence() {
-        val originalText = findViewById<TextInputEditText>(R.id.originalTextEditText).text.toString().trim()
-        val translation = findViewById<TextInputEditText>(R.id.translationEditText).text.toString().trim()
-        val note = findViewById<TextInputEditText>(R.id.noteEditText).text.toString().trim()
+        val originalText = binding.originalTextEditText.text.toString().trim()
+        val translation = binding.translationEditText.text.toString().trim()
+        val note = binding.noteEditText.text.toString().trim()
 
         if (originalText.isEmpty()) {
-            findViewById<TextInputEditText>(R.id.originalTextEditText).error = "请输入句子"
+            binding.originalTextEditText.error = "请输入句子"
             return
         }
 
         val words = mutableListOf<SentenceWord>()
-        for (i in 0 until sentenceWordsContainer.childCount) {
-            val row = sentenceWordsContainer.getChildAt(i)
+        for (i in 0 until binding.sentenceWordsContainer.childCount) {
+            val row = binding.sentenceWordsContainer.getChildAt(i)
             val wordText = row.findViewById<TextInputEditText>(R.id.wordEditText).text.toString().trim()
             val wordMeaning = row.findViewById<TextInputEditText>(R.id.meaningEditText).text.toString().trim()
             if (wordText.isNotEmpty() && wordMeaning.isNotEmpty()) {

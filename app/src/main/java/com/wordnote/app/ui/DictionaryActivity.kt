@@ -8,7 +8,6 @@ import android.os.Bundle
 import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.widget.EditText
-import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.ScrollView
@@ -19,10 +18,12 @@ import androidx.appcompat.app.AppCompatActivity
 import com.google.android.flexbox.FlexboxLayout
 import com.wordnote.app.R
 import com.wordnote.app.data.DictionaryDatabase
+import com.wordnote.app.databinding.ActivityDictionaryBinding
 import com.wordnote.app.util.compatOverridePendingTransition
 
 class DictionaryActivity : AppCompatActivity() {
 
+    private lateinit var binding: ActivityDictionaryBinding
     private lateinit var dictDb: DictionaryDatabase
     private lateinit var searchEditText: EditText
     private lateinit var loadingView: LinearLayout
@@ -58,7 +59,8 @@ class DictionaryActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_dictionary)
+        binding = ActivityDictionaryBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
         dictDb = DictionaryDatabase(this)
         initViews()
@@ -67,22 +69,22 @@ class DictionaryActivity : AppCompatActivity() {
     }
 
     private fun initViews() {
-        searchEditText = findViewById(R.id.dictSearchEditText)
-        loadingView = findViewById(R.id.loadingView)
-        hintView = findViewById(R.id.hintView)
-        noDatabaseView = findViewById(R.id.noDatabaseView)
-        noResultView = findViewById(R.id.noResultView)
-        noResultText = findViewById(R.id.noResultText)
-        resultScrollView = findViewById(R.id.resultScrollView)
-        resultWord = findViewById(R.id.resultWord)
-        resultPhonetic = findViewById(R.id.resultPhonetic)
-        resultTranslation = findViewById(R.id.resultTranslation)
-        tagsContainer = findViewById(R.id.tagsContainer)
-        selectDbButton = findViewById(R.id.selectDbButton)
-        searchModeButton = findViewById(R.id.searchModeButton)
-        searchHistoryContainer = findViewById(R.id.searchHistoryContainer)
-        historyChipContainer = findViewById(R.id.historyChipContainer)
-        clearHistoryButton = findViewById(R.id.clearHistoryButton)
+        searchEditText = binding.dictSearchEditText
+        loadingView = binding.loadingView
+        hintView = binding.hintView
+        noDatabaseView = binding.noDatabaseView
+        noResultView = binding.noResultView
+        noResultText = binding.noResultText
+        resultScrollView = binding.resultScrollView
+        resultWord = binding.resultWord
+        resultPhonetic = binding.resultPhonetic
+        resultTranslation = binding.resultTranslation
+        tagsContainer = binding.tagsContainer
+        selectDbButton = binding.selectDbButton
+        searchModeButton = binding.searchModeButton
+        searchHistoryContainer = binding.searchHistoryContainer
+        historyChipContainer = binding.historyChipContainer
+        clearHistoryButton = binding.clearHistoryButton
 
         updateSearchModeUI()
 
@@ -117,7 +119,7 @@ class DictionaryActivity : AppCompatActivity() {
             }
         })
 
-        findViewById<ImageView>(R.id.backButton).setOnClickListener {
+        binding.backButton.setOnClickListener {
             finish()
             compatOverridePendingTransition(R.anim.slide_in_left, R.anim.slide_out_right)
         }
@@ -216,7 +218,7 @@ class DictionaryActivity : AppCompatActivity() {
         }
         val contains = results.filter { entry -> !exactMatches.contains(entry) && !startsWith.contains(entry) }
 
-        val container = findViewById<LinearLayout>(R.id.chineseResultContainer)
+        val container = binding.chineseResultContainer
         container.removeAllViews()
         container.visibility = android.view.View.VISIBLE
 
@@ -332,7 +334,7 @@ class DictionaryActivity : AppCompatActivity() {
         resultScrollView.visibility = android.view.View.VISIBLE
 
         // Hide Chinese results container
-        val chineseContainer = findViewById<LinearLayout>(R.id.chineseResultContainer)
+        val chineseContainer = binding.chineseResultContainer
         chineseContainer.visibility = android.view.View.GONE
         chineseContainer.removeAllViews()
 

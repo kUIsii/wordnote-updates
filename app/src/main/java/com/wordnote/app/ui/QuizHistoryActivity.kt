@@ -3,11 +3,9 @@ package com.wordnote.app.ui
 import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
-import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
@@ -17,10 +15,10 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
-import com.google.android.material.card.MaterialCardView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.wordnote.app.R
 import com.wordnote.app.data.QuizHistory
+import com.wordnote.app.databinding.ActivityQuizHistoryBinding
 import com.wordnote.app.util.compatOverridePendingTransition
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -29,34 +27,23 @@ import java.util.Locale
 class QuizHistoryActivity : AppCompatActivity() {
 
     private lateinit var viewModel: WordViewModel
-    private lateinit var recyclerView: RecyclerView
-    private lateinit var emptyView: LinearLayout
-    private lateinit var recordCountText: TextView
-    private lateinit var totalTestsText: TextView
-    private lateinit var avgScoreText: TextView
-    private lateinit var totalWordsText: TextView
+    private lateinit var binding: ActivityQuizHistoryBinding
     private val adapter = QuizHistoryAdapter()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_quiz_history)
+        binding = ActivityQuizHistoryBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
         viewModel = ViewModelProvider(this)[WordViewModel::class.java]
 
-        findViewById<ImageView>(R.id.backButton).setOnClickListener {
+        binding.backButton.setOnClickListener {
             finish()
             compatOverridePendingTransition(R.anim.slide_in_left, R.anim.slide_out_right)
         }
 
-        recyclerView = findViewById(R.id.historyRecyclerView)
-        emptyView = findViewById(R.id.emptyView)
-        recordCountText = findViewById(R.id.recordCountText)
-        totalTestsText = findViewById(R.id.totalTestsText)
-        avgScoreText = findViewById(R.id.avgScoreText)
-        totalWordsText = findViewById(R.id.totalWordsText)
-
-        recyclerView.layoutManager = LinearLayoutManager(this)
-        recyclerView.adapter = adapter
+        binding.historyRecyclerView.layoutManager = LinearLayoutManager(this)
+        binding.historyRecyclerView.adapter = adapter
 
         adapter.onItemClick = { record -> showQuizDetail(record) }
         adapter.onItemLongClick = { record ->
@@ -74,14 +61,14 @@ class QuizHistoryActivity : AppCompatActivity() {
 
         viewModel.allQuizHistory.observe(this) { history ->
             if (history.isNullOrEmpty()) {
-                recyclerView.visibility = View.GONE
-                emptyView.visibility = View.VISIBLE
-                recordCountText.text = ""
+                binding.historyRecyclerView.visibility = View.GONE
+                binding.emptyView.visibility = View.VISIBLE
+                binding.recordCountText.text = ""
                 updateStats(emptyList())
             } else {
-                recyclerView.visibility = View.VISIBLE
-                emptyView.visibility = View.GONE
-                recordCountText.text = "共 ${history.size} 条"
+                binding.historyRecyclerView.visibility = View.VISIBLE
+                binding.emptyView.visibility = View.GONE
+                binding.recordCountText.text = "共 ${history.size} 条"
                 adapter.submitList(history)
                 updateStats(history)
             }
@@ -90,21 +77,21 @@ class QuizHistoryActivity : AppCompatActivity() {
 
     private fun updateStats(history: List<QuizHistory>) {
         if (history.isEmpty()) {
-            totalTestsText.text = "0"
-            avgScoreText.text = "0%"
-            totalWordsText.text = "0"
+            binding.totalTestsText.text = "0"
+            binding.avgScoreText.text = "0%"
+            binding.totalWordsText.text = "0"
             return
         }
 
-        totalTestsText.text = "${history.size}"
+        binding.totalTestsText.text = "${history.size}"
 
         val avgScore = if (history.isNotEmpty()) {
             history.sumOf { if (it.totalWords > 0) it.correctCount * 100 / it.totalWords else 0 } / history.size
         } else 0
-        avgScoreText.text = "$avgScore%"
+        binding.avgScoreText.text = "$avgScore%"
 
         val totalWords = history.sumOf { it.totalWords }
-        totalWordsText.text = "$totalWords"
+        binding.totalWordsText.text = "$totalWords"
     }
 
     private fun showQuizDetail(record: QuizHistory) {

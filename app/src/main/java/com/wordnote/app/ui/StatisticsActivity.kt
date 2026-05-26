@@ -6,13 +6,18 @@ import android.os.Bundle
 import android.view.Gravity
 import android.view.View
 import android.widget.FrameLayout
-import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.wordnote.app.R
+import com.wordnote.app.databinding.ActivityStatisticsBinding
+import com.wordnote.app.databinding.ItemDayCategoryDetailBinding
+import com.wordnote.app.databinding.ItemForgottenWordBinding
+import com.wordnote.app.databinding.ItemStatRowBinding
+import com.wordnote.app.databinding.ItemTrendStatBinding
+import com.wordnote.app.databinding.LayoutStreakDisplayBinding
 import com.wordnote.app.data.Category
 import com.wordnote.app.data.QuizHistory
 import com.wordnote.app.data.Word
@@ -23,20 +28,16 @@ import java.util.Locale
 
 class StatisticsActivity : AppCompatActivity() {
 
+    private lateinit var binding: ActivityStatisticsBinding
     private lateinit var viewModel: WordViewModel
-    private lateinit var streakContainer: LinearLayout
-    private lateinit var trendStatsRow: LinearLayout
-    private lateinit var trendChartContainer: LinearLayout
-    private lateinit var pieChartView: PieChartView
-    private lateinit var quizStatsContainer: LinearLayout
-    private lateinit var forgottenWordsContainer: LinearLayout
 
     private var allWords: List<Word> = emptyList()
     private var categoriesList: List<Category> = emptyList()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_statistics)
+        binding = ActivityStatisticsBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
         viewModel = ViewModelProvider(this)[WordViewModel::class.java]
 
@@ -45,17 +46,10 @@ class StatisticsActivity : AppCompatActivity() {
     }
 
     private fun initViews() {
-        findViewById<ImageView>(R.id.backButton).setOnClickListener {
+        binding.backButton.setOnClickListener {
             finish()
             compatOverridePendingTransitionClose(R.anim.slide_in_left, R.anim.slide_out_right)
         }
-
-        streakContainer = findViewById(R.id.streakContainer)
-        trendStatsRow = findViewById(R.id.trendStatsRow)
-        trendChartContainer = findViewById(R.id.trendChartContainer)
-        pieChartView = findViewById(R.id.pieChartView)
-        quizStatsContainer = findViewById(R.id.quizStatsContainer)
-        forgottenWordsContainer = findViewById(R.id.forgottenWordsContainer)
     }
 
     private fun observeData() {
@@ -79,7 +73,7 @@ class StatisticsActivity : AppCompatActivity() {
     }
 
     private fun updateStats() {
-        findViewById<TextView>(R.id.totalWordsText).text = "${allWords.size}"
+        binding.totalWordsText.text = "${allWords.size}"
 
         val calendar = Calendar.getInstance()
         val year = calendar.get(Calendar.YEAR)
@@ -89,14 +83,14 @@ class StatisticsActivity : AppCompatActivity() {
             val wordCal = Calendar.getInstance().apply { timeInMillis = word.createdAt }
             wordCal.get(Calendar.YEAR) == year && wordCal.get(Calendar.MONTH) == month
         }
-        findViewById<TextView>(R.id.monthWordsText).text = "${monthWords.size}"
+        binding.monthWordsText.text = "${monthWords.size}"
 
         val uniqueCategories = allWords.mapNotNull { it.categoryId }.distinct()
-        findViewById<TextView>(R.id.categoryCountText).text = "${uniqueCategories.size}"
+        binding.categoryCountText.text = "${uniqueCategories.size}"
     }
 
     private fun updateStreak() {
-        streakContainer.removeAllViews()
+        binding.streakContainer.removeAllViews()
 
         // Calculate consecutive learning days ending today
         val wordsByDay = allWords.groupBy { getDayKey(it.createdAt) }
@@ -137,74 +131,18 @@ class StatisticsActivity : AppCompatActivity() {
 
         val totalDays = wordsByDay.size
 
-        val density = resources.displayMetrics.density
-
-        // Current streak
-        val streakRow = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(0, dpToPx(6), 0, dpToPx(6))
-        }
-
-        val streakValue = TextView(this).apply {
-            text = "$streak"
-            setTextColor(getColor(R.color.primary))
-            textSize = 28f
-            paint.isFakeBoldText = true
-        }
-        streakRow.addView(streakValue)
-
-        val streakLabel = TextView(this).apply {
-            text = "  天连续学习"
-            setTextColor(resources.getColor(R.color.text_secondary, null))
-            textSize = 14f
-        }
-        streakRow.addView(streakLabel)
-
-        streakContainer.addView(streakRow)
-
-        // Stats row: longest streak + total days
-        val statsRow = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            setPadding(0, dpToPx(8), 0, dpToPx(4))
-        }
-
-        val statsItems = listOf(
-            "最长连续" to "$longestStreak 天",
-            "累计学习" to "$totalDays 天"
-        )
-
-        statsItems.forEachIndexed { index, (label, value) ->
-            val item = LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL
-                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-            }
-
-            val valueText = TextView(this).apply {
-                text = value
-                setTextColor(resources.getColor(R.color.text_primary, null))
-                textSize = 15f
-                paint.isFakeBoldText = true
-            }
-            item.addView(valueText)
-
-            val labelText = TextView(this).apply {
-                text = label
-                setTextColor(resources.getColor(R.color.text_hint, null))
-                textSize = 12f
-                setPadding(0, dpToPx(2), 0, 0)
-            }
-            item.addView(labelText)
-
-            statsRow.addView(item)
-        }
-
-        streakContainer.addView(statsRow)
+        val streakBinding = LayoutStreakDisplayBinding.inflate(layoutInflater, binding.streakContainer, true)
+        streakBinding.streakCount.text = "$streak"
+        streakBinding.streakLabel.text = "  天连续学习"
+        streakBinding.longestStreakValue.text = "$longestStreak 天"
+        streakBinding.longestStreakLabel.text = "最长连续"
+        streakBinding.totalDaysValue.text = "$totalDays 天"
+        streakBinding.totalDaysLabel.text = "累计学习"
     }
 
     private fun updateLearningTrend() {
-        trendStatsRow.removeAllViews()
-        trendChartContainer.removeAllViews()
+        binding.trendStatsRow.removeAllViews()
+        binding.trendChartContainer.removeAllViews()
 
         val density = resources.displayMetrics.density
         val cal = Calendar.getInstance()
@@ -212,7 +150,6 @@ class StatisticsActivity : AppCompatActivity() {
         val categoryMap = categoriesList.associateBy { it.id }
 
         // === Stats Row ===
-        // This month
         val monthCal = Calendar.getInstance()
         val year = monthCal.get(Calendar.YEAR)
         val month = monthCal.get(Calendar.MONTH)
@@ -221,7 +158,6 @@ class StatisticsActivity : AppCompatActivity() {
             c.get(Calendar.YEAR) == year && c.get(Calendar.MONTH) == month
         }
 
-        // Last 7 days
         val sevenDaysAgo = now - 7L * 24 * 60 * 60 * 1000
         val last7Words = allWords.filter { it.createdAt >= sevenDaysAgo }
 
@@ -232,31 +168,10 @@ class StatisticsActivity : AppCompatActivity() {
         )
 
         stats.forEach { (value, label, color) ->
-            val item = LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL
-                gravity = Gravity.CENTER_HORIZONTAL
-                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-            }
-
-            val valueText = TextView(this).apply {
-                text = value
-                setTextColor(color)
-                textSize = 24f
-                paint.isFakeBoldText = true
-                gravity = Gravity.CENTER
-            }
-            item.addView(valueText)
-
-            val labelText = TextView(this).apply {
-                text = label
-                setTextColor(resources.getColor(R.color.text_hint, null))
-                textSize = 12f
-                gravity = Gravity.CENTER
-                setPadding(0, dpToPx(2), 0, 0)
-            }
-            item.addView(labelText)
-
-            trendStatsRow.addView(item)
+            val itemBinding = ItemTrendStatBinding.inflate(layoutInflater, binding.trendStatsRow, true)
+            itemBinding.trendStatValue.text = value
+            itemBinding.trendStatValue.setTextColor(color)
+            itemBinding.trendStatLabel.text = label
         }
 
         // === 7-Day Stacked Bar Chart by Category ===
@@ -289,7 +204,7 @@ class StatisticsActivity : AppCompatActivity() {
                 gravity = Gravity.CENTER
                 setPadding(0, dpToPx(16), 0, dpToPx(8))
             }
-            trendChartContainer.addView(emptyText)
+            binding.trendChartContainer.addView(emptyText)
             return
         }
 
@@ -402,7 +317,7 @@ class StatisticsActivity : AppCompatActivity() {
             chartRow.addView(col)
         }
 
-        trendChartContainer.addView(chartRow)
+        binding.trendChartContainer.addView(chartRow)
     }
 
     private fun showDayCategoryDetail(day: DayData, categoryMap: Map<Long, Category>) {
@@ -423,60 +338,21 @@ class StatisticsActivity : AppCompatActivity() {
         container.addView(summary)
 
         val sortedCats = day.categoryCounts.entries.sortedByDescending { it.value }
-        sortedCats.forEachIndexed { index, (catId, count) ->
+        sortedCats.forEach { (catId, count) ->
             val category = categoryMap[catId]
             val catName = category?.name ?: "未分类"
             val catColor = category?.let {
                 try { Color.parseColor(it.color) } catch (e: Exception) { Color.parseColor("#757575") }
             } ?: Color.parseColor("#757575")
 
-            val row = LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER_VERTICAL
-                setPadding(0, dpToPx(10), 0, dpToPx(10))
+            val itemBinding = ItemDayCategoryDetailBinding.inflate(layoutInflater, container, true)
+            itemBinding.categoryDot.background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(catColor)
             }
-
-            val dot = View(this).apply {
-                val size = (10 * density).toInt()
-                layoutParams = LinearLayout.LayoutParams(size, size)
-                background = GradientDrawable().apply {
-                    shape = GradientDrawable.OVAL
-                    setColor(catColor)
-                }
-            }
-            row.addView(dot)
-
-            val nameText = TextView(this).apply {
-                text = catName
-                setTextColor(resources.getColor(R.color.text_primary, null))
-                textSize = 15f
-                layoutParams = LinearLayout.LayoutParams(
-                    0,
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                    1f
-                ).apply {
-                    marginStart = dpToPx(10)
-                }
-            }
-            row.addView(nameText)
-
-            val countText = TextView(this).apply {
-                text = "$count"
-                setTextColor(catColor)
-                textSize = 15f
-                paint.isFakeBoldText = true
-            }
-            row.addView(countText)
-
-            container.addView(row)
-
-            if (index < sortedCats.size - 1) {
-                val divider = View(this).apply {
-                    layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 1)
-                    setBackgroundColor(resources.getColor(R.color.divider, null))
-                }
-                container.addView(divider)
-            }
+            itemBinding.categoryNameText.text = catName
+            itemBinding.categoryCountText.text = "$count"
+            itemBinding.categoryCountText.setTextColor(catColor)
         }
 
         MaterialAlertDialogBuilder(this, R.style.Theme_WordNoteApp_Dialog)
@@ -492,7 +368,7 @@ class StatisticsActivity : AppCompatActivity() {
 
     private fun updateCategoryDistribution() {
         if (allWords.isEmpty() || categoriesList.isEmpty()) {
-            pieChartView.setData(emptyList())
+            binding.pieChartView.setData(emptyList())
             return
         }
 
@@ -507,7 +383,7 @@ class StatisticsActivity : AppCompatActivity() {
                 PieChartView.Slice(cat.name, words.size, color)
             }
 
-        pieChartView.setData(slices)
+        binding.pieChartView.setData(slices)
     }
 
     private fun getDayKey(timestamp: Long): Long {
@@ -522,7 +398,7 @@ class StatisticsActivity : AppCompatActivity() {
     }
 
     private fun updateQuizStats(history: List<QuizHistory>) {
-        quizStatsContainer.removeAllViews()
+        binding.quizStatsContainer.removeAllViews()
 
         if (history.isEmpty()) {
             val emptyText = TextView(this).apply {
@@ -532,7 +408,7 @@ class StatisticsActivity : AppCompatActivity() {
                 gravity = Gravity.CENTER
                 setPadding(0, dpToPx(12), 0, dpToPx(12))
             }
-            quizStatsContainer.addView(emptyText)
+            binding.quizStatsContainer.addView(emptyText)
             return
         }
 
@@ -553,42 +429,14 @@ class StatisticsActivity : AppCompatActivity() {
         )
 
         stats.forEach { (label, value) ->
-            val row = LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER_VERTICAL
-                setPadding(0, dpToPx(8), 0, dpToPx(8))
-            }
-
-            val labelText = TextView(this).apply {
-                text = label
-                setTextColor(resources.getColor(R.color.text_secondary, null))
-                textSize = 14f
-                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-            }
-            row.addView(labelText)
-
-            val valueText = TextView(this).apply {
-                text = value
-                setTextColor(resources.getColor(R.color.text_primary, null))
-                textSize = 15f
-                paint.isFakeBoldText = true
-            }
-            row.addView(valueText)
-
-            quizStatsContainer.addView(row)
-
-            if (label != stats.last().first) {
-                val divider = View(this).apply {
-                    layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 1)
-                    setBackgroundColor(resources.getColor(R.color.divider, null))
-                }
-                quizStatsContainer.addView(divider)
-            }
+            val rowBinding = ItemStatRowBinding.inflate(layoutInflater, binding.quizStatsContainer, true)
+            rowBinding.statLabel.text = label
+            rowBinding.statValue.text = value
         }
     }
 
     private fun updateForgottenWords() {
-        forgottenWordsContainer.removeAllViews()
+        binding.forgottenWordsContainer.removeAllViews()
 
         val forgottenWords = allWords
             .filter { it.forgetCount > 0 }
@@ -603,61 +451,19 @@ class StatisticsActivity : AppCompatActivity() {
                 gravity = Gravity.CENTER
                 setPadding(0, dpToPx(12), 0, dpToPx(12))
             }
-            forgottenWordsContainer.addView(emptyText)
+            binding.forgottenWordsContainer.addView(emptyText)
             return
         }
 
-        forgottenWords.forEachIndexed { index, word ->
-            val row = LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER_VERTICAL
-                setPadding(0, dpToPx(8), 0, dpToPx(8))
-            }
-
-            val wordText = TextView(this).apply {
-                text = word.word
-                setTextColor(resources.getColor(R.color.text_primary, null))
-                textSize = 14f
-                paint.isFakeBoldText = true
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT
-                )
-            }
-            row.addView(wordText)
-
-            val meaningText = TextView(this).apply {
-                text = word.meaning
-                setTextColor(resources.getColor(R.color.text_hint, null))
-                textSize = 12f
-                maxLines = 1
-                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
-                    marginStart = dpToPx(8)
-                }
-            }
-            row.addView(meaningText)
-
-            val badge = TextView(this).apply {
-                text = "${word.forgetCount}次"
-                setTextColor(Color.WHITE)
-                textSize = 11f
-                val bg = GradientDrawable().apply {
-                    setColor(getColor(R.color.cat_hard))
-                    cornerRadius = 10f * resources.displayMetrics.density
-                }
-                background = bg
-                setPadding(dpToPx(8), dpToPx(2), dpToPx(8), dpToPx(2))
-            }
-            row.addView(badge)
-
-            forgottenWordsContainer.addView(row)
-
-            if (index < forgottenWords.size - 1) {
-                val divider = View(this).apply {
-                    layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 1)
-                    setBackgroundColor(resources.getColor(R.color.divider, null))
-                }
-                forgottenWordsContainer.addView(divider)
+        val density = resources.displayMetrics.density
+        forgottenWords.forEach { word ->
+            val itemBinding = ItemForgottenWordBinding.inflate(layoutInflater, binding.forgottenWordsContainer, true)
+            itemBinding.forgottenWordText.text = word.word
+            itemBinding.forgottenMeaningText.text = word.meaning
+            itemBinding.forgetCountBadge.text = "${word.forgetCount}次"
+            itemBinding.forgetCountBadge.background = GradientDrawable().apply {
+                setColor(getColor(R.color.cat_hard))
+                cornerRadius = 10f * density
             }
         }
     }

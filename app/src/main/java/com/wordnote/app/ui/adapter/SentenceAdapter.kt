@@ -10,6 +10,8 @@ import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.wordnote.app.R
 import com.wordnote.app.data.SentenceWithWords
+import com.wordnote.app.databinding.ItemDateHeaderBinding
+import com.wordnote.app.databinding.ItemSentenceBinding
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -73,12 +75,12 @@ class SentenceAdapter(
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
         return when (viewType) {
             TYPE_DATE_HEADER -> {
-                val view = LayoutInflater.from(parent.context).inflate(R.layout.item_date_header, parent, false)
-                DateHeaderViewHolder(view)
+                val binding = ItemDateHeaderBinding.inflate(LayoutInflater.from(parent.context), parent, false)
+                DateHeaderViewHolder(binding)
             }
             else -> {
-                val view = LayoutInflater.from(parent.context).inflate(R.layout.item_sentence, parent, false)
-                SentenceViewHolder(view)
+                val binding = ItemSentenceBinding.inflate(LayoutInflater.from(parent.context), parent, false)
+                SentenceViewHolder(binding)
             }
         }
     }
@@ -90,19 +92,19 @@ class SentenceAdapter(
         }
     }
 
-    class DateHeaderViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        private val dateText: TextView = itemView.findViewById(R.id.dateTextView)
+    class DateHeaderViewHolder(private val binding: ItemDateHeaderBinding) : RecyclerView.ViewHolder(binding.root) {
+        private val dateText: TextView = binding.dateTextView
 
         fun bind(item: ListItem.DateHeader) {
             dateText.text = item.dateStr
         }
     }
 
-    inner class SentenceViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        private val sentenceTextView: TextView = itemView.findViewById(R.id.sentenceTextView)
-        private val translationTextView: TextView = itemView.findViewById(R.id.translationTextView)
-        private val wordCountTextView: TextView = itemView.findViewById(R.id.wordCountTextView)
-        private val deleteButton: ImageView = itemView.findViewById(R.id.deleteButton)
+    inner class SentenceViewHolder(private val binding: ItemSentenceBinding) : RecyclerView.ViewHolder(binding.root) {
+        private val sentenceTextView: TextView = binding.sentenceTextView
+        private val translationTextView: TextView = binding.translationTextView
+        private val wordCountTextView: TextView = binding.wordCountTextView
+        private val deleteButton: ImageView = binding.deleteButton
 
         fun bind(item: SentenceWithWords) {
             sentenceTextView.text = item.sentence.originalText

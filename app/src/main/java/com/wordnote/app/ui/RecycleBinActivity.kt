@@ -6,7 +6,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.CheckBox
 import android.widget.ImageView
-import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -18,6 +17,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.wordnote.app.R
 import com.wordnote.app.data.Word
+import com.wordnote.app.databinding.ActivityRecycleBinBinding
 import com.wordnote.app.util.DateUtils
 import com.wordnote.app.util.compatOverridePendingTransitionClose
 
@@ -25,25 +25,14 @@ class RecycleBinActivity : AppCompatActivity() {
 
     private lateinit var viewModel: WordViewModel
     private lateinit var adapter: RecycleBinAdapter
-    private lateinit var emptyView: View
-    private lateinit var recyclerView: RecyclerView
-    private lateinit var bottomBar: LinearLayout
-    private lateinit var countText: TextView
-    private lateinit var restoreSelectedButton: View
-    private lateinit var permanentDeleteButton: View
+    private lateinit var binding: ActivityRecycleBinBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_recycle_bin)
+        binding = ActivityRecycleBinBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
         viewModel = ViewModelProvider(this)[WordViewModel::class.java]
-
-        emptyView = findViewById(R.id.emptyView)
-        recyclerView = findViewById(R.id.recycleBinList)
-        bottomBar = findViewById(R.id.bottomBar)
-        countText = findViewById(R.id.countText)
-        restoreSelectedButton = findViewById(R.id.restoreSelectedButton)
-        permanentDeleteButton = findViewById(R.id.permanentDeleteButton)
 
         setupToolbar()
         setupList()
@@ -52,7 +41,7 @@ class RecycleBinActivity : AppCompatActivity() {
     }
 
     private fun setupToolbar() {
-        findViewById<ImageView>(R.id.backButton).setOnClickListener {
+        binding.backButton.setOnClickListener {
             finish()
             compatOverridePendingTransitionClose(R.anim.slide_in_left, R.anim.slide_out_right)
         }
@@ -60,10 +49,10 @@ class RecycleBinActivity : AppCompatActivity() {
 
     private fun setupList() {
         adapter = RecycleBinAdapter { updateBottomBar() }
-        recyclerView.layoutManager = LinearLayoutManager(this)
-        recyclerView.adapter = adapter
+        binding.recycleBinList.layoutManager = LinearLayoutManager(this)
+        binding.recycleBinList.adapter = adapter
 
-        restoreSelectedButton.setOnClickListener {
+        binding.restoreSelectedButton.setOnClickListener {
             val selected = adapter.getSelectedIds()
             if (selected.isEmpty()) return@setOnClickListener
             MaterialAlertDialogBuilder(this)
@@ -78,7 +67,7 @@ class RecycleBinActivity : AppCompatActivity() {
                 .show()
         }
 
-        permanentDeleteButton.setOnClickListener {
+        binding.permanentDeleteButton.setOnClickListener {
             val selected = adapter.getSelectedIds()
             if (selected.isEmpty()) return@setOnClickListener
             MaterialAlertDialogBuilder(this)
@@ -101,11 +90,11 @@ class RecycleBinActivity : AppCompatActivity() {
     private fun observeData() {
         viewModel.deletedWords.observe(this) { words ->
             adapter.submitList(words)
-            emptyView.visibility = if (words.isEmpty()) View.VISIBLE else View.GONE
-            recyclerView.visibility = if (words.isEmpty()) View.GONE else View.VISIBLE
-            countText.text = "${words.size} 个单词"
+            binding.emptyView.visibility = if (words.isEmpty()) View.VISIBLE else View.GONE
+            binding.recycleBinList.visibility = if (words.isEmpty()) View.GONE else View.VISIBLE
+            binding.countText.text = "${words.size} 个单词"
             if (words.isEmpty()) {
-                bottomBar.visibility = View.GONE
+                binding.bottomBar.visibility = View.GONE
                 adapter.clearSelection()
             }
         }
@@ -113,7 +102,7 @@ class RecycleBinActivity : AppCompatActivity() {
 
     private fun updateBottomBar() {
         val count = adapter.getSelectedIds().size
-        bottomBar.visibility = if (count > 0) View.VISIBLE else View.GONE
+        binding.bottomBar.visibility = if (count > 0) View.VISIBLE else View.GONE
     }
 
     // Adapter

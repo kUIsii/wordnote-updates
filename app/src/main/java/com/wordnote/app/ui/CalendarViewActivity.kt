@@ -8,14 +8,15 @@ import android.text.style.ForegroundColorSpan
 import android.text.style.StyleSpan
 import android.view.View
 import java.util.concurrent.ConcurrentHashMap
-import android.widget.EditText
-import android.widget.ImageView
 import android.widget.LinearLayout
-import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
 import com.google.android.material.datepicker.MaterialDatePicker
 import com.wordnote.app.R
+import com.wordnote.app.databinding.ActivityCalendarViewBinding
+import com.wordnote.app.databinding.ItemCalendarSentenceBinding
+import com.wordnote.app.databinding.ItemCalendarCategoryHeaderBinding
+import com.wordnote.app.databinding.ItemCalendarWordBinding
 import com.wordnote.app.data.Category
 import com.wordnote.app.data.SentenceWithWords
 import com.wordnote.app.data.Word
@@ -30,16 +31,9 @@ import java.util.*
 
 class CalendarViewActivity : AppCompatActivity() {
 
+    private lateinit var binding: ActivityCalendarViewBinding
     private lateinit var viewModel: WordViewModel
     private var sentenceViewModel: SentenceViewModel? = null
-    private lateinit var backButton: ImageView
-    private lateinit var datePickerButton: TextView
-    private lateinit var selectedDateText: TextView
-    private lateinit var searchEditText: EditText
-    private lateinit var categoryContainer: LinearLayout
-    private lateinit var emptyView: LinearLayout
-    private lateinit var sentencesSection: LinearLayout
-    private lateinit var sentencesContainer: LinearLayout
 
     private var selectedDate: Long = System.currentTimeMillis()
     private var allWords: List<Word> = emptyList()
@@ -50,7 +44,8 @@ class CalendarViewActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_calendar_view)
+        binding = ActivityCalendarViewBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
         try {
             viewModel = ViewModelProvider(this)[WordViewModel::class.java]
@@ -73,16 +68,7 @@ class CalendarViewActivity : AppCompatActivity() {
     }
 
     private fun initViews() {
-        backButton = findViewById(R.id.backButton)
-        datePickerButton = findViewById(R.id.datePickerButton)
-        selectedDateText = findViewById(R.id.selectedDateText)
-        searchEditText = findViewById(R.id.searchEditText)
-        categoryContainer = findViewById(R.id.categoryContainer)
-        emptyView = findViewById(R.id.emptyView)
-        sentencesSection = findViewById(R.id.sentencesSection)
-        sentencesContainer = findViewById(R.id.sentencesContainer)
-
-        backButton.setOnClickListener {
+        binding.backButton.setOnClickListener {
             finish()
             compatOverridePendingTransitionClose(R.anim.slide_in_left, R.anim.slide_out_right)
         }
@@ -91,7 +77,7 @@ class CalendarViewActivity : AppCompatActivity() {
     }
 
     private fun setupDatePicker() {
-        datePickerButton.setOnClickListener {
+        binding.datePickerButton.setOnClickListener {
             showDatePicker()
         }
     }
@@ -130,11 +116,11 @@ class CalendarViewActivity : AppCompatActivity() {
             else -> sdf.format(Date(selectedDate))
         }
 
-        selectedDateText.text = dateStr
+        binding.selectedDateText.text = dateStr
     }
 
     private fun setupSearch() {
-        searchEditText.addTextChangedListener(object : android.text.TextWatcher {
+        binding.searchEditText.addTextChangedListener(object : android.text.TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
             override fun afterTextChanged(s: android.text.Editable?) {
@@ -216,7 +202,7 @@ class CalendarViewActivity : AppCompatActivity() {
             val targetMonth = cal.get(Calendar.MONTH)
             val targetDay = cal.get(Calendar.DAY_OF_MONTH)
 
-            val searchQuery = searchEditText.text.toString().trim()
+            val searchQuery = binding.searchEditText.text.toString().trim()
 
             val filteredWords = allWords.filter { word ->
                 val wordCal = Calendar.getInstance().apply { timeInMillis = word.createdAt }
@@ -267,72 +253,36 @@ class CalendarViewActivity : AppCompatActivity() {
 
     private fun displaySentences(sentences: List<SentenceWithWords>) {
         try {
-            sentencesContainer.removeAllViews()
+            binding.sentencesContainer.removeAllViews()
 
             if (sentences.isEmpty()) {
-                sentencesSection.visibility = View.GONE
-                // Check if words are also empty
-                if (categoryContainer.childCount == 0) {
-                    emptyView.visibility = View.VISIBLE
+                binding.sentencesSection.visibility = View.GONE
+                if (binding.categoryContainer.childCount == 0) {
+                    binding.emptyView.visibility = View.VISIBLE
                 }
                 return
             }
 
-            sentencesSection.visibility = View.VISIBLE
-            emptyView.visibility = View.GONE
-            val density = resources.displayMetrics.density
+            binding.sentencesSection.visibility = View.VISIBLE
+            binding.emptyView.visibility = View.GONE
 
             sentences.forEach { item ->
-                val card = com.google.android.material.card.MaterialCardView(this).apply {
-                    layoutParams = LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT,
-                        LinearLayout.LayoutParams.WRAP_CONTENT
-                    ).apply {
-                        bottomMargin = (8 * density).toInt()
-                    }
-                    setCardBackgroundColor(getColor(R.color.card_background))
-                    radius = 12f * density
-                    cardElevation = 0f
-                }
+                val itemBinding = ItemCalendarSentenceBinding.inflate(layoutInflater, binding.sentencesContainer, false)
 
-                val content = LinearLayout(this).apply {
-                    orientation = LinearLayout.VERTICAL
-                    setPadding((14 * density).toInt(), (12 * density).toInt(), (14 * density).toInt(), (12 * density).toInt())
-                }
-
-                val sentenceText = TextView(this).apply {
-                    text = item.sentence.originalText
-                    textSize = 15f
-                    setTextColor(getColor(R.color.text_primary))
-                    maxLines = 3
-                    ellipsize = android.text.TextUtils.TruncateAt.END
-                }
-                content.addView(sentenceText)
+                itemBinding.sentenceText.text = item.sentence.originalText
 
                 if (!item.sentence.translation.isNullOrBlank()) {
-                    val translationText = TextView(this).apply {
-                        text = item.sentence.translation
-                        textSize = 13f
-                        setTextColor(getColor(R.color.text_secondary))
-                        maxLines = 2
-                        setPadding(0, (4 * density).toInt(), 0, 0)
-                        ellipsize = android.text.TextUtils.TruncateAt.END
-                    }
-                    content.addView(translationText)
+                    itemBinding.translationText.text = item.sentence.translation
+                    itemBinding.translationText.visibility = View.VISIBLE
                 }
 
                 if (item.words.isNotEmpty()) {
-                    val wordCount = TextView(this).apply {
-                        text = "${item.words.size}个生词"
-                        textSize = 11f
-                        setTextColor(getColor(R.color.primary))
-                        setPadding(0, (6 * density).toInt(), 0, 0)
-                    }
-                    content.addView(wordCount)
+                    itemBinding.wordCountText.text = "${item.words.size}个生词"
+                    itemBinding.wordCountText.setTextColor(getColor(R.color.primary))
+                    itemBinding.wordCountText.visibility = View.VISIBLE
                 }
 
-                card.addView(content)
-                sentencesContainer.addView(card)
+                binding.sentencesContainer.addView(itemBinding.root)
             }
         } catch (e: Exception) {
             e.printStackTrace()
@@ -341,18 +291,18 @@ class CalendarViewActivity : AppCompatActivity() {
 
     private fun displayWordsByCategory(words: List<Word>) {
         try {
-            categoryContainer.removeAllViews()
+            binding.categoryContainer.removeAllViews()
 
-            val hasSentences = sentencesSection.visibility == View.VISIBLE
+            val hasSentences = binding.sentencesSection.visibility == View.VISIBLE
 
             if (words.isEmpty() && !hasSentences) {
-                emptyView.visibility = View.VISIBLE
-                categoryContainer.visibility = View.GONE
+                binding.emptyView.visibility = View.VISIBLE
+                binding.categoryContainer.visibility = View.GONE
                 return
             }
 
-            emptyView.visibility = View.GONE
-            categoryContainer.visibility = if (words.isEmpty()) View.GONE else View.VISIBLE
+            binding.emptyView.visibility = View.GONE
+            binding.categoryContainer.visibility = if (words.isEmpty()) View.GONE else View.VISIBLE
 
             // Group words by category
             val wordsByCategory = words.groupBy { it.categoryId }
@@ -383,6 +333,8 @@ class CalendarViewActivity : AppCompatActivity() {
             Color.parseColor("#757575")
         }
 
+        val isCollapsed = collapsedCategories.contains(category.id)
+
         // Category container with border
         val container = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -403,65 +355,17 @@ class CalendarViewActivity : AppCompatActivity() {
             layoutParams = params
         }
 
-        // Category header with collapse button
-        val headerLayout = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = android.view.Gravity.CENTER_VERTICAL
-            val params = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            )
-            layoutParams = params
+        // Category header from XML layout
+        val headerBinding = ItemCalendarCategoryHeaderBinding.inflate(layoutInflater, container, false)
+        headerBinding.categoryDot.background = android.graphics.drawable.GradientDrawable().apply {
+            shape = android.graphics.drawable.GradientDrawable.OVAL
+            setColor(categoryColor)
         }
+        headerBinding.categoryNameText.text = category.name
+        headerBinding.categoryCountText.text = "${words.size}个"
+        headerBinding.expandIcon.rotation = if (isCollapsed) 0f else 180f
 
-        // Category color dot
-        val colorDot = View(this).apply {
-            val dotSize = (12 * density).toInt()
-            val params = LinearLayout.LayoutParams(dotSize, dotSize)
-            layoutParams = params
-            background = android.graphics.drawable.GradientDrawable().apply {
-                shape = android.graphics.drawable.GradientDrawable.OVAL
-                setColor(categoryColor)
-            }
-        }
-        headerLayout.addView(colorDot)
-
-        // Category name
-        val nameText = TextView(this).apply {
-            text = category.name
-            textSize = 16f
-            setTextColor(resources.getColor(R.color.text_primary, null))
-            setPadding((8 * density).toInt(), 0, 0, 0)
-            val params = LinearLayout.LayoutParams(
-                0,
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                1f
-            )
-            layoutParams = params
-        }
-        headerLayout.addView(nameText)
-
-        // Word count
-        val countText = TextView(this).apply {
-            text = "${words.size}个"
-            textSize = 13f
-            setTextColor(resources.getColor(R.color.text_secondary, null))
-            setPadding(0, 0, (8 * density).toInt(), 0)
-        }
-        headerLayout.addView(countText)
-
-        // Collapse/expand arrow
-        val arrowText = TextView(this).apply {
-            text = if (collapsedCategories.contains(category.id)) "▶" else "▼"
-            textSize = 12f
-            setTextColor(resources.getColor(R.color.text_secondary, null))
-        }
-        headerLayout.addView(arrowText)
-
-        container.addView(headerLayout)
-
-        // Toggle collapse on header click
-        headerLayout.setOnClickListener {
+        headerBinding.root.setOnClickListener {
             if (collapsedCategories.contains(category.id)) {
                 collapsedCategories.remove(category.id)
             } else {
@@ -470,8 +374,10 @@ class CalendarViewActivity : AppCompatActivity() {
             filterWordsByDate()
         }
 
+        container.addView(headerBinding.root)
+
         // Words container (collapsible)
-        if (!collapsedCategories.contains(category.id)) {
+        if (!isCollapsed) {
             val wordsContainer = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 val params = LinearLayout.LayoutParams(
@@ -489,11 +395,9 @@ class CalendarViewActivity : AppCompatActivity() {
 
             wordsByBatch.forEach { (batchId, batchWords) ->
                 if (batchId != null && batchWords.size > 1) {
-                    // Multiple words in batch - show with thin border
                     createBatchGroup(wordsContainer, batchWords, categoryColor, wordIndex, density)
                     wordIndex += batchWords.size
                 } else {
-                    // Single word or no batch - show individually
                     batchWords.forEach { word ->
                         createWordItem(wordsContainer, word, wordIndex, density)
                         wordIndex++
@@ -504,7 +408,7 @@ class CalendarViewActivity : AppCompatActivity() {
             container.addView(wordsContainer)
         }
 
-        categoryContainer.addView(container)
+        binding.categoryContainer.addView(container)
     }
 
     private fun createBatchGroup(container: LinearLayout, words: List<Word>, categoryColor: Int, startIndex: Int, density: Float) {
@@ -539,71 +443,35 @@ class CalendarViewActivity : AppCompatActivity() {
     }
 
     private fun createWordItem(container: LinearLayout, word: Word, index: Int, density: Float, showBorder: Boolean = true) {
-        val row = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = android.view.Gravity.CENTER_VERTICAL
-            val params = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply {
-                topMargin = (4 * density).toInt()
-            }
-            layoutParams = params
-        }
+        val itemBinding = ItemCalendarWordBinding.inflate(layoutInflater, container, false)
 
-        // Index number
-        val indexText = TextView(this).apply {
-            text = "$index."
-            textSize = 13f
-            setTextColor(resources.getColor(R.color.text_secondary, null))
-            setPadding(0, 0, (8 * density).toInt(), 0)
-        }
-        row.addView(indexText)
+        itemBinding.indexText.text = "$index."
+        itemBinding.wordText.text = word.word
 
-        // Word
-        val wordText = TextView(this).apply {
-            text = word.word
-            textSize = 15f
-            setTextColor(resources.getColor(R.color.text_primary, null))
-            setPadding(0, 0, (12 * density).toInt(), 0)
-            val params = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            )
-            layoutParams = params
-        }
-        row.addView(wordText)
-
-        // Meaning
-        val meaningText = TextView(this).apply {
-            textSize = 14f
-            val highlighted = highlightedMeaningsMap[word.id]
-            if (!highlighted.isNullOrEmpty()) {
-                val spannable = SpannableString(word.meaning)
-                val highlightColor = Color.parseColor("#5B9BD5")
-                highlighted.forEach { hm ->
-                    val idx = word.meaning.indexOf(hm)
-                    if (idx >= 0) {
-                        spannable.setSpan(
-                            ForegroundColorSpan(highlightColor),
-                            idx, idx + hm.length,
-                            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-                        )
-                        spannable.setSpan(
-                            StyleSpan(android.graphics.Typeface.BOLD),
-                            idx, idx + hm.length,
-                            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-                        )
-                    }
+        val highlighted = highlightedMeaningsMap[word.id]
+        if (!highlighted.isNullOrEmpty()) {
+            val spannable = SpannableString(word.meaning)
+            val highlightColor = Color.parseColor("#5B9BD5")
+            highlighted.forEach { hm ->
+                val idx = word.meaning.indexOf(hm)
+                if (idx >= 0) {
+                    spannable.setSpan(
+                        ForegroundColorSpan(highlightColor),
+                        idx, idx + hm.length,
+                        Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                    )
+                    spannable.setSpan(
+                        StyleSpan(android.graphics.Typeface.BOLD),
+                        idx, idx + hm.length,
+                        Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                    )
                 }
-                text = spannable
-            } else {
-                text = word.meaning
-                setTextColor(resources.getColor(R.color.text_secondary, null))
             }
+            itemBinding.meaningText.text = spannable
+        } else {
+            itemBinding.meaningText.text = word.meaning
         }
-        row.addView(meaningText)
 
-        container.addView(row)
+        container.addView(itemBinding.root)
     }
 }

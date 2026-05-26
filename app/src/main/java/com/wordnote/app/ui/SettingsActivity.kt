@@ -16,11 +16,12 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.google.android.material.switchmaterial.SwitchMaterial
 import com.wordnote.app.R
 import com.wordnote.app.data.WordDatabase
+import com.wordnote.app.databinding.ActivitySettingsBinding
 import com.wordnote.app.util.compatOverridePendingTransition
 import com.wordnote.app.util.compatOverridePendingTransitionClose
+import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -29,11 +30,12 @@ import org.json.JSONObject
 
 class SettingsActivity : AppCompatActivity() {
 
-    private lateinit var darkModeSwitch: SwitchMaterial
+    private lateinit var binding: ActivitySettingsBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_settings)
+        binding = ActivitySettingsBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
         setupToolbar()
         setupVersion()
@@ -46,7 +48,7 @@ class SettingsActivity : AppCompatActivity() {
     private fun setupVersion() {
         try {
             val packageInfo = packageManager.getPackageInfo(packageName, 0)
-            val versionText = findViewById<android.widget.TextView>(R.id.versionText)
+            val versionText = binding.versionText
             versionText.text = packageInfo.versionName ?: "1.0"
 
             versionText.setOnClickListener {
@@ -59,7 +61,7 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun checkForUpdate() {
-        CoroutineScope(Dispatchers.Main).launch {
+        lifecycleScope.launch {
             try {
                 val packageInfo = packageManager.getPackageInfo(packageName, 0)
                 val currentVersionName = packageInfo.versionName ?: "1.0"
@@ -102,7 +104,7 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun startUpdate(updateInfo: com.wordnote.app.util.UpdateChecker.UpdateInfo) {
-        CoroutineScope(Dispatchers.Main).launch {
+        lifecycleScope.launch {
             try {
                 com.wordnote.app.util.UpdateChecker.downloadAndInstall(this@SettingsActivity, updateInfo) { }
                 Toast.makeText(this@SettingsActivity, "下载完成，请安装", Toast.LENGTH_LONG).show()
@@ -117,18 +119,17 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun setupToolbar() {
-        findViewById<ImageView>(R.id.backButton).setOnClickListener {
+        binding.backButton.setOnClickListener {
             finish()
             compatOverridePendingTransitionClose(R.anim.slide_in_left, R.anim.slide_out_right)
         }
     }
 
     private fun setupDarkMode() {
-        darkModeSwitch = findViewById(R.id.darkModeSwitch)
         val prefs = getSharedPreferences("settings", MODE_PRIVATE)
-        darkModeSwitch.isChecked = prefs.getBoolean("dark_mode", false)
+        binding.darkModeSwitch.isChecked = prefs.getBoolean("dark_mode", false)
 
-        darkModeSwitch.setOnCheckedChangeListener { _, isChecked ->
+        binding.darkModeSwitch.setOnCheckedChangeListener { _, isChecked ->
             prefs.edit().putBoolean("dark_mode", isChecked).apply()
             AppCompatDelegate.setDefaultNightMode(
                 if (isChecked) AppCompatDelegate.MODE_NIGHT_YES else AppCompatDelegate.MODE_NIGHT_NO
@@ -137,16 +138,16 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun setupBackupRestore() {
-        findViewById<LinearLayout>(R.id.backupButton).setOnClickListener {
+        binding.backupButton.setOnClickListener {
             showBackupManager()
         }
 
-        findViewById<LinearLayout>(R.id.recycleBinButton).setOnClickListener {
+        binding.recycleBinButton.setOnClickListener {
             startActivity(Intent(this, RecycleBinActivity::class.java))
             compatOverridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left)
         }
 
-        findViewById<LinearLayout>(R.id.changelogButton).setOnClickListener {
+        binding.changelogButton.setOnClickListener {
             startActivity(Intent(this, ChangelogActivity::class.java))
             compatOverridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left)
         }
@@ -183,7 +184,7 @@ class SettingsActivity : AppCompatActivity() {
     private fun loadBackupFiles(fileList: RecyclerView, emptyText: TextView) {
         val backupDir = File(android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS), "WordNoteBackup")
 
-        CoroutineScope(Dispatchers.IO).launch {
+        lifecycleScope.launch(Dispatchers.IO) {
             val dbFiles = if (backupDir.exists()) {
                 backupDir.listFiles()?.filter { it.name.endsWith(".db") }?.sortedByDescending { it.lastModified() } ?: emptyList()
             } else {
@@ -233,7 +234,7 @@ class SettingsActivity : AppCompatActivity() {
                     return@setPositiveButton
                 }
 
-                CoroutineScope(Dispatchers.IO).launch {
+                lifecycleScope.launch(Dispatchers.IO) {
                     try {
                         // Rename main db file
                         file.renameTo(newFile)
@@ -262,7 +263,7 @@ class SettingsActivity : AppCompatActivity() {
             .setTitle("删除备份")
             .setMessage("确定要删除 ${file.name} 吗？")
             .setPositiveButton("删除") { _, _ ->
-                CoroutineScope(Dispatchers.IO).launch {
+                lifecycleScope.launch(Dispatchers.IO) {
                     try {
                         file.delete()
                         File(file.path + "-wal").delete()
@@ -313,7 +314,7 @@ class SettingsActivity : AppCompatActivity() {
         val timestamp = java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.getDefault()).format(java.util.Date())
         val backupFile = File(backupDir, "wordnote_$timestamp.db")
 
-        CoroutineScope(Dispatchers.IO).launch {
+        lifecycleScope.launch(Dispatchers.IO) {
             try {
                 dbFile.copyTo(backupFile, overwrite = true)
                 val walFile = File(dbFile.path + "-wal")
@@ -351,7 +352,7 @@ class SettingsActivity : AppCompatActivity() {
     private fun restoreDatabase(backupFile: File) {
         val dbFile = getDatabasePath("word_database")
 
-        CoroutineScope(Dispatchers.IO).launch {
+        lifecycleScope.launch(Dispatchers.IO) {
             try {
                 if (!backupFile.exists()) {
                     withContext(Dispatchers.Main) {

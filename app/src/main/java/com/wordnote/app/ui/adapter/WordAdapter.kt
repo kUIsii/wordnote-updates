@@ -17,6 +17,11 @@ import com.google.android.material.shape.CornerFamily
 import com.google.android.material.shape.ShapeAppearanceModel
 import com.wordnote.app.R
 import com.wordnote.app.data.Category
+import com.wordnote.app.databinding.ItemDateHeaderBinding
+import com.wordnote.app.databinding.ItemMonthHeaderBinding
+import com.wordnote.app.databinding.ItemWeekHeaderBinding
+import com.wordnote.app.databinding.ItemDayHeaderBinding
+import com.wordnote.app.databinding.ItemWordCompactBinding
 import com.wordnote.app.data.HighlightedMeaning
 import com.wordnote.app.data.Word
 import com.wordnote.app.data.WordGroup
@@ -56,17 +61,17 @@ class WordAdapter(
 
     fun setCategories(categoryList: List<Category>) {
         categories = categoryList.associateBy { it.id }
-        notifyDataSetChanged()
+        rebuildAndSubmit()
     }
 
     fun setGroups(groupList: List<WordGroup>) {
         groups = groupList.associateBy { it.id }
-        notifyDataSetChanged()
+        rebuildAndSubmit()
     }
 
     fun setHighlightedMeanings(meanings: List<HighlightedMeaning>) {
         highlightedMeaningsMap = meanings.groupBy { it.wordId }.mapValues { it.value.map { m -> m.meaningText } }
-        notifyDataSetChanged()
+        rebuildAndSubmit()
     }
 
     private var currentCategoryName: String? = null
@@ -79,19 +84,19 @@ class WordAdapter(
 
     fun setGlobalSearchMode(enabled: Boolean) {
         isGlobalSearchMode = enabled
-        notifyDataSetChanged()
+        rebuildAndSubmit()
     }
 
     fun enterSelectionMode() {
         isSelectionMode = true
         selectedWordIds.clear()
-        notifyDataSetChanged()
+        rebuildAndSubmit()
     }
 
     fun exitSelectionMode() {
         isSelectionMode = false
         selectedWordIds.clear()
-        notifyDataSetChanged()
+        rebuildAndSubmit()
         onSelectionChanged(emptySet())
     }
 
@@ -100,7 +105,7 @@ class WordAdapter(
     fun deleteSelectedWords() {
         selectedWordIds.clear()
         isSelectionMode = false
-        notifyDataSetChanged()
+        rebuildAndSubmit()
     }
 
     private fun toggleSelection(wordId: Long) {
@@ -110,7 +115,13 @@ class WordAdapter(
             selectedWordIds.add(wordId)
         }
         onSelectionChanged(selectedWordIds)
-        notifyDataSetChanged()
+        rebuildAndSubmit()
+    }
+
+    private fun rebuildAndSubmit() {
+        if (allWords.isNotEmpty()) {
+            submitWordList(allWords)
+        }
     }
 
     fun setDateGroupingMode(enabled: Boolean) {
@@ -146,24 +157,24 @@ class WordAdapter(
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
         return when (viewType) {
             TYPE_DATE_HEADER -> {
-                val view = LayoutInflater.from(parent.context).inflate(R.layout.item_date_header, parent, false)
-                DateHeaderViewHolder(view)
+                val binding = ItemDateHeaderBinding.inflate(LayoutInflater.from(parent.context), parent, false)
+                DateHeaderViewHolder(binding)
             }
             TYPE_MONTH_HEADER -> {
-                val view = LayoutInflater.from(parent.context).inflate(R.layout.item_month_header, parent, false)
-                MonthHeaderViewHolder(view)
+                val binding = ItemMonthHeaderBinding.inflate(LayoutInflater.from(parent.context), parent, false)
+                MonthHeaderViewHolder(binding)
             }
             TYPE_WEEK_HEADER -> {
-                val view = LayoutInflater.from(parent.context).inflate(R.layout.item_week_header, parent, false)
-                WeekHeaderViewHolder(view)
+                val binding = ItemWeekHeaderBinding.inflate(LayoutInflater.from(parent.context), parent, false)
+                WeekHeaderViewHolder(binding)
             }
             TYPE_DAY_HEADER -> {
-                val view = LayoutInflater.from(parent.context).inflate(R.layout.item_day_header, parent, false)
-                DayHeaderViewHolder(view)
+                val binding = ItemDayHeaderBinding.inflate(LayoutInflater.from(parent.context), parent, false)
+                DayHeaderViewHolder(binding)
             }
             else -> {
-                val view = LayoutInflater.from(parent.context).inflate(R.layout.item_word_compact, parent, false)
-                WordViewHolder(view)
+                val binding = ItemWordCompactBinding.inflate(LayoutInflater.from(parent.context), parent, false)
+                WordViewHolder(binding)
             }
         }
     }
@@ -424,18 +435,18 @@ class WordAdapter(
         }
     }
 
-    inner class DateHeaderViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        private val dateTextView: TextView = itemView.findViewById(R.id.dateTextView)
+    inner class DateHeaderViewHolder(private val binding: ItemDateHeaderBinding) : RecyclerView.ViewHolder(binding.root) {
+        private val dateTextView: TextView = binding.dateTextView
 
         fun bind(dateLabel: String, decorated: Boolean = false) {
             dateTextView.text = dateLabel
         }
     }
 
-    inner class MonthHeaderViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        private val expandIcon: ImageView = itemView.findViewById(R.id.expandIcon)
-        private val monthTextView: TextView = itemView.findViewById(R.id.monthTextView)
-        private val wordCountTextView: TextView = itemView.findViewById(R.id.wordCountTextView)
+    inner class MonthHeaderViewHolder(private val binding: ItemMonthHeaderBinding) : RecyclerView.ViewHolder(binding.root) {
+        private val expandIcon: ImageView = binding.expandIcon
+        private val monthTextView: TextView = binding.monthTextView
+        private val wordCountTextView: TextView = binding.wordCountTextView
 
         fun bind(item: ListItem.MonthHeader) {
             monthTextView.text = item.label
@@ -458,10 +469,10 @@ class WordAdapter(
         }
     }
 
-    inner class DayHeaderViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        private val dayTextView: TextView = itemView.findViewById(R.id.dayTextView)
-        private val dayWordCount: TextView = itemView.findViewById(R.id.dayWordCount)
-        private val dayExpandIcon: ImageView = itemView.findViewById(R.id.dayExpandIcon)
+    inner class DayHeaderViewHolder(private val binding: ItemDayHeaderBinding) : RecyclerView.ViewHolder(binding.root) {
+        private val dayTextView: TextView = binding.dayTextView
+        private val dayWordCount: TextView = binding.dayWordCount
+        private val dayExpandIcon: ImageView = binding.dayExpandIcon
 
         fun bind(item: ListItem.DayHeader) {
             dayTextView.text = item.label
@@ -484,10 +495,10 @@ class WordAdapter(
         }
     }
 
-    inner class WeekHeaderViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        private val weekTextView: TextView = itemView.findViewById(R.id.weekTextView)
-        private val weekWordCount: TextView = itemView.findViewById(R.id.weekWordCount)
-        private val weekExpandIcon: ImageView = itemView.findViewById(R.id.weekExpandIcon)
+    inner class WeekHeaderViewHolder(private val binding: ItemWeekHeaderBinding) : RecyclerView.ViewHolder(binding.root) {
+        private val weekTextView: TextView = binding.weekTextView
+        private val weekWordCount: TextView = binding.weekWordCount
+        private val weekExpandIcon: ImageView = binding.weekExpandIcon
 
         fun bind(item: ListItem.WeekHeader) {
             weekTextView.text = item.label
@@ -510,20 +521,20 @@ class WordAdapter(
         }
     }
 
-    inner class WordViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        private val cardView: MaterialCardView = (itemView as MaterialCardView).apply {
+    inner class WordViewHolder(private val binding: ItemWordCompactBinding) : RecyclerView.ViewHolder(binding.root) {
+        private val cardView: MaterialCardView = (binding.root as MaterialCardView).apply {
             clipToOutline = true
         }
-        private val indexTextView: TextView = itemView.findViewById(R.id.indexTextView)
-        private val wordTextView: TextView = itemView.findViewById(R.id.wordTextView)
-        private val contentTextView: TextView = itemView.findViewById(R.id.contentTextView)
-        private val categoryStrip: View = itemView.findViewById(R.id.categoryStrip)
-        private val groupBadge: TextView = itemView.findViewById(R.id.groupBadge)
-        private val editButton: ImageView = itemView.findViewById(R.id.editWordButton)
-        private val deleteButton: ImageView = itemView.findViewById(R.id.deleteWordButton)
-        private val batchAppendButton: TextView = itemView.findViewById(R.id.batchAppendButton)
-        private val batchForgetBadge: TextView = itemView.findViewById(R.id.batchForgetBadge)
-        private val categoryNameLabel: TextView = itemView.findViewById(R.id.categoryNameLabel)
+        private val indexTextView: TextView = binding.indexTextView
+        private val wordTextView: TextView = binding.wordTextView
+        private val contentTextView: TextView = binding.contentTextView
+        private val categoryStrip: View = binding.categoryStrip
+        private val groupBadge: TextView = binding.groupBadge
+        private val editButton: ImageView = binding.editWordButton
+        private val deleteButton: ImageView = binding.deleteWordButton
+        private val batchAppendButton: TextView = binding.batchAppendButton
+        private val batchForgetBadge: TextView = binding.batchForgetBadge
+        private val categoryNameLabel: TextView = binding.categoryNameLabel
 
         fun bind(word: Word, index: Int, isFirstInBatch: Boolean = false, isLastInBatch: Boolean = false, batchForgetCount: Int = 0, categoryName: String? = null) {
             val density = itemView.resources.displayMetrics.density
@@ -618,7 +629,7 @@ class WordAdapter(
             val borderWidth = (1 * density).toInt()
             val cr = 12f * density
 
-            val batchGroupDivider = itemView.findViewById<View>(R.id.batchGroupDivider)
+            val batchGroupDivider = binding.batchGroupDivider
             batchGroupDivider?.visibility = View.GONE
 
             cardView.cardElevation = 0f
