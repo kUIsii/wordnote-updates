@@ -30,6 +30,14 @@ class ChangelogActivity : AppCompatActivity() {
 
         val changelog = listOf(
             VersionLog(
+                "v2.19.0", "2026-05-26",
+                listOf(
+                    "词典例句：英译中查询时自动获取英文例句，每词最多3条，含英文释义",
+                    "词典词性：结果显示词性标签（名词/动词/形容词等），支持多词性",
+                    "词典UI重做：MaterialCardView卡片、分区标签、例句圆角卡片、标签配色优化"
+                )
+            ),
+            VersionLog(
                 "v2.18.0", "2026-05-26",
                 listOf(
                     "代码质量重构：全面优化内部代码结构，提升运行流畅度",

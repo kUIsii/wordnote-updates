@@ -3,6 +3,7 @@ package com.wordnote.app.ui
 import android.app.Activity
 import android.content.Intent
 import android.graphics.Color
+import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.view.View
@@ -15,11 +16,18 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import com.google.android.flexbox.FlexboxLayout
 import com.wordnote.app.R
 import com.wordnote.app.data.DictionaryDatabase
 import com.wordnote.app.databinding.ActivityDictionaryBinding
 import com.wordnote.app.util.compatOverridePendingTransition
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.json.JSONArray
+import java.net.HttpURLConnection
+import java.net.URL
 
 class DictionaryActivity : AppCompatActivity() {
 
@@ -36,6 +44,9 @@ class DictionaryActivity : AppCompatActivity() {
     private lateinit var resultPhonetic: TextView
     private lateinit var resultTranslation: TextView
     private lateinit var tagsContainer: com.google.android.flexbox.FlexboxLayout
+    private lateinit var resultPos: TextView
+    private lateinit var examplesContainer: LinearLayout
+    private lateinit var examplesList: LinearLayout
     private lateinit var selectDbButton: com.google.android.material.button.MaterialButton
     private lateinit var searchModeButton: TextView
     private lateinit var searchHistoryContainer: LinearLayout
@@ -80,6 +91,9 @@ class DictionaryActivity : AppCompatActivity() {
         resultPhonetic = binding.resultPhonetic
         resultTranslation = binding.resultTranslation
         tagsContainer = binding.tagsContainer
+        resultPos = binding.resultPos
+        examplesContainer = binding.examplesContainer
+        examplesList = binding.examplesList
         selectDbButton = binding.selectDbButton
         searchModeButton = binding.searchModeButton
         searchHistoryContainer = binding.searchHistoryContainer
@@ -115,6 +129,7 @@ class DictionaryActivity : AppCompatActivity() {
                     noDatabaseView.visibility = View.GONE
                     resultScrollView.visibility = View.GONE
                     noResultView.visibility = View.GONE
+                    examplesContainer?.visibility = View.GONE
                 }
             }
         })
@@ -205,6 +220,8 @@ class DictionaryActivity : AppCompatActivity() {
         resultWord.visibility = android.view.View.GONE
         resultPhonetic.visibility = android.view.View.GONE
         resultTranslation.visibility = android.view.View.GONE
+        resultPos.visibility = android.view.View.GONE
+        examplesContainer.visibility = android.view.View.GONE
         tagsContainer.visibility = android.view.View.GONE
 
         // Group results by relevance tier
@@ -346,20 +363,60 @@ class DictionaryActivity : AppCompatActivity() {
         resultWord.text = entry.word
         resultPhonetic.text = entry.phonetic?.let { "/$it/" } ?: ""
 
+        // Show POS
+        val posMap = mapOf(
+            "n" to "noun", "v" to "verb", "adj" to "adjective",
+            "adv" to "adverb", "prep" to "preposition", "conj" to "conjunction",
+            "pron" to "pronoun", "int" to "interjection", "abbr" to "abbreviation"
+        )
+        if (!entry.pos.isNullOrBlank()) {
+            val posDisplay = entry.pos.split("/").mapNotNull { p ->
+                posMap[p.trim().lowercase()]?.let { cn ->
+                    when (cn) {
+                        "noun" -> "名词"
+                        "verb" -> "动词"
+                        "adjective" -> "形容词"
+                        "adverb" -> "副词"
+                        "preposition" -> "介词"
+                        "conjunction" -> "连词"
+                        "pronoun" -> "代词"
+                        "interjection" -> "感叹词"
+                        "abbreviation" -> "缩写"
+                        else -> p
+                    }
+                } ?: p
+            }.joinToString(" / ")
+            resultPos.text = posDisplay
+            resultPos.visibility = android.view.View.VISIBLE
+        } else {
+            resultPos.visibility = android.view.View.GONE
+        }
+
         // Build translation with POS
         val translation = entry.translation ?: "无释义"
         resultTranslation.text = translation
 
+        // Clear examples
+        examplesList.removeAllViews()
+        examplesContainer.visibility = android.view.View.GONE
+
         // Build tags
+        buildTags(entry)
+
+        // Fetch examples from Free Dictionary API
+        fetchExamples(entry.word)
+    }
+
+    private fun buildTags(entry: com.wordnote.app.data.DictEntry) {
         tagsContainer.removeAllViews()
         tagsContainer.visibility = android.view.View.GONE
-        val tags = mutableListOf<String>()
+        val tags = mutableListOf<Pair<String, Int>>() // text to color type
 
         if (entry.collins > 0) {
-            tags.add("柯林斯 Lv.${entry.collins}")
+            tags.add("柯林斯 Lv.${entry.collins}" to 0)
         }
         if (entry.oxford > 0) {
-            tags.add("牛津核心")
+            tags.add("牛津核心" to 0)
         }
         if (!entry.tag.isNullOrBlank()) {
             val examMap = mapOf(
@@ -368,36 +425,146 @@ class DictionaryActivity : AppCompatActivity() {
                 "ielts" to "雅思", "gre" to "GRE"
             )
             entry.tag.split(" ").forEach { t ->
-                examMap[t.lowercase()]?.let { tags.add(it) }
+                examMap[t.lowercase()]?.let { tags.add(it to 1) }
             }
         }
         if (entry.bnc > 0) {
-            tags.add("BNC #${entry.bnc}")
+            tags.add("BNC #${entry.bnc}" to 2)
         }
 
         if (tags.isNotEmpty()) {
             tagsContainer.visibility = android.view.View.VISIBLE
-            tags.forEach { tagText ->
+            tags.forEach { (tagText, colorType) ->
+                val (textColor, bgColor) = when (colorType) {
+                    1 -> Pair(
+                        resources.getColor(R.color.cat_hard, null),
+                        Color.argb(20, 232, 99, 106)
+                    )
+                    2 -> Pair(
+                        resources.getColor(R.color.cat_similar, null),
+                        Color.argb(20, 92, 184, 122)
+                    )
+                    else -> Pair(
+                        resources.getColor(R.color.primary, null),
+                        resources.getColor(R.color.primary_light, null)
+                    )
+                }
                 val tag = TextView(this).apply {
                     text = tagText
                     textSize = 11f
-                    setTextColor(resources.getColor(R.color.primary, null))
-                    setPadding(dpToPx(8), dpToPx(3), dpToPx(8), dpToPx(3))
-                    val bg = android.graphics.drawable.GradientDrawable().apply {
-                        setColor(resources.getColor(R.color.primary_light, null))
+                    setTextColor(textColor)
+                    setPadding(dpToPx(8), dpToPx(4), dpToPx(8), dpToPx(4))
+                    background = GradientDrawable().apply {
+                        setColor(bgColor)
                         cornerRadius = 12f * resources.displayMetrics.density
                     }
-                    background = bg
-                    val params = com.google.android.flexbox.FlexboxLayout.LayoutParams(
-                        com.google.android.flexbox.FlexboxLayout.LayoutParams.WRAP_CONTENT,
-                        com.google.android.flexbox.FlexboxLayout.LayoutParams.WRAP_CONTENT
+                    val params = FlexboxLayout.LayoutParams(
+                        FlexboxLayout.LayoutParams.WRAP_CONTENT,
+                        FlexboxLayout.LayoutParams.WRAP_CONTENT
                     ).apply {
-                        setMargins(dpToPx(6), 0, dpToPx(6), dpToPx(4))
+                        setMargins(0, 0, dpToPx(6), dpToPx(4))
                     }
                     layoutParams = params
                 }
                 tagsContainer.addView(tag)
             }
+        }
+    }
+
+    private fun fetchExamples(word: String) {
+        lifecycleScope.launch {
+            try {
+                val examples = withContext(Dispatchers.IO) {
+                    val url = URL("https://api.dictionaryapi.dev/api/v2/entries/en/$word")
+                    val conn = url.openConnection() as HttpURLConnection
+                    conn.apply {
+                        connectTimeout = 5000
+                        readTimeout = 5000
+                        setRequestProperty("Accept", "application/json")
+                    }
+
+                    if (conn.responseCode != 200) return@withContext emptyList()
+
+                    val text = conn.inputStream.bufferedReader().readText()
+                    parseExamples(text)
+                }
+
+                if (examples.isNotEmpty()) {
+                    showExamples(examples)
+                }
+            } catch (_: Exception) {
+                // Network unavailable, silently skip
+            }
+        }
+    }
+
+    private fun parseExamples(json: String): List<Pair<String, String>> {
+        val results = mutableListOf<Pair<String, String>>()
+        try {
+            val arr = JSONArray(json)
+            for (i in 0 until arr.length()) {
+                val entry = arr.getJSONObject(i)
+                val meanings = entry.getJSONArray("meanings")
+                for (j in 0 until meanings.length()) {
+                    val meaning = meanings.getJSONObject(j)
+                    val definitions = meaning.getJSONArray("definitions")
+                    for (k in 0 until definitions.length()) {
+                        val def = definitions.optJSONObject(k) ?: continue
+                        val example = def.optString("example", "")
+                        if (example.isNotBlank()) {
+                            val definition = def.optString("definition", "")
+                            results.add(example to definition)
+                            if (results.size >= 3) return results
+                        }
+                    }
+                }
+            }
+        } catch (_: Exception) {}
+        return results
+    }
+
+    private fun showExamples(examples: List<Pair<String, String>>) {
+        examplesContainer.visibility = android.view.View.VISIBLE
+        examplesList.removeAllViews()
+
+        examples.forEachIndexed { index, (example, definition) ->
+            val itemView = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(dpToPx(14), dpToPx(10), dpToPx(14), dpToPx(10))
+                background = GradientDrawable().apply {
+                    setColor(resources.getColor(R.color.surface_input, null))
+                    cornerRadius = 10f * resources.displayMetrics.density
+                }
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    bottomMargin = dpToPx(6)
+                }
+            }
+
+            val exampleTv = TextView(this).apply {
+                text = "\"$example\""
+                setTextColor(resources.getColor(R.color.text_primary, null))
+                textSize = 13f
+                typeface = Typeface.DEFAULT
+                setLineSpacing(dpToPx(2).toFloat(), 1f)
+            }
+            itemView.addView(exampleTv)
+
+            // Definition translation hint
+            if (definition.isNotBlank()) {
+                val defTv = TextView(this).apply {
+                    text = definition
+                    setTextColor(resources.getColor(R.color.text_hint, null))
+                    textSize = 11f
+                    setPadding(0, dpToPx(4), 0, 0)
+                    maxLines = 2
+                }
+                itemView.addView(defTv)
+            }
+
+            examplesList.addView(itemView)
         }
     }
 
