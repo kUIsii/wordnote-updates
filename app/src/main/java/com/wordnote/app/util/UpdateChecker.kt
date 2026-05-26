@@ -10,7 +10,6 @@ import android.widget.Toast
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
-import com.wordnote.app.BuildConfig
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
@@ -19,7 +18,6 @@ object UpdateChecker {
 
     private const val GITHUB_OWNER = "kUIsii"
     private const val GITHUB_REPO = "wordnote-updates"
-    private val GITHUB_TOKEN = BuildConfig.GITHUB_TOKEN
 
     data class UpdateInfo(
         val versionName: String,
@@ -34,7 +32,6 @@ object UpdateChecker {
 
             val url = URL("https://api.github.com/repos/$GITHUB_OWNER/$GITHUB_REPO/releases/latest")
             val connection = url.openConnection().apply {
-                setRequestProperty("Authorization", "token $GITHUB_TOKEN")
                 setRequestProperty("Accept", "application/vnd.github.v3+json")
             }
 
@@ -92,7 +89,6 @@ object UpdateChecker {
             val url = URL(updateInfo.downloadUrl)
             val connection = url.openConnection() as HttpURLConnection
             connection.apply {
-                setRequestProperty("Authorization", "token $GITHUB_TOKEN")
                 setRequestProperty("Accept", "application/octet-stream")
                 connectTimeout = 60000
                 readTimeout = 60000

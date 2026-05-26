@@ -30,6 +30,12 @@ class ChangelogActivity : AppCompatActivity() {
 
         val changelog = listOf(
             VersionLog(
+                "v2.19.2", "2026-05-26",
+                listOf(
+                    "更新检测修复：移除过期Token认证，解决旧版本无法检测更新的问题"
+                )
+            ),
+            VersionLog(
                 "v2.19.1", "2026-05-26",
                 listOf(
                     "例句中文翻译：每条例句自动显示中文翻译",

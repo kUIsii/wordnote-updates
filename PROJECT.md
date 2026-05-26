@@ -259,6 +259,20 @@ tags / word_tag (标签系统，目前未在 UI 使用)
 
 ## 开发日志
 
+### 2026-05-26 (v2.19.2)
+
+- 更新检测修复
+  - 移除更新检测和下载中的 GitHub Token 认证（公开仓库不需要）
+  - 解决旧 token 泄露后手机端无法检测更新的问题
+  - 移除 build.gradle 中的 GITHUB_TOKEN BuildConfig 字段
+
+### 2026-05-26 (词典增强 v2.19.1)
+
+- 例句中文翻译：每条例句自动调用 MyMemory API 显示中文翻译
+- 例句保存：点击「记录」一键保存到句子记录，自动填充原文和翻译
+- SentenceEditActivity 支持 EXTRA_SENTENCE_TEXT/EXTRA_SENTENCE_TRANSLATION 预填充
+- 移除 local.properties 的 git 追踪（防止 token 泄露）
+
 ### 2026-05-26 (词典增强)
 
 - 词典在线例句
