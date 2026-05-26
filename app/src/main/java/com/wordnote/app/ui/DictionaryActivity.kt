@@ -491,6 +491,10 @@ class DictionaryActivity : AppCompatActivity() {
 
                 if (examples.isNotEmpty()) {
                     showExamples(examples)
+                    // Fetch translations for each example
+                    examples.forEachIndexed { index, (example, _) ->
+                        fetchTranslation(index, example)
+                    }
                 }
             } catch (_: Exception) {
                 // Network unavailable, silently skip
@@ -523,6 +527,49 @@ class DictionaryActivity : AppCompatActivity() {
         return results
     }
 
+    private fun fetchTranslation(index: Int, englishText: String) {
+        lifecycleScope.launch {
+            try {
+                val translated = withContext(Dispatchers.IO) {
+                    val encoded = java.net.URLEncoder.encode(englishText, "UTF-8")
+                    val url = URL("https://api.mymemory.translated.net/get?q=$encoded&langpair=en|zh-CN")
+                    val conn = url.openConnection() as HttpURLConnection
+                    conn.apply {
+                        connectTimeout = 5000
+                        readTimeout = 5000
+                        setRequestProperty("Accept", "application/json")
+                    }
+                    if (conn.responseCode != 200) return@withContext null
+                    val text = conn.inputStream.bufferedReader().readText()
+                    val json = org.json.JSONObject(text)
+                    val responseData = json.optJSONObject("responseData")
+                    responseData?.optString("translatedText")
+                }
+
+                if (!translated.isNullOrBlank() && translated != englishText) {
+                    updateExampleTranslation(index, translated)
+                }
+            } catch (_: Exception) {}
+        }
+    }
+
+    private fun updateExampleTranslation(index: Int, translation: String) {
+        if (index >= examplesList.childCount) return
+        val itemView = examplesList.getChildAt(index) as? LinearLayout ?: return
+
+        // Check if translation view already exists
+        if (itemView.childCount >= 3) return
+
+        val transTv = TextView(this).apply {
+            text = translation
+            setTextColor(resources.getColor(R.color.text_secondary, null))
+            textSize = 12f
+            setPadding(0, dpToPx(3), 0, 0)
+        }
+        // Insert after the English example (before definition if exists)
+        itemView.addView(transTv, if (itemView.childCount > 1) 1 else itemView.childCount)
+    }
+
     private fun showExamples(examples: List<Pair<String, String>>) {
         examplesContainer.visibility = android.view.View.VISIBLE
         examplesList.removeAllViews()
@@ -543,16 +590,40 @@ class DictionaryActivity : AppCompatActivity() {
                 }
             }
 
+            // Top row: example text + save button
+            val topRow = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = android.view.Gravity.CENTER_VERTICAL
+            }
+
             val exampleTv = TextView(this).apply {
                 text = "\"$example\""
                 setTextColor(resources.getColor(R.color.text_primary, null))
                 textSize = 13f
                 typeface = Typeface.DEFAULT
                 setLineSpacing(dpToPx(2).toFloat(), 1f)
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
             }
-            itemView.addView(exampleTv)
+            topRow.addView(exampleTv)
 
-            // Definition translation hint
+            // Save button
+            val saveBtn = TextView(this).apply {
+                text = "记录"
+                setTextColor(resources.getColor(R.color.primary, null))
+                textSize = 12f
+                setPadding(dpToPx(8), dpToPx(4), dpToPx(4), dpToPx(4))
+                setOnClickListener {
+                    val intent = android.content.Intent(this@DictionaryActivity, SentenceEditActivity::class.java)
+                    intent.putExtra(SentenceEditActivity.EXTRA_SENTENCE_TEXT, example)
+                    intent.putExtra(SentenceEditActivity.EXTRA_SENTENCE_TRANSLATION, definition)
+                    startActivity(intent)
+                }
+            }
+            topRow.addView(saveBtn)
+
+            itemView.addView(topRow)
+
+            // Definition hint (English)
             if (definition.isNotBlank()) {
                 val defTv = TextView(this).apply {
                     text = definition

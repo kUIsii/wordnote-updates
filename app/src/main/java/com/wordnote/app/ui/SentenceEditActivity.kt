@@ -20,6 +20,8 @@ class SentenceEditActivity : AppCompatActivity() {
 
     companion object {
         const val EXTRA_SENTENCE_ID = "extra_sentence_id"
+        const val EXTRA_SENTENCE_TEXT = "extra_sentence_text"
+        const val EXTRA_SENTENCE_TRANSLATION = "extra_sentence_translation"
     }
 
     private lateinit var viewModel: SentenceViewModel
@@ -40,6 +42,14 @@ class SentenceEditActivity : AppCompatActivity() {
 
         if (editingSentenceId != -1L) {
             loadSentence()
+        } else {
+            // Pre-fill from extras (e.g. from dictionary examples)
+            intent.getStringExtra(EXTRA_SENTENCE_TEXT)?.let {
+                binding.originalTextEditText.setText(it)
+            }
+            intent.getStringExtra(EXTRA_SENTENCE_TRANSLATION)?.let {
+                binding.translationEditText.setText(it)
+            }
         }
     }
 

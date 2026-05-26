@@ -30,6 +30,13 @@ class ChangelogActivity : AppCompatActivity() {
 
         val changelog = listOf(
             VersionLog(
+                "v2.19.1", "2026-05-26",
+                listOf(
+                    "例句中文翻译：每条例句自动显示中文翻译",
+                    "例句保存：点击「记录」一键保存到句子记录，自动填充原文和翻译"
+                )
+            ),
+            VersionLog(
                 "v2.19.0", "2026-05-26",
                 listOf(
                     "词典例句：英译中查询时自动获取英文例句，每词最多3条，含英文释义",

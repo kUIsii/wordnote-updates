@@ -21,8 +21,8 @@ android {
         applicationId "com.wordnote.app"
         minSdk 26
         targetSdk 36
-        versionCode 46
-        versionName "2.19.0"
+        versionCode 47
+        versionName "2.19.1"
 
         def properties = new Properties()
         def localPropertiesFile = rootProject.file("local.properties")
