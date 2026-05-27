@@ -38,7 +38,7 @@ class WordViewModel(application: Application) : AndroidViewModel(application) {
     // Words for the currently selected category (from cache)
     private val _categoryWords = MutableLiveData<List<Word>>(emptyList())
 
-    val filteredWords: LiveData<List<Word>> = MediatorLiveData<List<Word>>().apply {
+    val filteredWords: MediatorLiveData<List<Word>> = MediatorLiveData<List<Word>>().apply {
         var currentCategoryWords: List<Word> = emptyList()
         var currentAllWords: List<Word> = emptyList()
         var currentQuery: String = ""
@@ -97,6 +97,8 @@ class WordViewModel(application: Application) : AndroidViewModel(application) {
     fun selectCategory(categoryId: Long?) {
         _selectedCategoryId.value = categoryId
         // Use cache for instant category switching
+        // Clear first, then set new data to trigger a clean DiffUtil diff
+        _categoryWords.value = emptyList()
         _categoryWords.value = if (categoryId != null) {
             categoryWordsCache[categoryId].orEmpty()
         } else {

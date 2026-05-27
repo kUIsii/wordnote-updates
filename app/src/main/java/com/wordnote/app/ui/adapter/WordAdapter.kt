@@ -183,19 +183,24 @@ class WordAdapter(
         }
     }
 
-    fun submitWordList(words: List<Word>) {
+    fun submitWordList(words: List<Word>, forceRefresh: Boolean = false) {
         allWords = words
         val items = mutableListOf<ListItem>()
 
         if (!isDateGroupingMode) {
-            // Original flat date grouping mode
             submitFlatList(words, items)
         } else {
-            // Hierarchical date grouping: Month -> Week -> Day
             submitGroupedList(words, items)
         }
 
-        submitList(items)
+        if (forceRefresh) {
+            // Skip DiffUtil: clear adapter completely, then submit fresh list
+            val snapshot = currentList.toList()
+            submitList(emptyList())
+            submitList(items)
+        } else {
+            submitList(items)
+        }
     }
 
     private fun submitFlatList(words: List<Word>, items: MutableList<ListItem>) {
