@@ -259,6 +259,13 @@ tags / word_tag (标签系统，目前未在 UI 使用)
 
 ## 开发日志
 
+### 2026-05-27 (分类切换性能优化)
+
+- 修复分类切换卡顿
+  - 去掉 `selectCategory()` 中先清空再设置的无用操作（原来触发两次 LiveData 通知）
+  - 分类切换时跳过 DiffUtil 全量对比（旧数据和新数据完全不同，O(n*m) 对比是浪费）
+  - 通过 `pendingCategorySwitch` 标志通知 Adapter 使用 `submitList(null)` + `submitList(items)` 模式
+
 ### 2026-05-26 (v2.19.3)
 
 - 存储权限修复

@@ -955,7 +955,9 @@ class MainActivity : AppCompatActivity() {
         }
 
         viewModel.filteredWords.observe(this) { words ->
-            wordAdapter.submitWordList(words)
+            val forceRefresh = viewModel.pendingCategorySwitch
+            if (forceRefresh) viewModel.clearPendingCategorySwitch()
+            wordAdapter.submitWordList(words, forceRefresh)
             emptyView.visibility = if (words.isEmpty()) View.VISIBLE else View.GONE
             wordRecyclerView.visibility = if (words.isEmpty()) View.GONE else View.VISIBLE
 

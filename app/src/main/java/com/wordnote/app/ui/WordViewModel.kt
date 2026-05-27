@@ -94,11 +94,17 @@ class WordViewModel(application: Application) : AndroidViewModel(application) {
     // Review
     val reviewCount: LiveData<Int> = repository.getReviewCount(System.currentTimeMillis())
 
+    // Flag: observer should skip DiffUtil on next update (category switch)
+    var pendingCategorySwitch = false
+        private set
+
+    fun clearPendingCategorySwitch() {
+        pendingCategorySwitch = false
+    }
+
     fun selectCategory(categoryId: Long?) {
         _selectedCategoryId.value = categoryId
-        // Use cache for instant category switching
-        // Clear first, then set new data to trigger a clean DiffUtil diff
-        _categoryWords.value = emptyList()
+        pendingCategorySwitch = true
         _categoryWords.value = if (categoryId != null) {
             categoryWordsCache[categoryId].orEmpty()
         } else {

@@ -194,13 +194,9 @@ class WordAdapter(
         }
 
         if (forceRefresh) {
-            // Skip DiffUtil: clear adapter completely, then submit fresh list
-            val snapshot = currentList.toList()
-            submitList(emptyList())
-            submitList(items)
-        } else {
-            submitList(items)
+            submitList(null)
         }
+        submitList(items)
     }
 
     private fun submitFlatList(words: List<Word>, items: MutableList<ListItem>) {
