@@ -396,9 +396,16 @@ class DictionaryActivity : AppCompatActivity() {
         val translation = entry.translation ?: "无释义"
         resultTranslation.text = translation
 
-        // Clear examples
+        // Show loading state for examples
+        examplesContainer.visibility = android.view.View.VISIBLE
         examplesList.removeAllViews()
-        examplesContainer.visibility = android.view.View.GONE
+        val loadingTv = TextView(this).apply {
+            text = "正在加载例句..."
+            setTextColor(resources.getColor(R.color.text_hint, null))
+            textSize = 12f
+            tag = "examples_loading"
+        }
+        examplesList.addView(loadingTv)
 
         // Build tags
         buildTags(entry)
@@ -495,11 +502,28 @@ class DictionaryActivity : AppCompatActivity() {
                     examples.forEachIndexed { index, (example, _) ->
                         fetchTranslation(index, example)
                     }
+                } else {
+                    showNoExamplesHint()
                 }
             } catch (_: Exception) {
-                // Network unavailable, silently skip
+                showNoExamplesHint()
             }
         }
+    }
+
+    private fun showNoExamplesHint() {
+        examplesList.removeAllViews()
+        val hint = TextView(this).apply {
+            text = "暂无例句"
+            setTextColor(resources.getColor(R.color.text_hint, null))
+            textSize = 12f
+        }
+        examplesList.addView(hint)
+        examplesContainer.visibility = android.view.View.VISIBLE
+        // Auto-hide after 2 seconds
+        examplesList.postDelayed({
+            examplesContainer.visibility = android.view.View.GONE
+        }, 2000)
     }
 
     private fun parseExamples(json: String): List<Pair<String, String>> {

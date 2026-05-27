@@ -32,13 +32,11 @@ class WordViewModel(application: Application) : AndroidViewModel(application) {
         _isGlobalSearch.value = !(_isGlobalSearch.value ?: false)
     }
 
-    val wordsByCategory: LiveData<List<Word>> = _selectedCategoryId.switchMap { categoryId ->
-        if (categoryId == null) {
-            repository.allWords
-        } else {
-            repository.getWordsByCategory(categoryId)
-        }
-    }
+    // Cache: all words grouped by categoryId, built from allWords
+    private var categoryWordsCache: Map<Long?, List<Word>> = emptyMap()
+
+    // Words for the currently selected category (from cache)
+    private val _categoryWords = MutableLiveData<List<Word>>(emptyList())
 
     val filteredWords: LiveData<List<Word>> = MediatorLiveData<List<Word>>().apply {
         var currentCategoryWords: List<Word> = emptyList()
@@ -68,14 +66,18 @@ class WordViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
 
-        addSource(wordsByCategory) { words ->
+        addSource(_categoryWords) { words ->
             currentCategoryWords = words
             update()
         }
 
         addSource(allWords) { words ->
             currentAllWords = words
-            update()
+            // Rebuild cache when allWords changes
+            categoryWordsCache = words.groupBy { it.categoryId }
+            // Update current category view
+            val catId = _selectedCategoryId.value
+            _categoryWords.value = if (catId != null) categoryWordsCache[catId].orEmpty() else words
         }
 
         addSource(_searchQuery) { query ->
@@ -94,6 +96,12 @@ class WordViewModel(application: Application) : AndroidViewModel(application) {
 
     fun selectCategory(categoryId: Long?) {
         _selectedCategoryId.value = categoryId
+        // Use cache for instant category switching
+        _categoryWords.value = if (categoryId != null) {
+            categoryWordsCache[categoryId].orEmpty()
+        } else {
+            allWords.value.orEmpty()
+        }
     }
 
     fun setSearchQuery(query: String) {

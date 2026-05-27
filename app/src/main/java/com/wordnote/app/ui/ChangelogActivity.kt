@@ -30,6 +30,13 @@ class ChangelogActivity : AppCompatActivity() {
 
         val changelog = listOf(
             VersionLog(
+                "v2.19.4", "2026-05-27",
+                listOf(
+                    "词典例句加载状态：查询时显示「正在加载例句...」，无结果时显示「暂无例句」",
+                    "分类切换优化：启动时预加载所有分类单词数据，滑动/点击切换分类时瞬间显示"
+                )
+            ),
+            VersionLog(
                 "v2.19.3", "2026-05-26",
                 listOf(
                     "备份文件修复：添加存储权限，解决备份列表为空的问题",
