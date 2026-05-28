@@ -60,6 +60,12 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var tabContainer: LinearLayout
 
+    companion object {
+        private const val VIEW_MODE_FLAT = 0
+        private const val VIEW_MODE_TODAY = 1
+        private const val VIEW_MODE_GROUPED = 2
+    }
+
     private var selectedCategoryId: Long? = null
     private var selectedCategoryName: String? = null
     private var selectedTab: TextView? = null
@@ -247,11 +253,16 @@ class MainActivity : AppCompatActivity() {
         }
 
         dateGroupingButton.setOnClickListener {
-            val newMode = !wordAdapter.isDateGroupingMode()
-            wordAdapter.setDateGroupingMode(newMode)
-            updateDateGroupingButtonIcon(newMode)
-            getSharedPreferences("settings", MODE_PRIVATE).edit()
-                .putBoolean("date_grouping_mode", newMode).apply()
+            val prefs = getSharedPreferences("settings", MODE_PRIVATE)
+            val currentMode = prefs.getInt("view_mode", VIEW_MODE_FLAT)
+            val nextMode = when (currentMode) {
+                VIEW_MODE_FLAT -> VIEW_MODE_TODAY
+                VIEW_MODE_TODAY -> VIEW_MODE_GROUPED
+                VIEW_MODE_GROUPED -> VIEW_MODE_FLAT
+                else -> VIEW_MODE_FLAT
+            }
+            prefs.edit().putInt("view_mode", nextMode).apply()
+            applyViewMode(nextMode)
         }
     }
 
@@ -283,13 +294,10 @@ class MainActivity : AppCompatActivity() {
             adapter = wordAdapter
         }
 
-        // Restore date grouping mode from SharedPreferences
-        val savedGroupingMode = getSharedPreferences("settings", MODE_PRIVATE)
-            .getBoolean("date_grouping_mode", false)
-        if (savedGroupingMode) {
-            wordAdapter.setDateGroupingMode(true)
-            updateDateGroupingButtonIcon(true)
-        }
+        // Restore view mode from SharedPreferences
+        val savedViewMode = getSharedPreferences("settings", MODE_PRIVATE)
+            .getInt("view_mode", VIEW_MODE_FLAT)
+        applyViewMode(savedViewMode)
 
         // Custom scrollbar indicator
         val scrollbarThumb = View(this).apply {
@@ -519,11 +527,29 @@ class MainActivity : AppCompatActivity() {
         return (dp * resources.displayMetrics.density).toInt()
     }
 
-    private fun updateDateGroupingButtonIcon(isGrouped: Boolean) {
-        if (isGrouped) {
-            dateGroupingButton.alpha = 1.0f
-        } else {
-            dateGroupingButton.alpha = 0.6f
+    private fun applyViewMode(mode: Int) {
+        val isGrouped = mode == VIEW_MODE_GROUPED
+        val isTodayOnly = mode == VIEW_MODE_TODAY
+        wordAdapter.setDateGroupingMode(isGrouped)
+        wordAdapter.setTodayOnlyMode(isTodayOnly)
+        viewModel.setTodayOnly(isTodayOnly)
+        updateDateGroupingButtonIcon(mode)
+    }
+
+    private fun updateDateGroupingButtonIcon(mode: Int) {
+        when (mode) {
+            VIEW_MODE_FLAT -> {
+                dateGroupingButton.alpha = 0.6f
+                dateGroupingButton.contentDescription = "正常顺序"
+            }
+            VIEW_MODE_TODAY -> {
+                dateGroupingButton.alpha = 0.8f
+                dateGroupingButton.contentDescription = "仅当日"
+            }
+            VIEW_MODE_GROUPED -> {
+                dateGroupingButton.alpha = 1.0f
+                dateGroupingButton.contentDescription = "折叠"
+            }
         }
     }
 
@@ -640,30 +666,33 @@ class MainActivity : AppCompatActivity() {
 
         val meaningTexts = meaning.split("，", ",").map { it.trim() }.filter { it.isNotBlank() }
 
-        // Check for similar words in other categories
+        // Check for same-category duplicates
         lifecycleScope.launch {
             try {
-                val similarWords = viewModel.findSimilarWordsExcluding(word, -1L)
-                if (similarWords.isNotEmpty()) {
-                    val categoryNames = similarWords.mapNotNull { w ->
-                        w.categoryId?.let { catId -> viewModel.getCategoryById(catId)?.name }
-                    }.distinct().joinToString("、")
-                    Toast.makeText(this@MainActivity, "该单词已存在于: $categoryNames", Toast.LENGTH_LONG).show()
+                val catId = selectedCategoryId ?: return@launch
+                val sameCatWords = viewModel.findSameCategoryWords(word, catId)
+                if (sameCatWords.isNotEmpty()) {
+                    val currentCatName = viewModel.getCategoryById(catId)?.name
+                    if (currentCatName == "意思相近的单词") {
+                        Toast.makeText(this@MainActivity, "该单词已存在于当前分类，仍可添加", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(this@MainActivity, "该单词已存在于当前分类，无法重复添加", Toast.LENGTH_LONG).show()
+                        return@launch
+                    }
                 }
+
+                val wordEntity = Word(
+                    word = word,
+                    meaning = meaning,
+                    categoryId = selectedCategoryId
+                )
+                viewModel.insertWord(wordEntity, meaningTexts = meaningTexts)
+                inputEditText.text?.clear()
+                Toast.makeText(this@MainActivity, "已添加", Toast.LENGTH_SHORT).show()
             } catch (e: Exception) {
-                // Ignore errors in duplicate check
+                Toast.makeText(this@MainActivity, "添加失败: ${e.message}", Toast.LENGTH_SHORT).show()
             }
         }
-
-        val wordEntity = Word(
-            word = word,
-            meaning = meaning,
-            categoryId = selectedCategoryId
-        )
-
-        viewModel.insertWord(wordEntity, meaningTexts = meaningTexts)
-        inputEditText.text?.clear()
-        Toast.makeText(this, "已添加", Toast.LENGTH_SHORT).show()
     }
 
     private fun addBatchWordsFromInput(input: String) {
@@ -676,60 +705,72 @@ class MainActivity : AppCompatActivity() {
         val batchId = System.currentTimeMillis()
         val wordsToAdd = mutableListOf<Word>()
         var skippedCount = 0
+        var duplicateCount = 0
+        val catId = selectedCategoryId ?: return
+        val isSimilarCategory = viewModel.getCategoryById(catId)?.name == "意思相近的单词"
 
-        lines.forEach { line ->
-            val trimmedLine = line.trim()
-            val parts = trimmedLine.split("\\s+".toRegex(), limit = 2)
+        lifecycleScope.launch {
+            lines.forEach { line ->
+                val trimmedLine = line.trim()
+                val parts = trimmedLine.split("\\s+".toRegex(), limit = 2)
 
-            if (parts.size < 2) {
-                // No meaning provided, skip this line
-                skippedCount++
-                return@forEach
+                if (parts.size < 2) {
+                    skippedCount++
+                    return@forEach
+                }
+
+                val word: String
+                val meaning: String
+
+                val firstHasChinese = parts[0].any { it in '一'..'鿿' }
+                val secondHasChinese = parts[1].any { it in '一'..'鿿' }
+
+                if (secondHasChinese && !firstHasChinese) {
+                    word = parts[0].trim()
+                    meaning = parts[1].trim()
+                } else if (firstHasChinese && !secondHasChinese) {
+                    meaning = parts[0].trim()
+                    word = parts[1].trim()
+                } else {
+                    word = parts[0].trim()
+                    meaning = parts[1].trim()
+                }
+
+                if (word.isNotBlank() && meaning.isNotBlank()) {
+                    // Check same-category duplicate
+                    val sameCatWords = viewModel.findSameCategoryWords(word, catId)
+                    if (sameCatWords.isNotEmpty() && !isSimilarCategory) {
+                        duplicateCount++
+                        return@forEach
+                    }
+                    wordsToAdd.add(Word(
+                        word = word,
+                        meaning = meaning,
+                        categoryId = selectedCategoryId,
+                        batchId = batchId
+                    ))
+                } else {
+                    skippedCount++
+                }
             }
 
-            val word: String
-            val meaning: String
-
-            val firstHasChinese = parts[0].any { it in '一'..'鿿' }
-            val secondHasChinese = parts[1].any { it in '一'..'鿿' }
-
-            if (secondHasChinese && !firstHasChinese) {
-                word = parts[0].trim()
-                meaning = parts[1].trim()
-            } else if (firstHasChinese && !secondHasChinese) {
-                meaning = parts[0].trim()
-                word = parts[1].trim()
-            } else {
-                word = parts[0].trim()
-                meaning = parts[1].trim()
+            if (wordsToAdd.isEmpty()) {
+                Toast.makeText(this@MainActivity, "没有有效的单词可添加", Toast.LENGTH_SHORT).show()
+                return@launch
             }
 
-            if (word.isNotBlank() && meaning.isNotBlank()) {
-                wordsToAdd.add(Word(
-                    word = word,
-                    meaning = meaning,
-                    categoryId = selectedCategoryId,
-                    batchId = batchId
-                ))
-            } else {
-                skippedCount++
+            viewModel.insertBatchWords(wordsToAdd)
+            inputEditText.text?.clear()
+
+            val message = buildString {
+                append("已添加 ${wordsToAdd.size} 个单词")
+                val parts = mutableListOf<String>()
+                if (skippedCount > 0) parts.add("跳过 $skippedCount 个无效行")
+                if (duplicateCount > 0) parts.add("$duplicateCount 个重复单词")
+                if (parts.isNotEmpty()) append("（${parts.joinToString("，")}）")
             }
+            Toast.makeText(this@MainActivity, message, Toast.LENGTH_SHORT).show()
         }
-
-        if (wordsToAdd.isEmpty()) {
-            Toast.makeText(this, "没有有效的单词可添加", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        viewModel.insertBatchWords(wordsToAdd)
-        inputEditText.text?.clear()
-
-        val message = if (skippedCount > 0) {
-            "已添加 ${wordsToAdd.size} 个单词（跳过 $skippedCount 个无效行）"
-        } else {
-            "已添加 ${wordsToAdd.size} 个单词"
-        }
-        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
     }
 
     private fun showEditWordSheet(word: Word) {

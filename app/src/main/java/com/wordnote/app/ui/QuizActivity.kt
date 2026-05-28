@@ -2,9 +2,14 @@ package com.wordnote.app.ui
 
 import android.content.Context
 import android.content.Intent
+import android.graphics.Typeface
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.text.SpannableString
+import android.text.Spanned
+import android.text.style.ForegroundColorSpan
+import android.text.style.StyleSpan
 import android.util.Log
 import android.view.View
 import android.widget.Toast
@@ -27,20 +32,19 @@ class QuizActivity : AppCompatActivity() {
     private var quizWords = emptyList<Word>()
     private var currentIndex = 0
     private var correctCount = 0
-    private var forgottenWords = mutableListOf<Word>()
+    private val forgottenWords = mutableListOf<Word>()
 
     private var wordCount = 35
     private var categoryIds: List<Long>? = null
     private var useForgetCount = false
 
-    private val autoAdvanceHandler = Handler(Looper.getMainLooper())
+    private var hasRemembered = false
     private var isShowingMeaning = false
 
     companion object {
         private const val EXTRA_WORD_COUNT = "word_count"
         private const val EXTRA_CATEGORY_IDS = "category_ids"
         private const val EXTRA_USE_FORGET_COUNT = "use_forget_count"
-        private const val AUTO_ADVANCE_DELAY = 2000L
 
         fun launch(context: Context, wordCount: Int, categoryIds: List<Long>?, useForgetCount: Boolean) {
             val intent = Intent(context, QuizActivity::class.java).apply {
@@ -64,20 +68,18 @@ class QuizActivity : AppCompatActivity() {
         useForgetCount = intent.getBooleanExtra(EXTRA_USE_FORGET_COUNT, false)
 
         initViews()
-        // Observe categories so getCategoryById() works
         viewModel.allCategories.observe(this) { }
         loadWords()
     }
 
     private fun initViews() {
         binding.backButton.setOnClickListener {
-            autoAdvanceHandler.removeCallbacksAndMessages(null)
             finish()
             compatOverridePendingTransition(R.anim.slide_in_left, R.anim.slide_out_right)
         }
 
         binding.forgetButton.setOnClickListener { onWordForgotten() }
-        binding.rememberButton.setOnClickListener { onWordRemembered() }
+        binding.rememberButton.setOnClickListener { onWordRememberedOrUnremember() }
         binding.nextButton.setOnClickListener { advanceToNext() }
     }
 
@@ -142,11 +144,12 @@ class QuizActivity : AppCompatActivity() {
 
     private fun showWord() {
         if (quizWords.isEmpty() || currentIndex >= quizWords.size) {
-            if (!isFinishingQuiz) finishQuiz()
+            finishQuiz()
             return
         }
 
         isShowingMeaning = false
+        hasRemembered = false
         val word = quizWords[currentIndex]
 
         binding.progressText.text = "${currentIndex + 1} / ${quizWords.size}"
@@ -154,12 +157,17 @@ class QuizActivity : AppCompatActivity() {
         binding.progressBar.progress = currentIndex + 1
 
         binding.quizWordText.text = word.word
+        binding.quizWordText.setTextColor(getColor(R.color.text_primary))
         val category = word.categoryId?.let { viewModel.getCategoryById(it) }
         binding.quizCategoryText.text = category?.name ?: ""
 
         binding.meaningCard.visibility = View.GONE
+
+        // Both buttons visible, remember button in default state
         binding.forgetButton.visibility = View.VISIBLE
+        binding.forgetButton.text = "不记得"
         binding.rememberButton.visibility = View.VISIBLE
+        binding.rememberButton.text = "记得"
         binding.nextButton.visibility = View.GONE
 
         binding.wordDisplayContainer.let {
@@ -180,6 +188,11 @@ class QuizActivity : AppCompatActivity() {
 
         isShowingMeaning = true
         val word = quizWords[currentIndex]
+
+        // If previously remembered, undo the correctCount
+        if (hasRemembered) {
+            correctCount--
+        }
         forgottenWords.add(word)
 
         lifecycleScope.launch {
@@ -189,22 +202,73 @@ class QuizActivity : AppCompatActivity() {
             }
         }
 
-        binding.meaningCard.visibility = View.VISIBLE
-        binding.quizMeaningText.text = word.meaning
+        // Show word in red + meaning
+        binding.quizWordText.setTextColor(getColor(R.color.cat_hard))
+        showMeaningWithHighlight(word)
 
         binding.forgetButton.visibility = View.GONE
         binding.rememberButton.visibility = View.GONE
         binding.nextButton.visibility = View.VISIBLE
     }
 
-    private fun onWordRemembered() {
-        correctCount++
-        currentIndex++
-        showWord()
+    private fun onWordRememberedOrUnremember() {
+        if (quizWords.isEmpty() || currentIndex < 0 || currentIndex >= quizWords.size) return
+
+        if (hasRemembered) {
+            // Undo: change back to forgotten
+            onWordForgotten()
+        } else {
+            // Mark as remembered
+            hasRemembered = true
+            correctCount++
+
+            val word = quizWords[currentIndex]
+            showMeaningWithHighlight(word)
+
+            // Change button to "不记得" (undo)
+            binding.rememberButton.text = "不记得"
+            binding.rememberButton.visibility = View.VISIBLE
+            binding.forgetButton.visibility = View.GONE
+            binding.nextButton.visibility = View.VISIBLE
+        }
+    }
+
+    private fun showMeaningWithHighlight(word: Word) {
+        binding.meaningCard.visibility = View.VISIBLE
+
+        // Check if meaning has highlighted parts
+        lifecycleScope.launch {
+            val meanings = withContext(Dispatchers.IO) {
+                viewModel.getMeaningsForWordSync(word.id)
+            }
+            val highlightedTexts = meanings.filter { it.isHighlighted }.map { it.meaningText }
+
+            if (highlightedTexts.isNotEmpty()) {
+                val spannable = SpannableString(word.meaning)
+                highlightedTexts.forEach { hm ->
+                    val idx = word.meaning.indexOf(hm)
+                    if (idx >= 0) {
+                        val highlightColor = getColor(R.color.primary)
+                        spannable.setSpan(
+                            ForegroundColorSpan(highlightColor),
+                            idx, idx + hm.length,
+                            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                        )
+                        spannable.setSpan(
+                            StyleSpan(Typeface.BOLD),
+                            idx, idx + hm.length,
+                            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                        )
+                    }
+                }
+                binding.quizMeaningText.text = spannable
+            } else {
+                binding.quizMeaningText.text = word.meaning
+            }
+        }
     }
 
     private fun advanceToNext() {
-        autoAdvanceHandler.removeCallbacksAndMessages(null)
         currentIndex++
         showWord()
     }
@@ -214,7 +278,6 @@ class QuizActivity : AppCompatActivity() {
     private fun finishQuiz() {
         if (isFinishingQuiz) return
         isFinishingQuiz = true
-        autoAdvanceHandler.removeCallbacksAndMessages(null)
 
         val totalWords = quizWords.size
         val correctCountVal = correctCount
@@ -257,6 +320,5 @@ class QuizActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        autoAdvanceHandler.removeCallbacksAndMessages(null)
     }
 }

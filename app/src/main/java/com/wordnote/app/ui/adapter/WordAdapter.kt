@@ -54,6 +54,7 @@ class WordAdapter(
 
     // Date grouping mode
     private var isDateGroupingMode = false
+    private var isTodayOnlyMode = false
     private val collapsedMonths = mutableSetOf<String>()
     private val collapsedWeeks = mutableSetOf<String>()
     private val collapsedDays = mutableSetOf<String>()
@@ -128,7 +129,15 @@ class WordAdapter(
         }
     }
 
+    fun setTodayOnlyMode(enabled: Boolean) {
+        if (isTodayOnlyMode != enabled) {
+            isTodayOnlyMode = enabled
+            submitWordList(allWords)
+        }
+    }
+
     fun isDateGroupingMode(): Boolean = isDateGroupingMode
+    fun isTodayOnlyMode(): Boolean = isTodayOnlyMode
 
     companion object {
         private const val TYPE_DATE_HEADER = 0
@@ -216,12 +225,15 @@ class WordAdapter(
         val lastWordInCategory = if (currentCategoryName == "意思相近的单词") words.lastOrNull() else null
 
         words.forEach { word ->
-            val date = DateUtils.formatDate(word.createdAt)
-            if (date != currentDate) {
-                currentDate = date
-                val label = formatDateLabel(word.createdAt)
-                items.add(ListItem.DateHeader(date, label))
-                currentBatchId = null
+            // Skip date headers in today-only mode
+            if (!isTodayOnlyMode) {
+                val date = DateUtils.formatDate(word.createdAt)
+                if (date != currentDate) {
+                    currentDate = date
+                    val label = formatDateLabel(word.createdAt)
+                    items.add(ListItem.DateHeader(date, label))
+                    currentBatchId = null
+                }
             }
 
             val batchForget = batchForgetCountMap[word.batchId] ?: 0

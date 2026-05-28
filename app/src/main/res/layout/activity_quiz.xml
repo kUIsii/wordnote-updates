@@ -175,8 +175,7 @@
                 android:textStyle="bold"
                 app:backgroundTint="@color/primary"
                 app:cornerRadius="26dp"
-                android:layout_marginStart="8dp"
-                android:visibility="gone" />
+                android:layout_marginStart="8dp" />
 
         </LinearLayout>
 

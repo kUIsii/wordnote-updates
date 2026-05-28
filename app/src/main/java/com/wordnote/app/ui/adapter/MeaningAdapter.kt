@@ -17,6 +17,7 @@ import com.wordnote.app.databinding.ItemMeaningBinding
 class MeaningAdapter(
     private val onHighlightToggle: (WordMeaning) -> Unit,
     private val onNoteClick: (WordMeaning) -> Unit,
+    private val onEditClick: (WordMeaning) -> Unit,
     private val onOrderChanged: (List<WordMeaning>) -> Unit
 ) : RecyclerView.Adapter<MeaningAdapter.VH>() {
 
@@ -56,6 +57,7 @@ class MeaningAdapter(
         private val seqText: TextView = binding.seqText
         private val meaningText: TextView = binding.meaningText
         private val highlightButton: TextView = binding.highlightButton
+        private val editMeaningButton: TextView = binding.editMeaningButton
         private val noteButton: TextView = binding.noteButton
 
         fun bind(meaning: WordMeaning, position: Int) {
@@ -109,6 +111,9 @@ class MeaningAdapter(
                 highlightButton.setTextColor(itemView.context.getColor(R.color.text_secondary))
             }
             highlightButton.setOnClickListener { onHighlightToggle(meaning) }
+
+            // Edit button
+            editMeaningButton.setOnClickListener { onEditClick(meaning) }
 
             // Note button
             noteButton.text = if (meaning.note != null) "有备注" else "备注"

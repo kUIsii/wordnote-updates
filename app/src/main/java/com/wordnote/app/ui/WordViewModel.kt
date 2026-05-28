@@ -28,8 +28,15 @@ class WordViewModel(application: Application) : AndroidViewModel(application) {
     private val _isGlobalSearch = MutableLiveData(false)
     val isGlobalSearch: LiveData<Boolean> = _isGlobalSearch
 
+    private val _isTodayOnly = MutableLiveData(false)
+    val isTodayOnly: LiveData<Boolean> = _isTodayOnly
+
     fun toggleGlobalSearch() {
         _isGlobalSearch.value = !(_isGlobalSearch.value ?: false)
+    }
+
+    fun setTodayOnly(enabled: Boolean) {
+        _isTodayOnly.value = enabled
     }
 
     // Cache: all words grouped by categoryId, built from allWords
@@ -43,14 +50,24 @@ class WordViewModel(application: Application) : AndroidViewModel(application) {
         var currentAllWords: List<Word> = emptyList()
         var currentQuery: String = ""
         var isGlobal: Boolean = false
+        var isTodayOnly: Boolean = false
 
         fun update() {
             // Empty query: always show current category (global toggle has no effect without search)
             // Non-empty query: use allWords when global, category words when not
             val sourceWords = if (currentQuery.isNotEmpty() && isGlobal) currentAllWords else currentCategoryWords
+            val todayStart = com.wordnote.app.util.DateUtils.getStartOfDay(System.currentTimeMillis())
+            val todayEnd = todayStart + 24 * 60 * 60 * 1000
+
             value = if (currentQuery.isEmpty()) {
-                sourceWords
+                // Apply today-only filter when not searching
+                if (isTodayOnly) {
+                    sourceWords.filter { it.createdAt >= todayStart && it.createdAt < todayEnd }
+                } else {
+                    sourceWords
+                }
             } else {
+                // Search: no date filter, search across all
                 val matchedBatchIds = sourceWords.filter { word ->
                     word.word.contains(currentQuery, ignoreCase = true) ||
                             word.meaning.contains(currentQuery, ignoreCase = true) ||
@@ -88,6 +105,11 @@ class WordViewModel(application: Application) : AndroidViewModel(application) {
         addSource(_isGlobalSearch) { global ->
             isGlobal = global
             if (currentQuery.isNotEmpty()) update()
+        }
+
+        addSource(_isTodayOnly) { todayOnly ->
+            isTodayOnly = todayOnly
+            update()
         }
     }
 
@@ -269,6 +291,17 @@ class WordViewModel(application: Application) : AndroidViewModel(application) {
         repository.updateMeaningNote(meaning.id, note)
     }
 
+    fun updateMeaningText(meaning: WordMeaning, text: String) = viewModelScope.launch {
+        repository.updateMeaningText(meaning.id, text)
+        // Sync word.meaning with all meanings
+        val allMeanings = repository.getMeaningsForWordSync(meaning.wordId)
+        val word = repository.getWordById(meaning.wordId)
+        if (word != null && allMeanings.isNotEmpty()) {
+            val newMeaning = allMeanings.joinToString("，") { it.meaningText }
+            repository.updateWord(word.copy(meaning = newMeaning))
+        }
+    }
+
     val problematicWordIds: LiveData<List<Long>> = repository.getProblematicWordIds()
 
     // Copy words to category
@@ -325,6 +358,10 @@ class WordViewModel(application: Application) : AndroidViewModel(application) {
     // Similar word detection
     suspend fun findSimilarWordsExcluding(wordText: String, excludeWordId: Long): List<Word> {
         return repository.findSimilarWordsExcluding(wordText, excludeWordId)
+    }
+
+    suspend fun findSameCategoryWords(wordText: String, categoryId: Long): List<Word> {
+        return repository.findSameCategoryWords(wordText, categoryId)
     }
 
     fun setWordBatchId(wordId: Long, batchId: Long?) = viewModelScope.launch {

@@ -111,6 +111,9 @@ class WordDetailActivity : AppCompatActivity() {
             onNoteClick = { meaning ->
                 showNoteDialog(meaning)
             },
+            onEditClick = { meaning ->
+                showEditMeaningDialog(meaning)
+            },
             onOrderChanged = { newOrder ->
                 viewModel.reorderMeanings(newOrder)
             }
@@ -350,6 +353,25 @@ class WordDetailActivity : AppCompatActivity() {
                 val note = input.text.toString().trim().ifBlank { null }
                 viewModel.updateMeaningNote(meaning, note)
                 Toast.makeText(this, "已保存", Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+
+    private fun showEditMeaningDialog(meaning: WordMeaning) {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_note_input, null)
+        val input = dialogView.findViewById<EditText>(R.id.noteEditText)
+        input.setText(meaning.meaningText)
+
+        MaterialAlertDialogBuilder(this)
+            .setTitle("编辑释义")
+            .setView(dialogView)
+            .setPositiveButton("保存") { _, _ ->
+                val newText = input.text.toString().trim()
+                if (newText.isNotBlank()) {
+                    viewModel.updateMeaningText(meaning, newText)
+                    Toast.makeText(this, "已更新", Toast.LENGTH_SHORT).show()
+                }
             }
             .setNegativeButton("取消", null)
             .show()

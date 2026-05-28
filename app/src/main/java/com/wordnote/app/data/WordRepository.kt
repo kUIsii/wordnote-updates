@@ -76,6 +76,7 @@ class WordRepository(
     suspend fun setMeaningHighlighted(meaningId: Long, isHighlighted: Boolean) = wordMeaningDao.setHighlighted(meaningId, isHighlighted)
     suspend fun updateMeaningNote(meaningId: Long, note: String?) = wordMeaningDao.updateNote(meaningId, note)
     suspend fun updateMeaningSortOrder(meaningId: Long, sortOrder: Int) = wordMeaningDao.updateSortOrder(meaningId, sortOrder)
+    suspend fun updateMeaningText(meaningId: Long, text: String) = wordMeaningDao.updateMeaningText(meaningId, text)
     fun getProblematicWordIds(): LiveData<List<Long>> = wordMeaningDao.getProblematicWordIds()
     fun getHighlightedMeanings(): LiveData<List<HighlightedMeaning>> = wordMeaningDao.getHighlightedMeanings()
 
@@ -92,7 +93,22 @@ class WordRepository(
                 note = word.note,
                 createdAt = now
             )
-            wordDao.insertWord(copy)
+            val newWordId = wordDao.insertWord(copy)
+            // Copy WordMeaning records
+            val meanings = wordMeaningDao.getMeaningsForWordOrderedSync(wordId)
+            if (meanings.isNotEmpty()) {
+                val copiedMeanings = meanings.map { m ->
+                    WordMeaning(
+                        wordId = newWordId,
+                        meaningText = m.meaningText,
+                        note = m.note,
+                        isProblematic = m.isProblematic,
+                        isHighlighted = m.isHighlighted,
+                        sortOrder = m.sortOrder
+                    )
+                }
+                wordMeaningDao.insertAll(copiedMeanings)
+            }
             count++
         }
         return count
@@ -115,6 +131,10 @@ class WordRepository(
     // Similar word detection
     suspend fun findSimilarWordsExcluding(wordText: String, excludeWordId: Long): List<Word> {
         return wordDao.findSimilarWordsExcluding(wordText, excludeWordId)
+    }
+
+    suspend fun findSameCategoryWords(wordText: String, categoryId: Long): List<Word> {
+        return wordDao.findSameCategoryWords(wordText, categoryId)
     }
 
     // Soft delete / Recycle bin operations

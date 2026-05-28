@@ -43,6 +43,9 @@ interface WordMeaningDao {
     @Query("SELECT wordId, meaningText FROM word_meanings WHERE isHighlighted = 1")
     fun getHighlightedMeanings(): LiveData<List<HighlightedMeaning>>
 
+    @Query("UPDATE word_meanings SET meaningText = :text WHERE id = :meaningId")
+    suspend fun updateMeaningText(meaningId: Long, text: String)
+
     @Query("UPDATE word_meanings SET sortOrder = :sortOrder WHERE id = :meaningId")
     suspend fun updateSortOrder(meaningId: Long, sortOrder: Int)
 

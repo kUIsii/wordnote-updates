@@ -47,6 +47,17 @@
         android:paddingHorizontal="10dp"
         android:paddingVertical="4dp" />
 
+    <!-- Edit button -->
+    <TextView
+        android:id="@+id/editMeaningButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="编辑"
+        android:textSize="11sp"
+        android:paddingHorizontal="10dp"
+        android:paddingVertical="4dp"
+        android:textColor="@color/text_secondary" />
+
     <!-- Note button -->
     <TextView
         android:id="@+id/noteButton"
