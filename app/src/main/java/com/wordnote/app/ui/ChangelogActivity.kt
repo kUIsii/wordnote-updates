@@ -30,6 +30,15 @@ class ChangelogActivity : AppCompatActivity() {
 
         val changelog = listOf(
             VersionLog(
+                "v2.20.3", "2026-05-28",
+                listOf(
+                    "更新日志同步：补充 v2.20.1 更新记录",
+                    "仅当日模式修复：batch 分组不再被拆散，序号连贯",
+                    "仅当日模式显示日期头",
+                    "模式切换增加 Toast 提示当前模式"
+                )
+            ),
+            VersionLog(
                 "v2.20.1", "2026-05-28",
                 listOf(
                     "释义拆分和编辑：修复复制单词不复制释义记录的bug，详情页新增编辑释义按钮",
