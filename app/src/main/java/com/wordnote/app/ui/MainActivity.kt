@@ -534,6 +534,14 @@ class MainActivity : AppCompatActivity() {
         wordAdapter.setTodayOnlyMode(isTodayOnly)
         viewModel.setTodayOnly(isTodayOnly)
         updateDateGroupingButtonIcon(mode)
+
+        val modeName = when (mode) {
+            VIEW_MODE_FLAT -> "正常顺序"
+            VIEW_MODE_TODAY -> "仅当日"
+            VIEW_MODE_GROUPED -> "折叠"
+            else -> ""
+        }
+        Toast.makeText(this, "显示模式：$modeName", Toast.LENGTH_SHORT).show()
     }
 
     private fun updateDateGroupingButtonIcon(mode: Int) {

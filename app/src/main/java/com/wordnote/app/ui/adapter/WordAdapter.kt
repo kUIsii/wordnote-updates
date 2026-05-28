@@ -225,9 +225,17 @@ class WordAdapter(
         val lastWordInCategory = if (currentCategoryName == "意思相近的单词") words.lastOrNull() else null
 
         words.forEach { word ->
-            // Skip date headers in today-only mode
-            if (!isTodayOnlyMode) {
-                val date = DateUtils.formatDate(word.createdAt)
+            val wordDate = DateUtils.formatDate(word.createdAt)
+
+            // In today-only mode, show a single date header for today
+            if (isTodayOnlyMode) {
+                if (currentDate == "" && items.isEmpty()) {
+                    currentDate = wordDate
+                    val label = formatDateLabel(word.createdAt)
+                    items.add(ListItem.DateHeader(wordDate, label))
+                }
+            } else {
+                val date = wordDate
                 if (date != currentDate) {
                     currentDate = date
                     val label = formatDateLabel(word.createdAt)
@@ -253,14 +261,14 @@ class WordAdapter(
                     val wordIdx = words.indexOf(word)
                     val isLast = wordIdx + 1 >= words.size ||
                             words[wordIdx + 1].batchId != currentBatchId ||
-                            DateUtils.formatDate(words[wordIdx + 1].createdAt) != currentDate
+                            (!isTodayOnlyMode && DateUtils.formatDate(words[wordIdx + 1].createdAt) != currentDate)
                     items.add(ListItem.WordItem(word, index, isFirstInBatch = true, isLastInBatch = isLast, batchForgetCount = batchForget, categoryName = showCatName))
                     if (isLast) index++
                 } else {
                     val nextWordIndex = words.indexOf(word) + 1
                     val isLast = nextWordIndex >= words.size ||
                             words[nextWordIndex].batchId != currentBatchId ||
-                            DateUtils.formatDate(words[nextWordIndex].createdAt) != currentDate
+                            (!isTodayOnlyMode && DateUtils.formatDate(words[nextWordIndex].createdAt) != currentDate)
                     items.add(ListItem.WordItem(word, index, isFirstInBatch = false, isLastInBatch = isLast, batchForgetCount = batchForget, categoryName = showCatName))
                     if (isLast) index++
                 }
