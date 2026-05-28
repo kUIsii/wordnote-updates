@@ -30,7 +30,7 @@ class ChangelogActivity : AppCompatActivity() {
 
         val changelog = listOf(
             VersionLog(
-                "v2.20.3", "2026-05-28",
+                "v2.20.4", "2026-05-28",
                 listOf(
                     "更新日志同步：补充 v2.20.1 更新记录",
                     "仅当日模式修复：batch 分组不再被拆散，序号连贯",
