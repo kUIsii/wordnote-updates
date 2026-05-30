@@ -12,6 +12,7 @@
 
     <!-- Category Colors - softer, less harsh -->
     <color name="cat_hard">#E8636A</color>
+    <color name="cat_easy">#5CB87A</color>
     <color name="cat_differs">#F0A050</color>
     <color name="cat_similar">#5CB87A</color>
     <color name="cat_partial">#5B9BD5</color>

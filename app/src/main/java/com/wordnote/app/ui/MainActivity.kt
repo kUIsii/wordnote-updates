@@ -1,14 +1,22 @@
 package com.wordnote.app.ui
 
 import android.content.Intent
+import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.RectF
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.text.SpannableString
+import android.text.Spanned
+import android.text.style.BackgroundColorSpan
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.View
+import android.view.animation.AnimationUtils
+import android.view.animation.DecelerateInterpolator
 import android.view.inputmethod.EditorInfo
 import android.widget.FrameLayout
 import androidx.core.view.GestureDetectorCompat
@@ -26,6 +34,8 @@ import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.TextInputEditText
+import androidx.core.content.ContextCompat
+import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -35,6 +45,7 @@ import com.wordnote.app.databinding.ActivityMainBinding
 import com.wordnote.app.data.Word
 import com.wordnote.app.data.WordGroup
 import com.wordnote.app.ui.adapter.WordAdapter
+import com.wordnote.app.ui.adapter.GroupManagementAdapter
 import com.wordnote.app.util.UpdateChecker
 import com.wordnote.app.util.compatOverridePendingTransition
 import androidx.lifecycle.lifecycleScope
@@ -101,6 +112,8 @@ class MainActivity : AppCompatActivity() {
         setupSwipeGesture()
         setupInput()
         setupSearch()
+        setupSearchAnimation()
+        setupSearchSuggestions()
         observeData()
         checkForUpdateOnStartup()
 
@@ -237,6 +250,11 @@ class MainActivity : AppCompatActivity() {
         settingsButton = binding.settingsButton
         dateGroupingButton = binding.dateGroupingButton
 
+        binding.quickQuizCard.setOnClickListener {
+            startActivity(Intent(this, QuizSetupActivity::class.java))
+            compatOverridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left)
+        }
+
         binding.dictionaryButton.setOnClickListener {
             startActivity(Intent(this, DictionaryActivity::class.java))
             compatOverridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left)
@@ -293,6 +311,8 @@ class MainActivity : AppCompatActivity() {
             layoutManager = LinearLayoutManager(this@MainActivity)
             adapter = wordAdapter
         }
+
+        setupSwipeToDelete()
 
         // Restore view mode from SharedPreferences
         val savedViewMode = getSharedPreferences("settings", MODE_PRIVATE)
@@ -407,6 +427,7 @@ class MainActivity : AppCompatActivity() {
         val selectionCountText = binding.selectionCountText
         val deleteSelectedButton = binding.deleteSelectedButton
         val copySelectedButton = binding.copySelectedButton
+        val groupSelectedButton = binding.groupSelectedButton
         val cancelButton = binding.cancelSelectionButton
 
         if (selectedIds.isEmpty()) {
@@ -425,6 +446,12 @@ class MainActivity : AppCompatActivity() {
         copySelectedButton.setOnClickListener {
             if (selectedIds.isNotEmpty()) {
                 showCopyCategoryDialog(selectedIds)
+            }
+        }
+
+        groupSelectedButton.setOnClickListener {
+            if (selectedIds.isNotEmpty()) {
+                showBatchGroupDialog(selectedIds)
             }
         }
 
@@ -465,7 +492,205 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
-    private fun setupTabs(categories: List<Category> = emptyList()) {
+    private fun showBatchGroupDialog(selectedWordIds: Set<Long>) {
+        val groups = groupsList
+        val groupNames = groups.map { it.name }.toTypedArray()
+
+        if (groups.isEmpty()) {
+            // No groups exist, prompt to create one
+            showCreateGroupForBatchDialog(selectedWordIds)
+            return
+        }
+
+        val items = arrayOf(*groupNames, "新建分组", "移除分组")
+        MaterialAlertDialogBuilder(this)
+            .setTitle("选择分组（${selectedWordIds.size} 个单词）")
+            .setItems(items) { _, which ->
+                if (which < groups.size) {
+                    // Assign to existing group
+                    val group = groups[which]
+                    viewModel.assignWordsToGroup(selectedWordIds.toList(), group.id)
+                    wordAdapter.exitSelectionMode()
+                    Toast.makeText(this, "已添加到「${group.name}」", Toast.LENGTH_SHORT).show()
+                } else if (which == groups.size) {
+                    // Create new group
+                    showCreateGroupForBatchDialog(selectedWordIds)
+                } else {
+                    // Remove from group
+                    viewModel.assignWordsToGroup(selectedWordIds.toList(), null)
+                    wordAdapter.exitSelectionMode()
+                    Toast.makeText(this, "已移除分组", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+
+    private fun showCreateGroupForBatchDialog(wordIds: Set<Long>) {
+        val input = EditText(this).apply {
+            hint = "分组名称"
+            setPadding(dpToPx(16), dpToPx(12), dpToPx(16), dpToPx(12))
+        }
+
+        MaterialAlertDialogBuilder(this)
+            .setTitle("新建分组")
+            .setView(input)
+            .setPositiveButton("创建并添加") { _, _ ->
+                val groupName = input.text.toString().trim()
+                if (groupName.isNotBlank()) {
+                    viewModel.createGroup(groupName)
+                    // Observe groups to get the new group ID, then assign
+                    val observer = object : androidx.lifecycle.Observer<List<WordGroup>> {
+                        override fun onChanged(groups: List<WordGroup>) {
+                            val newGroup = groups.find { it.name == groupName }
+                            if (newGroup != null) {
+                                viewModel.assignWordsToGroup(wordIds.toList(), newGroup.id)
+                                wordAdapter.exitSelectionMode()
+                                Toast.makeText(this@MainActivity, "已添加到「$groupName」", Toast.LENGTH_SHORT).show()
+                                viewModel.allGroups.removeObserver(this)
+                            }
+                        }
+                    }
+                    viewModel.allGroups.observe(this, observer)
+                }
+            }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+
+    private fun showGroupManagementDialog() {
+        val dialog = BottomSheetDialog(this, R.style.Theme_WordNoteApp_BottomSheet)
+
+        // Create content programmatically
+        val container = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dpToPx(16), dpToPx(16), dpToPx(16), dpToPx(16))
+        }
+
+        // Title
+        val title = TextView(this).apply {
+            text = "词语分组管理"
+            textSize = 18f
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setTextColor(getColor(R.color.text_primary))
+            setPadding(0, 0, 0, dpToPx(16))
+        }
+        container.addView(title)
+
+        // Group list
+        val groupRecyclerView = RecyclerView(this).apply {
+            layoutManager = LinearLayoutManager(this@MainActivity)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                0, 1f
+            )
+        }
+        container.addView(groupRecyclerView)
+
+        // Add group button
+        val addBtn = MaterialButton(this).apply {
+            text = "新建分组"
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = dpToPx(12)
+            }
+        }
+        container.addView(addBtn)
+
+        // Setup adapter with drag-and-drop
+        val groupItems = groupsList.toMutableList()
+        var groupWordCounts = mutableMapOf<Long, Int>()
+
+        // Load word counts
+        lifecycleScope.launch {
+            groupsList.forEach { group ->
+                val count = viewModel.getWordCountForGroupSync(group.id)
+                groupWordCounts[group.id] = count
+            }
+            groupRecyclerView.adapter?.notifyDataSetChanged()
+        }
+
+        val groupAdapter = GroupManagementAdapter(
+            groups = groupItems,
+            wordCounts = groupWordCounts,
+            onDelete = { group ->
+                MaterialAlertDialogBuilder(this)
+                    .setTitle("删除分组")
+                    .setMessage("确定要删除「${group.name}」吗？\n分组中的单词不会被删除。")
+                    .setPositiveButton("删除") { _, _ ->
+                        viewModel.deleteGroup(group)
+                        groupItems.remove(group)
+                        groupRecyclerView.adapter?.notifyDataSetChanged()
+                        Toast.makeText(this, "已删除", Toast.LENGTH_SHORT).show()
+                    }
+                    .setNegativeButton("取消", null)
+                    .show()
+            }
+        )
+        groupRecyclerView.adapter = groupAdapter
+
+        // Drag and drop
+        val itemTouchHelper = ItemTouchHelper(object : ItemTouchHelper.SimpleCallback(
+            ItemTouchHelper.UP or ItemTouchHelper.DOWN, 0
+        ) {
+            override fun onMove(
+                recyclerView: RecyclerView,
+                viewHolder: RecyclerView.ViewHolder,
+                target: RecyclerView.ViewHolder
+            ): Boolean {
+                val fromPos = viewHolder.adapterPosition
+                val toPos = target.adapterPosition
+                java.util.Collections.swap(groupItems, fromPos, toPos)
+                groupAdapter.notifyItemMoved(fromPos, toPos)
+                return true
+            }
+
+            override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {}
+
+            override fun clearView(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder) {
+                super.clearView(recyclerView, viewHolder)
+                // Save new order when drag ends
+                viewModel.updateGroupSortOrder(groupItems)
+            }
+
+            override fun isLongPressDragEnabled() = true
+        })
+        itemTouchHelper.attachToRecyclerView(groupRecyclerView)
+        groupAdapter.onDragStart = { viewHolder: RecyclerView.ViewHolder ->
+            itemTouchHelper.startDrag(viewHolder)
+        }
+
+        addBtn.setOnClickListener {
+            val input = EditText(this).apply {
+                hint = "分组名称"
+                setPadding(dpToPx(16), dpToPx(12), dpToPx(16), dpToPx(12))
+            }
+            MaterialAlertDialogBuilder(this)
+                .setTitle("新建分组")
+                .setView(input)
+                .setPositiveButton("创建") { _, _ ->
+                    val name = input.text.toString().trim()
+                    if (name.isNotBlank()) {
+                        viewModel.createGroup(name)
+                        // Add to local list and refresh
+                        groupItems.add(WordGroup(name = name, sortOrder = groupItems.size))
+                        groupRecyclerView.adapter?.notifyItemInserted(groupItems.size - 1)
+                    }
+                }
+                .setNegativeButton("取消", null)
+                .show()
+        }
+
+        val bottomSheet = dialog.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)
+        bottomSheet?.layoutParams?.height = (resources.displayMetrics.heightPixels * 0.7).toInt()
+
+        dialog.setContentView(container)
+        dialog.show()
+    }
+
+    private fun setupTabs(categories: List<Category>) {
         tabContainer.removeAllViews()
         categoriesList = categories
 
@@ -809,18 +1034,22 @@ class MainActivity : AppCompatActivity() {
         val groupNames = mutableListOf("无分组")
         groupsList.forEach { groupNames.add(it.name) }
         groupNames.add("+ 新建分组")
+        groupNames.add("管理分组")
         val groupAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, groupNames)
         groupAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         groupSpinner.adapter = groupAdapter
         word.groupId?.let { gId ->
             val idx = groupsList.indexOfFirst { it.id == gId } + 1
-            if (idx > 0 && idx < groupNames.size - 1) groupSpinner.setSelection(idx)
+            if (idx > 0 && idx < groupNames.size - 2) groupSpinner.setSelection(idx)
         }
 
         groupSpinner.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: View?, position: Int, id: Long) {
-                if (position == groupNames.size - 1 && groupNames[position] == "+ 新建分组") {
+                if (position == groupNames.size - 2 && groupNames[position] == "+ 新建分组") {
                     showCreateGroupDialogInSheet(dialog, groupSpinner, groupNames)
+                } else if (position == groupNames.size - 1 && groupNames[position] == "管理分组") {
+                    dialog.dismiss()
+                    showGroupManagementDialog()
                 }
             }
             override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
@@ -965,6 +1194,76 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun setupSearchAnimation() {
+        searchEditText.setOnFocusChangeListener { view, hasFocus ->
+            if (hasFocus) {
+                view.animate()
+                    .scaleX(1.02f)
+                    .scaleY(1.02f)
+                    .setDuration(200)
+                    .setInterpolator(DecelerateInterpolator())
+                    .start()
+            } else {
+                view.animate()
+                    .scaleX(1f)
+                    .scaleY(1f)
+                    .setDuration(200)
+                    .setInterpolator(DecelerateInterpolator())
+                    .start()
+            }
+        }
+    }
+
+    private fun highlightSearchResult(text: String, query: String): SpannableString {
+        val spannable = SpannableString(text)
+        if (query.isEmpty()) return spannable
+
+        val lowerText = text.lowercase()
+        val lowerQuery = query.lowercase()
+        var startIndex = lowerText.indexOf(lowerQuery)
+
+        while (startIndex >= 0) {
+            val endIndex = startIndex + query.length
+            spannable.setSpan(
+                BackgroundColorSpan(Color.parseColor("#FFFF00")),
+                startIndex, endIndex,
+                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
+            startIndex = lowerText.indexOf(lowerQuery, endIndex)
+        }
+
+        return spannable
+    }
+
+    private fun setupSearchSuggestions() {
+        searchEditText.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: android.text.Editable?) {
+                val query = s?.toString() ?: ""
+                if (query.length >= 2) {
+                    showSearchSuggestions(query)
+                } else {
+                    hideSearchSuggestions()
+                }
+            }
+        })
+    }
+
+    private fun showSearchSuggestions(query: String) {
+        // TODO: Show search suggestions dropdown
+    }
+
+    private fun hideSearchSuggestions() {
+        // TODO: Hide search suggestions dropdown
+    }
+
+    private fun animateSearchResults() {
+        val controller = AnimationUtils.loadLayoutAnimation(this, R.anim.layout_animation_fall_down)
+        wordRecyclerView.layoutAnimation = controller
+        wordRecyclerView.scheduleLayoutAnimation()
+    }
+
     private fun observeData() {
         viewModel.allCategories.observe(this) { categories ->
             wordAdapter.setCategories(categories)
@@ -1007,6 +1306,10 @@ class MainActivity : AppCompatActivity() {
             val forceRefresh = viewModel.pendingCategorySwitch
             if (forceRefresh) viewModel.clearPendingCategorySwitch()
             wordAdapter.submitWordList(words, forceRefresh)
+            val currentQuery = viewModel.searchQuery.value ?: ""
+            if (currentQuery.isNotBlank() && words.isNotEmpty()) {
+                animateSearchResults()
+            }
             emptyView.visibility = if (words.isEmpty()) View.VISIBLE else View.GONE
             wordRecyclerView.visibility = if (words.isEmpty()) View.GONE else View.VISIBLE
 
@@ -1040,7 +1343,115 @@ class MainActivity : AppCompatActivity() {
         viewModel.reviewCount.observe(this) { count ->
             val total = viewModel.allWords.value?.size ?: 0
             statsTextView.text = "共 $total 个 · 待复习 $count 个"
+            binding.reviewCountText.text = if (count > 0) {
+                "有 $count 个单词待复习"
+            } else {
+                "暂无待复习单词"
+            }
         }
+    }
+
+    private fun setupSwipeToDelete() {
+        val itemTouchHelper = ItemTouchHelper(object : ItemTouchHelper.SimpleCallback(
+            0, ItemTouchHelper.LEFT
+        ) {
+            override fun onMove(
+                recyclerView: RecyclerView,
+                viewHolder: RecyclerView.ViewHolder,
+                target: RecyclerView.ViewHolder
+            ): Boolean = false
+
+            override fun getSwipeDirs(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder): Int {
+                if (viewHolder !is WordAdapter.WordViewHolder) return 0
+                return super.getSwipeDirs(recyclerView, viewHolder)
+            }
+
+            override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
+                val position = viewHolder.adapterPosition
+                val listItem = wordAdapter.currentList[position]
+                if (listItem is com.wordnote.app.ui.adapter.ListItem.WordItem) {
+                    showDeleteConfirmation(listItem.word) {
+                        wordAdapter.notifyItemChanged(position)
+                    }
+                } else {
+                    wordAdapter.notifyItemChanged(position)
+                }
+            }
+
+            override fun onChildDraw(
+                c: Canvas,
+                recyclerView: RecyclerView,
+                viewHolder: RecyclerView.ViewHolder,
+                dX: Float,
+                dY: Float,
+                actionState: Int,
+                isCurrentlyActive: Boolean
+            ) {
+                if (dX < 0) {
+                    val itemView = viewHolder.itemView
+                    val density = resources.displayMetrics.density
+                    val cornerRadius = 12f * density
+
+                    c.save()
+                    c.clipRect(
+                        itemView.left.toFloat(),
+                        itemView.top.toFloat(),
+                        itemView.right.toFloat(),
+                        itemView.bottom.toFloat()
+                    )
+
+                    // Draw red background
+                    val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                        color = Color.parseColor("#FF5252")
+                    }
+                    val background = RectF(
+                        itemView.right + dX,
+                        itemView.top.toFloat(),
+                        itemView.right.toFloat(),
+                        itemView.bottom.toFloat()
+                    )
+                    c.drawRoundRect(background, cornerRadius, cornerRadius, paint)
+
+                    // Draw delete icon
+                    val icon = ContextCompat.getDrawable(this@MainActivity, R.drawable.ic_delete)
+                    icon?.setTint(Color.WHITE)
+                    icon?.let {
+                        val iconMargin = (itemView.height - it.intrinsicHeight) / 2
+                        val iconTop = itemView.top + iconMargin
+                        val iconLeft = itemView.right - iconMargin - it.intrinsicWidth
+                        it.setBounds(iconLeft, iconTop, iconLeft + it.intrinsicWidth, iconTop + it.intrinsicHeight)
+                        it.draw(c)
+                    }
+
+                    c.restore()
+                }
+
+                super.onChildDraw(c, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive)
+            }
+        })
+
+        itemTouchHelper.attachToRecyclerView(wordRecyclerView)
+    }
+
+    private fun showDeleteConfirmation(word: Word, onCancel: () -> Unit) {
+        MaterialAlertDialogBuilder(this)
+            .setTitle("删除单词")
+            .setMessage("确定要删除 \"${word.word}\" 吗？")
+            .setPositiveButton("删除") { _, _ ->
+                animateDeleteItem(word)
+            }
+            .setNegativeButton("取消") { _, _ ->
+                onCancel()
+            }
+            .setOnCancelListener {
+                onCancel()
+            }
+            .show()
+    }
+
+    private fun animateDeleteItem(word: Word) {
+        viewModel.deleteWord(word)
+        Toast.makeText(this, "已移入回收站", Toast.LENGTH_SHORT).show()
     }
 
     private fun showDeleteWordDialog(word: Word) {

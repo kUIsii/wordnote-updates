@@ -12,11 +12,14 @@ import android.text.style.ForegroundColorSpan
 import android.text.style.StyleSpan
 import android.util.Log
 import android.view.View
+import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import com.wordnote.app.R
+import com.wordnote.app.data.QuizMode
 import com.wordnote.app.data.Word
 import com.wordnote.app.databinding.ActivityQuizBinding
 import com.wordnote.app.util.compatOverridePendingTransition
@@ -37,6 +40,7 @@ class QuizActivity : AppCompatActivity() {
     private var wordCount = 35
     private var categoryIds: List<Long>? = null
     private var useForgetCount = false
+    private var quizMode: QuizMode = QuizMode.EN_TO_CN
 
     private var hasRemembered = false
     private var isShowingMeaning = false
@@ -45,12 +49,14 @@ class QuizActivity : AppCompatActivity() {
         private const val EXTRA_WORD_COUNT = "word_count"
         private const val EXTRA_CATEGORY_IDS = "category_ids"
         private const val EXTRA_USE_FORGET_COUNT = "use_forget_count"
+        private const val EXTRA_QUIZ_MODE = "quiz_mode"
 
-        fun launch(context: Context, wordCount: Int, categoryIds: List<Long>?, useForgetCount: Boolean) {
+        fun launch(context: Context, wordCount: Int, categoryIds: List<Long>?, useForgetCount: Boolean, quizMode: QuizMode = QuizMode.EN_TO_CN) {
             val intent = Intent(context, QuizActivity::class.java).apply {
                 putExtra(EXTRA_WORD_COUNT, wordCount)
                 putExtra(EXTRA_CATEGORY_IDS, categoryIds?.toLongArray())
                 putExtra(EXTRA_USE_FORGET_COUNT, useForgetCount)
+                putExtra(EXTRA_QUIZ_MODE, quizMode.name)
             }
             context.startActivity(intent)
         }
@@ -66,6 +72,9 @@ class QuizActivity : AppCompatActivity() {
         wordCount = intent.getIntExtra(EXTRA_WORD_COUNT, 35)
         categoryIds = intent.getLongArrayExtra(EXTRA_CATEGORY_IDS)?.toList()
         useForgetCount = intent.getBooleanExtra(EXTRA_USE_FORGET_COUNT, false)
+        quizMode = intent.getStringExtra(EXTRA_QUIZ_MODE)?.let {
+            try { QuizMode.valueOf(it) } catch (e: Exception) { QuizMode.EN_TO_CN }
+        } ?: QuizMode.EN_TO_CN
 
         initViews()
         viewModel.allCategories.observe(this) { }
@@ -81,6 +90,19 @@ class QuizActivity : AppCompatActivity() {
         binding.forgetButton.setOnClickListener { onWordForgotten() }
         binding.rememberButton.setOnClickListener { onWordRememberedOrUnremember() }
         binding.nextButton.setOnClickListener { advanceToNext() }
+
+        binding.spellingInput.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_DONE) {
+                checkSpelling()
+                true
+            } else {
+                false
+            }
+        }
+
+        binding.checkSpellingButton.setOnClickListener {
+            checkSpelling()
+        }
     }
 
     private fun loadWords() {
@@ -156,12 +178,25 @@ class QuizActivity : AppCompatActivity() {
         binding.progressBar.max = quizWords.size
         binding.progressBar.progress = currentIndex + 1
 
-        binding.quizWordText.text = word.word
+        // Determine effective mode for MIXED
+        val effectiveMode = if (quizMode == QuizMode.MIXED) {
+            QuizMode.entries.toTypedArray().filter { it != QuizMode.MIXED }.random()
+        } else {
+            quizMode
+        }
+
+        if (effectiveMode == QuizMode.SPELLING) {
+            showSpellingTest()
+            return
+        }
+
+        binding.quizWordText.text = if (effectiveMode == QuizMode.CN_TO_EN) word.meaning else word.word
         binding.quizWordText.setTextColor(getColor(R.color.text_primary))
         val category = word.categoryId?.let { viewModel.getCategoryById(it) }
         binding.quizCategoryText.text = category?.name ?: ""
 
         binding.meaningCard.visibility = View.GONE
+        binding.spellingInputContainer.visibility = View.GONE
 
         // Both buttons visible, remember button in default state
         binding.forgetButton.visibility = View.VISIBLE
@@ -266,6 +301,65 @@ class QuizActivity : AppCompatActivity() {
                 binding.quizMeaningText.text = word.meaning
             }
         }
+    }
+
+    private fun showSpellingTest() {
+        val word = quizWords[currentIndex]
+
+        // Display meaning, ask user to type the word
+        binding.quizWordText.text = word.meaning
+        binding.quizWordText.setTextColor(getColor(R.color.text_primary))
+        binding.quizCategoryText.text = "请拼写单词"
+
+        // Hide remember/forget buttons
+        binding.forgetButton.visibility = View.GONE
+        binding.rememberButton.visibility = View.GONE
+        binding.nextButton.visibility = View.GONE
+        binding.meaningCard.visibility = View.GONE
+
+        // Show spelling input
+        binding.spellingInputContainer.visibility = View.VISIBLE
+        binding.spellingInput.text?.clear()
+        binding.spellingInput.requestFocus()
+
+        // Show keyboard
+        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+        imm.showSoftInput(binding.spellingInput, InputMethodManager.SHOW_IMPLICIT)
+    }
+
+    private fun checkSpelling() {
+        val word = quizWords[currentIndex]
+        val userInput = binding.spellingInput.text.toString().trim()
+
+        if (userInput.isEmpty()) return
+
+        if (userInput.equals(word.word, ignoreCase = true)) {
+            onWordRememberedOrUnremember()
+            showSpellingResult(true, word.word)
+        } else {
+            onWordForgotten()
+            showSpellingResult(false, word.word)
+        }
+    }
+
+    private fun showSpellingResult(isCorrect: Boolean, correctWord: String) {
+        binding.spellingInputContainer.visibility = View.GONE
+
+        // Hide keyboard
+        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+        imm.hideSoftInputFromWindow(binding.spellingInput.windowToken, 0)
+
+        if (isCorrect) {
+            binding.quizWordText.setTextColor(getColor(R.color.cat_easy))
+            Toast.makeText(this, "正确！", Toast.LENGTH_SHORT).show()
+        } else {
+            binding.quizWordText.setTextColor(getColor(R.color.cat_hard))
+            binding.quizWordText.text = correctWord
+            Toast.makeText(this, "正确答案: $correctWord", Toast.LENGTH_LONG).show()
+        }
+
+        // Show next button
+        binding.nextButton.visibility = View.VISIBLE
     }
 
     private fun advanceToNext() {

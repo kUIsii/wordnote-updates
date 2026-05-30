@@ -44,6 +44,7 @@ class SettingsActivity : AppCompatActivity() {
         setupToolbar()
         setupVersion()
         setupDarkMode()
+        setupLearningGoals()
         setupBackupRestore()
     }
 
@@ -138,6 +139,37 @@ class SettingsActivity : AppCompatActivity() {
             AppCompatDelegate.setDefaultNightMode(
                 if (isChecked) AppCompatDelegate.MODE_NIGHT_YES else AppCompatDelegate.MODE_NIGHT_NO
             )
+        }
+    }
+
+    private fun setupLearningGoals() {
+        val prefs = getSharedPreferences("learning_goals", MODE_PRIVATE)
+
+        val newWords = prefs.getInt("daily_new_words", 10)
+        val reviewWords = prefs.getInt("daily_review_words", 20)
+        val minutes = prefs.getInt("daily_minutes", 15)
+
+        binding.newWordsSlider.value = newWords.toFloat()
+        binding.reviewWordsSlider.value = reviewWords.toFloat()
+        binding.minutesSlider.value = minutes.toFloat()
+
+        binding.newWordsValue.text = "$newWords 个"
+        binding.reviewWordsValue.text = "$reviewWords 个"
+        binding.minutesValue.text = "$minutes 分钟"
+
+        binding.newWordsSlider.addOnChangeListener { _, value, _ ->
+            prefs.edit().putInt("daily_new_words", value.toInt()).apply()
+            binding.newWordsValue.text = "${value.toInt()} 个"
+        }
+
+        binding.reviewWordsSlider.addOnChangeListener { _, value, _ ->
+            prefs.edit().putInt("daily_review_words", value.toInt()).apply()
+            binding.reviewWordsValue.text = "${value.toInt()} 个"
+        }
+
+        binding.minutesSlider.addOnChangeListener { _, value, _ ->
+            prefs.edit().putInt("daily_minutes", value.toInt()).apply()
+            binding.minutesValue.text = "${value.toInt()} 分钟"
         }
     }
 

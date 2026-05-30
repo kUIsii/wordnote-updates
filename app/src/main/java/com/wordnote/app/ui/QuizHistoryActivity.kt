@@ -6,7 +6,6 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -16,19 +15,32 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.tabs.TabLayout
 import com.wordnote.app.R
 import com.wordnote.app.data.QuizHistory
 import com.wordnote.app.databinding.ActivityQuizHistoryBinding
+import com.wordnote.app.databinding.ItemLeaderboardEntryBinding
 import com.wordnote.app.util.compatOverridePendingTransition
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+
+data class LeaderboardEntry(
+    val rank: Int,
+    val score: Int,
+    val totalWords: Int,
+    val correctRate: Int,
+    val date: Long,
+    val duration: Long
+)
 
 class QuizHistoryActivity : AppCompatActivity() {
 
     private lateinit var viewModel: WordViewModel
     private lateinit var binding: ActivityQuizHistoryBinding
     private val adapter = QuizHistoryAdapter()
+    private val leaderboardAdapter = LeaderboardAdapter()
+    private var allHistory: List<QuizHistory> = emptyList()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -45,6 +57,9 @@ class QuizHistoryActivity : AppCompatActivity() {
         binding.historyRecyclerView.layoutManager = LinearLayoutManager(this)
         binding.historyRecyclerView.adapter = adapter
 
+        binding.leaderboardRecyclerView.layoutManager = LinearLayoutManager(this)
+        binding.leaderboardRecyclerView.adapter = leaderboardAdapter
+
         adapter.onItemClick = { record -> showQuizDetail(record) }
         adapter.onItemLongClick = { record ->
             MaterialAlertDialogBuilder(this, R.style.Theme_WordNoteApp_Dialog)
@@ -59,18 +74,39 @@ class QuizHistoryActivity : AppCompatActivity() {
             true
         }
 
+        // Setup tabs
+        binding.tabLayout.addTab(binding.tabLayout.newTab().setText("历史记录"))
+        binding.tabLayout.addTab(binding.tabLayout.newTab().setText("排行榜"))
+
+        binding.tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
+            override fun onTabSelected(tab: TabLayout.Tab?) {
+                when (tab?.position) {
+                    0 -> showHistoryTab()
+                    1 -> showLeaderboardTab()
+                }
+            }
+            override fun onTabUnselected(tab: TabLayout.Tab?) {}
+            override fun onTabReselected(tab: TabLayout.Tab?) {}
+        })
+
         viewModel.allQuizHistory.observe(this) { history ->
-            if (history.isNullOrEmpty()) {
+            allHistory = history ?: emptyList()
+            if (allHistory.isEmpty()) {
                 binding.historyRecyclerView.visibility = View.GONE
+                binding.leaderboardRecyclerView.visibility = View.GONE
                 binding.emptyView.visibility = View.VISIBLE
                 binding.recordCountText.text = ""
                 updateStats(emptyList())
             } else {
-                binding.historyRecyclerView.visibility = View.VISIBLE
                 binding.emptyView.visibility = View.GONE
-                binding.recordCountText.text = "共 ${history.size} 条"
-                adapter.submitList(history)
-                updateStats(history)
+                binding.recordCountText.text = "共 ${allHistory.size} 条"
+                adapter.submitList(allHistory)
+                updateStats(allHistory)
+                // Refresh current tab content
+                when (binding.tabLayout.selectedTabPosition) {
+                    0 -> showHistoryTab()
+                    1 -> showLeaderboardTab()
+                }
             }
         }
     }
@@ -115,6 +151,50 @@ class QuizHistoryActivity : AppCompatActivity() {
         }
         startActivity(intent)
         compatOverridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left)
+    }
+
+    private fun showHistoryTab() {
+        binding.historyRecyclerView.visibility = View.VISIBLE
+        binding.leaderboardRecyclerView.visibility = View.GONE
+        if (allHistory.isEmpty()) {
+            binding.emptyView.visibility = View.VISIBLE
+        }
+    }
+
+    private fun showLeaderboardTab() {
+        binding.historyRecyclerView.visibility = View.GONE
+        binding.leaderboardRecyclerView.visibility = View.VISIBLE
+        binding.emptyView.visibility = View.GONE
+        updateLeaderboard(allHistory)
+    }
+
+    private fun updateLeaderboard(history: List<QuizHistory>) {
+        if (history.isEmpty()) {
+            binding.leaderboardRecyclerView.visibility = View.GONE
+            binding.emptyView.visibility = View.VISIBLE
+            return
+        }
+
+        val leaderboard = history.map { record ->
+            val correctRate = if (record.totalWords > 0) {
+                record.correctCount * 100 / record.totalWords
+            } else 0
+
+            LeaderboardEntry(
+                rank = 0,
+                score = record.correctCount,
+                totalWords = record.totalWords,
+                correctRate = correctRate,
+                date = record.createdAt,
+                duration = 0
+            )
+        }
+        .sortedWith(compareByDescending<LeaderboardEntry> { it.correctRate }
+            .thenByDescending { it.totalWords })
+        .take(10)
+        .mapIndexed { index, entry -> entry.copy(rank = index + 1) }
+
+        leaderboardAdapter.submitList(leaderboard)
     }
 
     private fun dpToPx(dp: Int): Int {
@@ -182,5 +262,57 @@ class QuizHistoryActivity : AppCompatActivity() {
     class DiffCallback : DiffUtil.ItemCallback<QuizHistory>() {
         override fun areItemsTheSame(oldItem: QuizHistory, newItem: QuizHistory) = oldItem.id == newItem.id
         override fun areContentsTheSame(oldItem: QuizHistory, newItem: QuizHistory) = oldItem == newItem
+    }
+
+    inner class LeaderboardAdapter : ListAdapter<LeaderboardEntry, LeaderboardAdapter.ViewHolder>(LeaderboardDiffCallback()) {
+
+        inner class ViewHolder(private val itemBinding: ItemLeaderboardEntryBinding) :
+            androidx.recyclerview.widget.RecyclerView.ViewHolder(itemBinding.root) {
+
+            fun bind(entry: LeaderboardEntry) {
+                val rankIcon = when (entry.rank) {
+                    1 -> R.drawable.ic_gold_medal
+                    2 -> R.drawable.ic_silver_medal
+                    3 -> R.drawable.ic_bronze_medal
+                    else -> null
+                }
+
+                if (rankIcon != null) {
+                    itemBinding.rankIcon.setImageResource(rankIcon)
+                    itemBinding.rankIcon.visibility = View.VISIBLE
+                    itemBinding.rankText.visibility = View.GONE
+                } else {
+                    itemBinding.rankText.text = "${entry.rank}"
+                    itemBinding.rankIcon.visibility = View.GONE
+                    itemBinding.rankText.visibility = View.VISIBLE
+                }
+
+                itemBinding.scoreText.text = "${entry.correctRate}%"
+                itemBinding.detailText.text = "${entry.score}/${entry.totalWords}"
+                itemBinding.dateText.text = SimpleDateFormat("MM/dd", Locale.getDefault()).format(Date(entry.date))
+
+                val scoreColor = when {
+                    entry.correctRate >= 80 -> getColor(R.color.primary)
+                    entry.correctRate >= 50 -> Color.parseColor("#FB8C00")
+                    else -> getColor(R.color.cat_hard)
+                }
+                itemBinding.scoreText.setTextColor(scoreColor)
+            }
+        }
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+            val binding = ItemLeaderboardEntryBinding.inflate(LayoutInflater.from(parent.context), parent, false)
+            return ViewHolder(binding)
+        }
+
+        override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+            holder.bind(getItem(position))
+        }
+    }
+
+    class LeaderboardDiffCallback : DiffUtil.ItemCallback<LeaderboardEntry>() {
+        override fun areItemsTheSame(oldItem: LeaderboardEntry, newItem: LeaderboardEntry) =
+            oldItem.rank == newItem.rank && oldItem.date == newItem.date
+        override fun areContentsTheSame(oldItem: LeaderboardEntry, newItem: LeaderboardEntry) = oldItem == newItem
     }
 }

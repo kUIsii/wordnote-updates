@@ -138,6 +138,19 @@
 
     </com.google.android.material.card.MaterialCardView>
 
+    <!-- TabLayout -->
+    <com.google.android.material.tabs.TabLayout
+        android:id="@+id/tabLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginBottom="12dp"
+        app:tabMode="fixed"
+        app:tabGravity="fill"
+        app:tabIndicatorColor="@color/primary"
+        app:tabSelectedTextColor="@color/primary"
+        app:tabTextColor="@color/text_hint" />
+
     <!-- Record list -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/historyRecyclerView"
@@ -148,6 +161,18 @@
         android:paddingHorizontal="16dp"
         android:paddingBottom="16dp"
         android:overScrollMode="never" />
+
+    <!-- Leaderboard list -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/leaderboardRecyclerView"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:clipToPadding="false"
+        android:paddingHorizontal="16dp"
+        android:paddingBottom="16dp"
+        android:overScrollMode="never"
+        android:visibility="gone" />
 
     <!-- Empty state -->
     <LinearLayout

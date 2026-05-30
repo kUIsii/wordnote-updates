@@ -3,6 +3,7 @@ package com.wordnote.app
 import android.app.Application
 import com.wordnote.app.data.WordDatabase
 import com.wordnote.app.data.WordRepository
+import com.wordnote.app.util.AutoBackupManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -30,6 +31,7 @@ class WordNoteApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         autoRestoreIfBackupExists()
+        checkAutoBackup()
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val defaultColorMap = mapOf(
@@ -47,6 +49,19 @@ class WordNoteApplication : Application() {
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
+            }
+        }
+    }
+
+    private fun checkAutoBackup() {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val autoBackupManager = AutoBackupManager(this@WordNoteApplication)
+                if (autoBackupManager.shouldAutoBackup()) {
+                    autoBackupManager.performAutoBackup()
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("WordNoteApp", "Auto backup check failed: ${e.message}")
             }
         }
     }

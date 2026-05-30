@@ -331,8 +331,9 @@ class WordViewModel(application: Application) : AndroidViewModel(application) {
     // WordGroup operations
     val allGroups: LiveData<List<WordGroup>> = repository.allGroups
 
-    fun createGroup(name: String) = viewModelScope.launch {
-        repository.insertGroup(WordGroup(name = name))
+    fun createGroup(name: String, color: String? = null) = viewModelScope.launch {
+        val maxOrder = repository.getAllGroupsSync().maxOfOrNull { it.sortOrder } ?: 0
+        repository.insertGroup(WordGroup(name = name, color = color, sortOrder = maxOrder + 1))
     }
 
     fun deleteGroup(group: WordGroup) = viewModelScope.launch {
@@ -344,12 +345,32 @@ class WordViewModel(application: Application) : AndroidViewModel(application) {
         repository.deleteGroup(group)
     }
 
+    fun updateGroup(group: WordGroup) = viewModelScope.launch {
+        repository.updateGroup(group)
+    }
+
     fun assignWordToGroup(wordId: Long, groupId: Long?) = viewModelScope.launch {
         repository.setWordGroup(wordId, groupId)
     }
 
+    fun assignWordsToGroup(wordIds: List<Long>, groupId: Long?) = viewModelScope.launch {
+        wordIds.forEach { wordId ->
+            repository.setWordGroup(wordId, groupId)
+        }
+    }
+
     fun getWordCountForGroup(groupId: Long): LiveData<Int> = liveData {
         emit(repository.getWordCountForGroup(groupId))
+    }
+
+    suspend fun getWordsByGroupSync(groupId: Long): List<Word> = repository.getWordsByGroup(groupId)
+
+    suspend fun getWordCountForGroupSync(groupId: Long): Int = repository.getWordCountForGroup(groupId)
+
+    fun updateGroupSortOrder(groups: List<WordGroup>) = viewModelScope.launch {
+        groups.forEachIndexed { index, group ->
+            repository.updateGroupSortOrder(group.id, index)
+        }
     }
 
     // Quiz History operations

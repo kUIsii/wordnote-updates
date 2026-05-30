@@ -285,6 +285,57 @@
                 android:layout_height="0dp"
                 android:visibility="gone" />
 
+            <!-- Quiz Mode Section -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="测验模式"
+                android:textColor="@color/text_hint"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.08"
+                android:layout_marginStart="4dp"
+                android:layout_marginTop="20dp"
+                android:layout_marginBottom="8dp" />
+
+            <com.google.android.material.chip.ChipGroup
+                android:id="@+id/quizModeChipGroup"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:singleSelection="true"
+                app:selectionRequired="true">
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chipEnToCn"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="英译中"
+                    android:checked="true"
+                    style="@style/Widget.MaterialComponents.Chip.Choice" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chipCnToEn"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="中译英"
+                    style="@style/Widget.MaterialComponents.Chip.Choice" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chipSpelling"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="拼写测试"
+                    style="@style/Widget.MaterialComponents.Chip.Choice" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chipMixed"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="混合模式"
+                    style="@style/Widget.MaterialComponents.Chip.Choice" />
+
+            </com.google.android.material.chip.ChipGroup>
+
             <!-- Start Button -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/startQuizButton"

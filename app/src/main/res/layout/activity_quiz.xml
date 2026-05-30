@@ -136,6 +136,44 @@
 
             </com.google.android.material.card.MaterialCardView>
 
+            <!-- Spelling Input (hidden initially) -->
+            <LinearLayout
+                android:id="@+id/spellingInputContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginTop="24dp"
+                android:visibility="gone">
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="输入单词"
+                    app:boxStrokeColor="@color/primary">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/spellingInput"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="text"
+                        android:imeOptions="actionDone"
+                        android:textSize="18sp" />
+
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/checkSpellingButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:text="检查"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:layout_marginTop="12dp"
+                    app:backgroundTint="@color/primary"
+                    app:cornerRadius="24dp" />
+
+            </LinearLayout>
+
         </LinearLayout>
 
     </FrameLayout>

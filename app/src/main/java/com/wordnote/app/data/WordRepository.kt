@@ -122,6 +122,7 @@ class WordRepository(
     suspend fun deleteGroup(group: WordGroup) = wordGroupDao.delete(group)
     suspend fun getGroupById(groupId: Long): WordGroup? = wordGroupDao.getGroupById(groupId)
     suspend fun getWordCountForGroup(groupId: Long): Int = wordGroupDao.getWordCountForGroup(groupId)
+    suspend fun updateGroupSortOrder(groupId: Long, sortOrder: Int) = wordGroupDao.updateSortOrder(groupId, sortOrder)
 
     // Word with group operations
     suspend fun getWordsByGroup(groupId: Long): List<Word> = wordDao.getWordsByGroupSync(groupId)

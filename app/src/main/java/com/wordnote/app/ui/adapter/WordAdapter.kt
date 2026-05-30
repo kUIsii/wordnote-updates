@@ -633,6 +633,17 @@ class WordAdapter(
                 if (group != null) {
                     groupBadge.text = group.name
                     groupBadge.visibility = View.VISIBLE
+                    // Apply group color if available
+                    if (group.color != null) {
+                        try {
+                            val groupColor = Color.parseColor(group.color)
+                            groupBadge.setTextColor(groupColor)
+                            val bg = groupBadge.background as? android.graphics.drawable.GradientDrawable
+                            bg?.setStroke(1, groupColor)
+                        } catch (e: Exception) {
+                            // Use default colors
+                        }
+                    }
                 } else {
                     groupBadge.visibility = View.GONE
                 }

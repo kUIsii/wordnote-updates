@@ -9,8 +9,8 @@ import android.view.Gravity
 import android.view.View
 import android.view.animation.DecelerateInterpolator
 import android.widget.CheckBox
+import android.widget.ImageView
 import android.widget.LinearLayout
-import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -19,6 +19,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.wordnote.app.R
 import com.wordnote.app.data.Category
 import com.wordnote.app.data.QuizHistory
+import com.wordnote.app.data.QuizMode
 import com.wordnote.app.databinding.ActivityQuizSetupBinding
 import com.wordnote.app.util.compatOverridePendingTransition
 
@@ -48,12 +49,12 @@ class QuizSetupActivity : AppCompatActivity() {
             compatOverridePendingTransition(R.anim.slide_in_left, R.anim.slide_out_right)
         }
 
-        binding.wordCountSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+        binding.wordCountSeekBar.setOnSeekBarChangeListener(object : android.widget.SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: android.widget.SeekBar?, progress: Int, fromUser: Boolean) {
                 binding.wordCountText.text = "$progress 个单词"
             }
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+            override fun onStartTrackingTouch(seekBar: android.widget.SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: android.widget.SeekBar?) {}
         })
 
         binding.randomCheckBox.setOnCheckedChangeListener { _, isChecked ->
@@ -70,7 +71,19 @@ class QuizSetupActivity : AppCompatActivity() {
         updateMethodCards()
 
         binding.startQuizButton.setOnClickListener {
-            startQuiz()
+            it.animate()
+                .scaleX(0.95f)
+                .scaleY(0.95f)
+                .setDuration(100)
+                .withEndAction {
+                    it.animate()
+                        .scaleX(1f)
+                        .scaleY(1f)
+                        .setDuration(100)
+                        .start()
+                    startQuiz()
+                }
+                .start()
         }
 
         binding.viewAllHistoryButton.setOnClickListener {
@@ -137,11 +150,21 @@ class QuizSetupActivity : AppCompatActivity() {
         } ?: return
 
         for (j in 0 until innerLayout.childCount) {
-            val tv = innerLayout.getChildAt(j) as? TextView ?: continue
-            if (tv.textSize > 13f) {
-                tv.setTextColor(if (isLight) android.graphics.Color.WHITE else getColor(com.wordnote.app.R.color.text_primary))
-            } else {
-                tv.setTextColor(if (isLight) android.graphics.Color.argb(179, 255, 255, 255) else getColor(com.wordnote.app.R.color.text_hint))
+            val child = innerLayout.getChildAt(j)
+            when (child) {
+                is TextView -> {
+                    if (child.textSize > 13f) {
+                        child.setTextColor(if (isLight) android.graphics.Color.WHITE else getColor(com.wordnote.app.R.color.text_primary))
+                    } else {
+                        child.setTextColor(if (isLight) android.graphics.Color.argb(179, 255, 255, 255) else getColor(com.wordnote.app.R.color.text_hint))
+                    }
+                }
+                is ImageView -> {
+                    child.setColorFilter(
+                        if (isLight) android.graphics.Color.WHITE else getColor(com.wordnote.app.R.color.text_hint),
+                        android.graphics.PorterDuff.Mode.SRC_IN
+                    )
+                }
             }
         }
     }
@@ -407,11 +430,18 @@ class QuizSetupActivity : AppCompatActivity() {
         }
         val useForgetCount = binding.forgetCountCheckBox.isChecked && !binding.randomCheckBox.isChecked
 
+        val quizMode = when (binding.quizModeChipGroup.checkedChipId) {
+            R.id.chipCnToEn -> QuizMode.CN_TO_EN
+            R.id.chipSpelling -> QuizMode.SPELLING
+            R.id.chipMixed -> QuizMode.MIXED
+            else -> QuizMode.EN_TO_CN
+        }
+
         try {
             if (selectedCategories.size == allCategories.size) {
-                QuizActivity.launch(this, wordCount, null, useForgetCount)
+                QuizActivity.launch(this, wordCount, null, useForgetCount, quizMode)
             } else {
-                QuizActivity.launch(this, wordCount, selectedCategories.toList(), useForgetCount)
+                QuizActivity.launch(this, wordCount, selectedCategories.toList(), useForgetCount, quizMode)
             }
             compatOverridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left)
         } catch (e: Exception) {

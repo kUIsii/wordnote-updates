@@ -192,6 +192,60 @@
 
     </HorizontalScrollView>
 
+    <!-- Quick Quiz Card -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/quickQuizCard"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginTop="4dp"
+        android:layout_marginBottom="8dp"
+        app:cardCornerRadius="16dp"
+        app:cardElevation="2dp"
+        app:cardBackgroundColor="@color/primary"
+        xmlns:app="http://schemas.android.com/apk/res-auto">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="16dp"
+            android:gravity="center_vertical">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="开始测验"
+                    android:textColor="@android:color/white"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/reviewCountText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="有 0 个单词待复习"
+                    android:textColor="#B3FFFFFF"
+                    android:textSize="13sp"
+                    android:layout_marginTop="4dp" />
+            </LinearLayout>
+
+            <ImageView
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:src="@drawable/ic_quiz_white"
+                android:background="@drawable/circle_bg_white_translucent"
+                android:padding="12dp"
+                android:contentDescription="测验" />
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
     <!-- Word List -->
     <FrameLayout
         android:layout_width="match_parent"
@@ -283,6 +337,17 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="复制到"
+            android:textColor="@color/text_on_primary"
+            android:backgroundTint="@color/primary"
+            android:textSize="14sp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/groupSelectedButton"
+            style="@style/Widget.Material3.Button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:text="分组"
             android:textColor="@color/text_on_primary"
             android:backgroundTint="@color/primary"
             android:textSize="14sp" />

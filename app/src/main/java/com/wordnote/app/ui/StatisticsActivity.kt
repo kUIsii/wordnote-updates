@@ -56,6 +56,7 @@ class StatisticsActivity : AppCompatActivity() {
         viewModel.allWords.observe(this) { words ->
             allWords = words
             updateStats()
+            updateDailyProgress()
             updateStreak()
             updateLearningTrend()
             updateForgottenWords()
@@ -87,6 +88,32 @@ class StatisticsActivity : AppCompatActivity() {
 
         val uniqueCategories = allWords.mapNotNull { it.categoryId }.distinct()
         binding.categoryCountText.text = "${uniqueCategories.size}"
+    }
+
+    private fun updateDailyProgress() {
+        val prefs = getSharedPreferences("learning_goals", MODE_PRIVATE)
+        val dailyGoal = prefs.getInt("daily_new_words", 10)
+
+        val todayStart = getDayKey(System.currentTimeMillis())
+        val todayWords = allWords.filter { it.createdAt >= todayStart }
+        val todayCount = todayWords.size
+
+        val progress = if (dailyGoal > 0) todayCount.toFloat() / dailyGoal else 0f
+
+        binding.dailyProgressBar.setProgressColor(getColor(R.color.primary))
+        binding.dailyProgressBar.setBgColor(getColor(R.color.divider))
+        binding.dailyProgressBar.setStrokeWidth(6f)
+        binding.dailyProgressBar.setProgress(progress.coerceAtMost(1f))
+
+        binding.dailyProgressText.text = "$todayCount / $dailyGoal"
+
+        if (todayCount >= dailyGoal) {
+            binding.dailyGoalStatus.text = "今日目标已完成！"
+            binding.dailyGoalStatus.setTextColor(getColor(R.color.cat_similar))
+        } else {
+            binding.dailyGoalStatus.text = "还需学习 ${dailyGoal - todayCount} 个"
+            binding.dailyGoalStatus.setTextColor(getColor(R.color.text_hint))
+        }
     }
 
     private fun updateStreak() {
