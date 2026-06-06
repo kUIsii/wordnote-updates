@@ -5,29 +5,29 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- Back card (lighter blue, offset) -->
+    <!-- Document (dark navy rounded rectangle) -->
     <path
-        android:pathData="M38,28 L72,28 Q76,28 76,32 L76,66 Q76,70 72,70 L38,70 Q34,70 34,66 L34,32 Q34,28 38,28 Z"
-        android:fillColor="#90CAF9"
-        android:fillAlpha="0.6" />
+        android:pathData="M30,22 L78,22 Q84,22 84,28 L84,80 Q84,86 78,86 L30,86 Q24,86 24,80 L24,28 Q24,22 30,22 Z"
+        android:fillColor="#2D3748" />
 
-    <!-- Front card (white) -->
+    <!-- Gold bookmark (small vertical rectangle at top left) -->
     <path
-        android:pathData="M32,34 L66,34 Q70,34 70,38 L70,72 Q70,76 66,76 L32,76 Q28,76 28,72 L28,38 Q28,34 32,34 Z"
+        android:pathData="M36,18 L40,18 L40,38 L36,38 Z"
+        android:fillColor="#C9A84C" />
+
+    <!-- Text line 1 (long) -->
+    <path
+        android:pathData="M38,42 L70,42 Q71,42 71,43 L71,45 Q71,46 70,46 L38,46 Q37,46 37,45 L37,43 Q37,42 38,42 Z"
         android:fillColor="#FFFFFF" />
 
-    <!-- Letter "A" on the card -->
+    <!-- Text line 2 (medium) -->
     <path
-        android:pathData="M49,44 L55,60 L53,60 L51.5,56 L46.5,56 L45,60 L43,60 L49,44 Z M47,54 L49,48 L51,54 Z"
-        android:fillColor="#1E88E5" />
+        android:pathData="M38,52 L66,52 Q67,52 67,53 L67,55 Q67,56 66,56 L38,56 Q37,56 37,55 L37,53 Q37,52 38,52 Z"
+        android:fillColor="#FFFFFF" />
 
-    <!-- Small text lines below the A -->
+    <!-- Text line 3 (short) -->
     <path
-        android:pathData="M40,63 L58,63 Q59,63 59,64 L59,65 Q59,66 58,66 L40,66 Q39,66 39,65 L39,64 Q39,63 40,63 Z"
-        android:fillColor="#E3F2FD" />
-
-    <path
-        android:pathData="M40,68 L52,68 Q53,68 53,69 L53,70 Q53,71 52,71 L40,71 Q39,71 39,70 L39,69 Q39,68 40,68 Z"
-        android:fillColor="#E3F2FD" />
+        android:pathData="M38,62 L60,62 Q61,62 61,63 L61,65 Q61,66 60,66 L38,66 Q37,66 37,65 L37,63 Q37,62 38,62 Z"
+        android:fillColor="#FFFFFF" />
 
 </vector>

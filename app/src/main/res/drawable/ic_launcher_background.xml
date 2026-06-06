@@ -5,9 +5,9 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- Solid blue background -->
+    <!-- Warm beige/cream background -->
     <path
         android:pathData="M0,0 L108,0 L108,108 L0,108 Z"
-        android:fillColor="#1E88E5" />
+        android:fillColor="#F5F0E8" />
 
 </vector>
