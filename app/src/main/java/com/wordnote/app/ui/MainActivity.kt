@@ -113,9 +113,13 @@ class MainActivity : AppCompatActivity() {
         handleNavigationIntent(intent)
     }
 
+    private var pendingScrollToWordId: Long? = null
+
     private fun handleNavigationIntent(intent: Intent) {
         val categoryId = intent.getLongExtra("navigate_to_category", -1L)
+        val wordId = intent.getLongExtra("navigate_to_word_id", -1L)
         if (categoryId != -1L) {
+            pendingScrollToWordId = if (wordId != -1L) wordId else null
             // Wait for categories to load, then select the target
             viewModel.allCategories.observe(this) { categories ->
                 val targetCategory = categories.find { it.id == categoryId }
@@ -381,12 +385,13 @@ class MainActivity : AppCompatActivity() {
                 return false
             }
 
-            override fun onDown(e: MotionEvent): Boolean = false
+            override fun onDown(e: MotionEvent): Boolean = true
         })
 
         wordRecyclerView.addOnItemTouchListener(object : RecyclerView.OnItemTouchListener {
             override fun onInterceptTouchEvent(rv: RecyclerView, e: MotionEvent): Boolean {
-                return gestureDetector.onTouchEvent(e)
+                gestureDetector.onTouchEvent(e)
+                return false
             }
             override fun onTouchEvent(rv: RecyclerView, e: MotionEvent) {}
             override fun onRequestDisallowInterceptTouchEvent(disallowIntercept: Boolean) {}
@@ -591,8 +596,8 @@ class MainActivity : AppCompatActivity() {
         selectedTab = tab
         selectedCategoryId = categoryId
         selectedCategoryName = categoriesList.find { it.id == categoryId }?.name
-        viewModel.selectCategory(categoryId)
         wordAdapter.setCurrentCategoryName(selectedCategoryName)
+        viewModel.selectCategory(categoryId)
 
         updateInputMode()
 
@@ -917,7 +922,8 @@ class MainActivity : AppCompatActivity() {
                 createdAt = lastWord.createdAt
             )
 
-            viewModel.insertWord(wordEntity)
+            val meaningTexts = newMeaning.split("，", ",").map { it.trim() }.filter { it.isNotBlank() }
+            viewModel.insertWord(wordEntity, meaningTexts = meaningTexts)
             Toast.makeText(this, "已追加到分组", Toast.LENGTH_SHORT).show()
             dialog.dismiss()
         }
@@ -1027,6 +1033,18 @@ class MainActivity : AppCompatActivity() {
                         } else {
                             lm.scrollToPositionWithOffset(0, 0)
                         }
+                    }
+                }
+            }
+
+            // Scroll to specific word if navigated from detail page
+            pendingScrollToWordId?.let { targetWordId ->
+                pendingScrollToWordId = null
+                val wordIndex = words.indexOfFirst { it.id == targetWordId }
+                if (wordIndex >= 0) {
+                    wordRecyclerView.post {
+                        val lm = wordRecyclerView.layoutManager as? LinearLayoutManager ?: return@post
+                        lm.scrollToPositionWithOffset(wordIndex, 0)
                     }
                 }
             }

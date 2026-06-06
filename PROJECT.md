@@ -263,6 +263,23 @@ tags / word_tag (标签系统，目前未在 UI 使用)
 
 ## 开发日志
 
+### 2026-06-06 (五项 Bug 修复)
+
+- Bug 1: 复制到"意思相近的单词"后 + 按钮不显示
+  - 根因：selectTab 中 setCurrentCategoryName 在 selectCategory 之后调用，但 selectCategory 同步触发 filteredWords 导致 submitFlatList 执行时 currentCategoryName 还是旧值
+  - 修复：将 setCurrentCategoryName 移到 selectCategory 之前
+- Bug 2 & 5: 释义拆分逻辑不稳定
+  - 根因：WordDetailActivity 中 loadWord 和 loadMeanings 独立观察 LiveData，若 meanings 先于 word 触发则 currentWord 为 null，拆分逻辑被跳过
+  - 修复：添加 pendingMeanings 机制，currentWord 设置后重新触发 displayMeanings
+- Bug 3: 空分类下左右翻动失效
+  - 根因：onDown 返回 false 导致 GestureDetector 不追踪手势，onFling 永远不会被调用
+  - 修复：onDown 返回 true，onInterceptTouchEvent 始终返回 false 以不干扰 RecyclerView
+- Bug 4: "出现在其他分类"只跳转分类不精确定位
+  - 根因：点击相似词时 intent 只传了 categoryId 没传 wordId
+  - 修复：传递 wordId，MainActivity 中根据 wordId 滚动到对应位置
+- 追加单词自动拆分释义
+  - showBatchAppendSheet 追加时同步创建 WordMeaning 记录（与 addSingleWordFromInput 一致）
+
 ### 2026-05-28 (四项优化)
 
 - 释义拆分和编辑

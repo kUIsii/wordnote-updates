@@ -60,6 +60,7 @@ class WordDetailActivity : AppCompatActivity() {
     private var wordId: Long = -1
     private var currentWord: Word? = null
     private var categoriesMap: Map<Long, Category> = emptyMap()
+    private var pendingMeanings: List<WordMeaning>? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -230,10 +231,11 @@ class WordDetailActivity : AppCompatActivity() {
                 itemBinding.divider.visibility = View.GONE
             }
 
-            // Click to navigate to MainActivity with this category
+            // Click to navigate to MainActivity with this category and word
             itemBinding.rowContainer.setOnClickListener {
                 val intent = Intent(this, MainActivity::class.java).apply {
                     putExtra("navigate_to_category", similarWord.categoryId)
+                    putExtra("navigate_to_word_id", similarWord.id)
                     flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
                 }
                 startActivity(intent)
@@ -255,6 +257,12 @@ class WordDetailActivity : AppCompatActivity() {
         wordTextView.text = word.word
         meaningTextView.text = word.meaning
         forgetCountTextView.text = "${word.forgetCount}"
+
+        // Re-display pending meanings now that currentWord is set
+        pendingMeanings?.let { meanings ->
+            pendingMeanings = null
+            displayMeanings(meanings)
+        }
 
         if (word.nextReviewAt > 0) {
             val now = System.currentTimeMillis()
@@ -284,44 +292,47 @@ class WordDetailActivity : AppCompatActivity() {
     private fun displayMeanings(meanings: List<WordMeaning>) {
         if (meanings.isEmpty()) {
             val word = currentWord
-            if (word != null) {
-                val parts = word.meaning.split("，", ",").map { it.trim() }.filter { it.isNotBlank() }
-                if (parts.size > 1) {
-                    // Multiple meanings - show split button
-                    meaningsCard.visibility = View.VISIBLE
-                    meaningTextView.visibility = View.GONE
-                    meaningsLabel.visibility = View.VISIBLE
-                    meaningsHint.visibility = View.GONE
-                    meaningsRecyclerView.visibility = View.GONE
+            if (word == null) {
+                // Store for later display when currentWord is set
+                pendingMeanings = meanings
+                return
+            }
+            val parts = word.meaning.split("，", ",").map { it.trim() }.filter { it.isNotBlank() }
+            if (parts.size > 1) {
+                // Multiple meanings - show split button
+                meaningsCard.visibility = View.VISIBLE
+                meaningTextView.visibility = View.GONE
+                meaningsLabel.visibility = View.VISIBLE
+                meaningsHint.visibility = View.GONE
+                meaningsRecyclerView.visibility = View.GONE
 
-                    // Clear any existing dynamic views
-                    while (meaningsContainer.childCount > 3) {
-                        meaningsContainer.removeViewAt(meaningsContainer.childCount - 1)
-                    }
-
-                    // Add split button
-                    val splitButton = TextView(this).apply {
-                        text = "拆分释义"
-                        textSize = 14f
-                        setPadding(dpToPx(16), dpToPx(10), dpToPx(16), dpToPx(10))
-                        val bg = GradientDrawable().apply {
-                            setColor(getColor(R.color.primary))
-                            cornerRadius = 20f * resources.displayMetrics.density
-                        }
-                        background = bg
-                        setTextColor(getColor(R.color.text_on_primary))
-                        setOnClickListener {
-                            viewModel.saveMeanings(wordId, parts)
-                            Toast.makeText(this@WordDetailActivity, "已拆分 ${parts.size} 个释义", Toast.LENGTH_SHORT).show()
-                        }
-                    }
-                    (meaningsContainer as LinearLayout).addView(splitButton)
-                    return
-                } else if (parts.size == 1) {
-                    // Single meaning - auto-create and show marking UI
-                    viewModel.createMeaningsIfEmpty(wordId, parts)
-                    return  // Will re-trigger via LiveData observer
+                // Clear any existing dynamic views
+                while (meaningsContainer.childCount > 3) {
+                    meaningsContainer.removeViewAt(meaningsContainer.childCount - 1)
                 }
+
+                // Add split button
+                val splitButton = TextView(this).apply {
+                    text = "拆分释义"
+                    textSize = 14f
+                    setPadding(dpToPx(16), dpToPx(10), dpToPx(16), dpToPx(10))
+                    val bg = GradientDrawable().apply {
+                        setColor(getColor(R.color.primary))
+                        cornerRadius = 20f * resources.displayMetrics.density
+                    }
+                    background = bg
+                    setTextColor(getColor(R.color.text_on_primary))
+                    setOnClickListener {
+                        viewModel.saveMeanings(wordId, parts)
+                        Toast.makeText(this@WordDetailActivity, "已拆分 ${parts.size} 个释义", Toast.LENGTH_SHORT).show()
+                    }
+                }
+                (meaningsContainer as LinearLayout).addView(splitButton)
+                return
+            } else if (parts.size == 1) {
+                // Single meaning - auto-create and show marking UI
+                viewModel.createMeaningsIfEmpty(wordId, parts)
+                return  // Will re-trigger via LiveData observer
             }
             meaningsCard.visibility = View.GONE
             meaningTextView.visibility = View.VISIBLE
